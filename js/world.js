@@ -83,7 +83,7 @@ function buildWorld() {
   m.rect(108, 58, 2, 6, '='); m.rect(108, 64, 2, 1, ':');
   m.rect(108, 47, 2, 8, '-');
   m.rect(14, 58, 2, 26, '='); m.rect(14, 84, 2, 9, 'b'); m.set(15, 55, '-');
-  m.rect(36, 66, 1, 15, ':'); m.rect(36, 59, 1, 7, ':'); m.rect(39, 61, 5, 5, '.'); m.rect(40, 63, 3, 2, ':');
+  m.rect(36, 66, 1, 15, ':'); m.rect(36, 59, 1, 7, ':'); m.rect(37, 70, 9, 8, ':'); m.rect(39, 61, 5, 5, '.'); m.rect(40, 63, 3, 2, ':');
   // ---- buildings
   for (const [x, c, d] of [[33, 'R', 2], [41, 'B', 2], [49, 'R', 3], [62, 'B', 2], [70, 'R', 3], [78, 'R', 2], [86, 'B', 2]]) m.house(x, 50, 6, 5, c, d);
   m.house(62, 60, 7, 4, 'G', 3, "GAS 'N' GULP", '#48a05a');
@@ -173,7 +173,7 @@ const MAPS = {
     Z('suburbs', 'Elm Street', [56, 39, 68, 29], 'streets', 'suburbs', 'grass', 0.2),
     Z('hospital_d', 'County General', [4, 46, 26, 22], 'spooky', 'hospital_d', 'street', 0.44),
     Z('harbor', 'Wexler Harbor', [0, 68, 30, 28], 'nest', 'hospital_d', 'street', 0.3),
-    Z('lot', 'The Lost Lot', [31, 68, 15, 19], 'streets', 'lot', 'grass', 0.28),
+    Z('lot', 'The Night Market', [31, 68, 15, 19], 'streets', 'lot', 'grass', 0.28),
     Z('downtown', 'Downtown Wexler Falls', [46, 68, 48, 24], 'streets', 'downtown', 'street', 0.28)
   ] },
   school: { m: buildSchool(), base: 'o', zones: [Z('school', 'Wexler Middle School', [0, 0, 99, 99], 'spooky', 'school', 'indoor', 0.46)] },

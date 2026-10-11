@@ -8,7 +8,7 @@ async function script(fn) { Script.n++; try { await fn(); } catch (e) { console.
 
 function newState() {
   return { map: 'world', x: 41, y: 64, dir: 'up', party: [], pen: [], bag: { snack: 5, juice: 3 }, scrap: 40, flags: {}, badges: [], dex: {}, seen: {},
-    wins: 0, night: 0, saved: [], crew: [], bond: {}, rest: { map: 'world', x: 41, y: 64 }, log: [], obj: '', time: 0, steps: 0,
+    wins: 0, night: 0, saved: [], gear: { sword: 0, charms: {}, wins: 0 }, crew: [], bond: {}, rest: { map: 'world', x: 41, y: 64 }, log: [], obj: '', time: 0, steps: 0,
     learn: { grade: 2, sk: {}, right: 0, total: 0, streak: 0, best: 0, recent: [], flip: false } };
 }
 const flag = k => !!G.flags[k];
@@ -34,6 +34,7 @@ async function checkFeats() {
   if (L.best >= 5) await badge('streak5'); if (L.best >= 10) await badge('streak10');
   if (m >= 1) await badge('master1'); if (m >= 5) await badge('master5');
   if (f >= 5) await badge('friends5'); if (f >= 10) await badge('friends10');
+  if (G.gear.sword >= 1) await badge('blade'); if (G.gear.sword >= 5) await badge('bellbreaker'); if (G.gear.wins >= 15) await badge('shopper');
   if (G.night >= 1) await badge('rescue1'); if (G.night >= 10) await badge('rescue10'); if (G.night >= 25) await badge('rescue25');
   await Learn.celebrate();
 }
@@ -119,7 +120,10 @@ async function pretender(w) {
   if (res === 'win') { G.scrap += 10; await say(null, 'The Pretender curls up on the ground and starts to snore. +10 bonus scrap.'); }
   await afterBattle();
 }
+// Dex carries his current sword on his back, so redraw him when it changes.
+function syncGear() { HUM.dex.sword = (G && G.gear.sword) || 0; for (const k in Art.cache) if (k.startsWith('h:dex') || k.startsWith('s:dex')) delete Art.cache[k]; }
 function enterWorld() {
+  syncGear();
   Scene = 'world'; PL.px = G.x * 16; PL.py = G.y * 16; PL.moving = false; PL.zone = null; checkZone(true);
 }
 function checkZone(quiet) {
@@ -186,7 +190,7 @@ function worldUpdate(dt, pr) {
 }
 const GMAP = { '=': 'road', c: 'road', '-': 'walk', ':': 'dirt', J: 'dirt', j: 'dirt', s: 'sand', '~': 'water', b: 'plank', o: 'floor', E: 'floor', m: 'grime', w: 'wood', l: 'wood', k: 'carpet', W: 'wall' };
 const OBJT = { T: 'tree', t: 'dead', ',': 'tuft', f: 'fence', i: 'ifence', g: 'grave', r: 'rock', c: 'car', j: 'junk', d: 'desk', h: 'shelf', e: 'bed', p: 'plant', u: 'counter', l: 'candle' };
-const ESIZE = { barricade: 64, nest: 170, tower: 250, krush: 160, bellringer: 170, ferry: 230, fire: 70, stash: 58, comic: 50, sign: 58, note: 52, horn: 62, wreck: 78, log: 70, gate: 60, shutter: 58, munch: 92, coach: 92, mallcop: 92, flatline: 92, bloater: 92 };
+const ESIZE = { stall1: 150, stall2: 150, stall3: 150, clanker: 96, newt: 90, flicker: 90, barricade: 64, nest: 170, tower: 250, krush: 160, bellringer: 170, ferry: 230, fire: 70, stash: 58, comic: 50, sign: 58, note: 52, horn: 62, wreck: 78, log: 70, gate: 60, shutter: 58, munch: 92, coach: 92, mallcop: 92, flatline: 92, bloater: 92 };
 const FLOATY = { stash: 1, comic: 1, note: 1 };
 function prepMap(name) {
   const mp = MAPS[name], m = mp.m, world = name === 'world', baseT = world ? 'grass' : (GMAP[mp.base] || 'floor');
@@ -238,7 +242,7 @@ function worldDraw() {
     if (o === 'candle') lights.push([tx * 48 + 24, ty * 48, 170, 1]);
   }
   for (const b of m.b) if ((b.x + b.w) * 48 > camX - 60 && b.x * 48 < camX + W + 60 && (b.y + b.h) * 48 > camY - 20 && b.y * 48 - 400 < camY + H) list.push({ y: (b.y + b.h) * 48 - 6, b });
-  for (const e of entsOn(G.map)) { list.push({ y: (e.y + 1) * 48 - 1, e }); if (e.spr === 'fire') lights.push([e.x * 48 + 24, e.y * 48 + 20, 230, 1]); if (e.spr === 'nest') lights.push([e.x * 48 + 24, e.y * 48 - 40, 150, 1]); }
+  for (const e of entsOn(G.map)) { list.push({ y: (e.y + 1) * 48 - 1, e }); if (e.spr === 'fire') lights.push([e.x * 48 + 24, e.y * 48 + 20, 230, 1]); if (e.spr === 'nest') lights.push([e.x * 48 + 24, e.y * 48 - 40, 150, 1]); if (e.spr.startsWith('stall')) lights.push([e.x * 48 + 24, e.y * 48 - 20, 190, 1]); }
   if (world) for (const w of WAND) if (w.state !== 'gone') list.push({ y: w.py * 3 + 47, w });
   list.push({ y: pxY + 48, pl: true }); list.sort((a, b) => a.y - b.y);
   const oval = (x, y, rx, ry) => { ctx.fillStyle = 'rgba(10,4,30,.26)'; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 6.3); ctx.fill(); };
@@ -354,6 +358,7 @@ async function bagMenu() {
     const i = await menu(ids.map(id => ({ label: ITEMS[id].n, right: '×' + G.bag[id] })), { x: 20, y: 20, w: 420, title: 'BAG', onDraw: s => { panel(450, 20, 490, 110); setFont(26); wrap(ITEMS[ids[s]].d, 450).forEach((l, k) => text(l, 472, 40 + k * 28)); } });
     if (i < 0) return;
     if (ids[i] === 'snack') { await say(null, 'Toss these to wild critters during a battle.'); continue; }
+    if (ITEMS[ids[i]].foe || ITEMS[ids[i]].buff || ITEMS[ids[i]].party) { await say(null, 'Save this for a battle. Open your BAG during a fight to use it.'); continue; }
     const t = await menu(partyItems(G.party), { x: 450, y: 140, w: 490, title: 'Use on who?' });
     if (t >= 0 && !(await useItem(ids[i], G.party[t]))) await say(null, "That won't do anything right now.");
   }
@@ -387,6 +392,7 @@ const badgesPage = () => page(() => {
 });
 const crewPage = () => page(() => {
   overlay(); setFont(18, true); text('THE CREW', 44, 34, '#ffd76a');
+  setFont(22); text('Blade: ' + (G.gear.sword ? SWORDS[G.gear.sword - 1].n : 'none yet') + '     Charms: ' + (Object.keys(G.gear.charms).map(k => CHARMS[k].n).join(', ') || 'none yet'), W - 44, 40, '#c8ffb8', 'right');
   if (!G.crew.length) { setFont(28); text("It's just you and your critters. For now.", 44, 90); return; }
   G.crew.forEach((id, i) => {
     const c = CREW[id], y = 76 + i * 200;
@@ -440,7 +446,52 @@ async function restMenu(nest) {
     if (Scene !== 'world') return;
   }
 }
+// ---------------------------------------------------------------- the Night Market: pay with brains
+const SHOPS = {
+  forge: { who: 'clank', title: "OLD CLANK'S FORGE", short: 'FORGE',
+    intro: ["Halt. ...Old habit. I stood guard at Blackwood Manor for a hundred years.", "I watched that Bell switch off every mind in this town. I am done guarding it. Now I make things to break it.", "I do not take scrap, small knight. A blade is only as sharp as the one who swings it. Show me you can THINK, and I will arm you."],
+    hello: ['Back for a better blade, small knight?', 'Steel is patient. Are you?', 'A sharp mind first. Then a sharp sword.'],
+    stock() { const gates = [null, 'priya', 'bash', 'wren', 'broadcast'], why = ['', 'Old Clank needs Priya to design the grip. Find her first.', 'Too heavy to forge alone. Come back with someone strong.', 'It must be quenched in lightning. Come back with someone fast enough to catch a bolt.', 'It needs a shard of the antenna dish. Send the broadcast first.'];
+      return SWORDS.map((w, i) => ({ n: w.n, d: w.d + ` Your critters hit ${6 * (i + 1)}% harder, and Dex can strike once per battle.`, tier: i + 1, owned: G.gear.sword > i, locked: (G.gear.sword < i && 'Earn the ' + SWORDS[i - 1].n + ' first.') || (gates[i] && !flag(gates[i]) && why[i]), get() { G.gear.sword = i + 1; syncGear(); } })); },
+    dare: it => `The ${it.n}. Earn it.`, win: ['It suits you. Swing it like you mean it.', 'Well struck, small knight. Even before you swing.'], lose: ['Not yet. The steel can wait. Try again when you are ready.', 'A dull answer. Sharpen it and return.'] },
+  brew: { who: 'newt', title: "NANA NEWT'S POTIONS", short: 'POTION',
+    intro: ["Come in, come in, dearie! Mind the cauldron. It bites.", "We crawled up out of the storm drains on the Green Night, same as your critters. Somebody has to look after the little ones.", "Venom, dearie, is just medicine pointed the other way. I don't want your scrap. A potion is a recipe, and a recipe is MATH. Measure right and I'll brew for you."],
+    hello: ['Back again, dearie? Lovely.', 'What shall Nana brew for you today?', 'The cauldron is hot and so are my recipes.'],
+    stock() { const mk = (id, tier, qty, gate, why) => ({ n: ITEMS[id].n + (qty > 1 ? ' ×' + qty : ''), d: ITEMS[id].d + ` You have ${G.bag[id] || 0}.`, tier, qty, locked: gate && !flag(gate) && why, get() { give(id, qty, true); } });
+      return [mk('potion', 1, 2), mk('venom', 2, 2, 'priya', 'Nana needs glass vials from the school science lab. Rescue Priya first.'), mk('power', 2, 1, 'priya', 'Nana needs glass vials from the school science lab. Rescue Priya first.'), mk('stone', 3, 1, 'bash', 'Needs moss from the mall garden. Befriend whoever is guarding it.'), mk('tonic', 4, 1, 'wren', 'Needs a feather from the junkyard crows. Go meet their keeper.')]; },
+    dare: it => `${it.n.replace(/ ×.*/, '')}? Ooh, a tricky recipe. Measure carefully!`, win: ['Perfect measurements! Here you are, dearie.', 'Bubbling beautifully. Don\'t drink it all at once.'], lose: ['Oh dear, it curdled. No matter! We try again.', 'A pinch too much somewhere. Have another go, dearie.'] },
+  magic: { who: 'flick', title: "PROFESSOR FLICKER'S SPELL CELLAR", short: 'MAGIC',
+    intro: ["Ah! A living student. How novel. I was librarian at Blackwood Manor, before the Bell. And after, I suppose, in a manner of speaking.", "Here is the secret, young man: the Bell does not make monsters. It switches THINKING off. A mind that is busy working cannot be switched off.", "That is why your critters strike harder when you solve things. Numbers and words are the oldest magic there is. Prove you can wield them, and my scrolls are yours."],
+    hello: ['Class is in session.', 'Ah, my favorite living student.', 'Magic is only math wearing a cape. Shall we?'],
+    stock() { const sc = (id, tier, qty, gate, why) => ({ n: ITEMS[id].n + (qty > 1 ? ' ×' + qty : ''), d: ITEMS[id].d + ` You have ${G.bag[id] || 0}.`, tier, qty, locked: gate && !flag(gate) && why, get() { give(id, qty, true); } });
+      const ch = (id, tier, gate, why) => ({ n: CHARMS[id].n, d: CHARMS[id].d + ' (Permanent.)', tier, owned: !!G.gear.charms[id], locked: gate && !flag(gate) && why, get() { G.gear.charms[id] = 1; } });
+      return [sc('moon', 2, 1), sc('bolt', 2, 2, 'priya', 'I need someone to help me translate it. Bring a scientist.'), sc('frost', 3, 1, 'bash', 'The ink must be kept cold. Come back when your crew is bigger.'), ch('luck', 2), ch('hint', 3, 'priya', 'The owl only trusts scholars. Bring a scientist.'), ch('retry', 4, 'bash', 'This charm must be forged in friendship. Come back with a bigger crew.'), ch('xp', 5, 'wren', 'The amulet is locked in a case only a very fast hand can open.')]; },
+    dare: it => `${it.n.replace(/ ×.*/, '')}. An excellent choice. Your examination begins now.`, win: ['Full marks! Use it wisely.', 'Splendid. I knew you had it in you.'], lose: ['Not quite. Review, and sit the examination again.', 'A wrong turn is still a turn. Try once more.'] }
+};
+async function nightShop(id) {
+  const S = SHOPS[id];
+  if (!flag('shop_' + id)) { setFlag('shop_' + id); for (const l of S.intro) await say(S.who, l); if (!flag('marketLog')) { setFlag('marketLog'); logAdd('Found the Night Market in the Lost Lot. Friendly monsters, and they do not take scrap. You pay by solving math. A ghost says thinking is the one thing the Bell cannot switch off. That explains a LOT.'); } }
+  else await say(S.who, pick(S.hello));
+  while (true) {
+    const stock = S.stock();
+    const i = await menu(stock.map(it => ({ label: it.n, right: it.owned ? 'OWNED' : it.locked ? 'LATER' : '★'.repeat(it.tier), disabled: !!(it.owned || it.locked), rcol: '#ffd76a' })).concat([{ label: 'Leave' }]), { x: 20, y: 20, w: 470, title: S.title, onDraw: k => {
+      const it = stock[k]; panel(500, 20, 440, 330); if (!it) return;
+      setFont(28); text(it.n, 524, 40, '#ffd76a'); setFont(24); let y = 78; wrap(it.d, 396).forEach(l => { text(l, 524, y); y += 27; }); y += 8;
+      if (it.owned) text('You already own this.', 524, y, '#a8ffb8');
+      else if (it.locked) wrap(it.locked, 396).forEach(l => { text(l, 524, y, '#ffb07a'); y += 27; });
+      else { const T = Learn.trialInfo(it.tier); text('PRICE: a math challenge  ' + '★'.repeat(it.tier), 524, y, '#a8ffb8'); y += 30; wrap(`${T.n} questions${T.typed ? ', typed answers, ending with a word problem' : ''}${T.up ? `, Grade ${T.g} level` : ''}. ${T.allow ? 'You may miss one.' : 'No misses allowed.'}`, 396).forEach(l => { text(l, 524, y, '#e8e0f4'); y += 27; }); }
+    } });
+    if (i < 0 || i >= stock.length) break;
+    const it = stock[i];
+    await say(S.who, S.dare(it));
+    if (await Learn.trial(it.tier, S.short + ' CHALLENGE  ' + '★'.repeat(it.tier))) {
+      it.get(); G.gear.wins = (G.gear.wins || 0) + 1; Snd.sfx('badge');
+      await say(null, `★ You earned: ${it.n}! ★`, { col: '#ffd76a' }); await say(S.who, pick(S.win)); await checkFeats();
+    } else await say(S.who, pick(S.lose));
+  }
+}
 async function munchShop() {
+  if (!flag('munchTip')) { setFlag('munchTip'); await say('munch', "Psst. Munch only sells snacks. For the GOOD stuff, go to the Night Market. South of your tower, down the dirt path."); await say('munch', "Swords! Potions! Magic! But Munch's cousins do not take scrap. They take SMARTS."); }
   await say('munch', pick(['MUNCH TRADE! Shiny scrap for crunchy snacks.', 'Munch not eat kids. Kids are mostly elbows.', 'Welcome, tiny customer! Munch has the good stuff.']));
   const stock = ['snack', 'juice', 'wipes'].concat(flag('priya') ? ['soda'] : [], flag('bash') ? ['salts'] : [], flag('wren') ? ['slush'] : []);
   while (true) {

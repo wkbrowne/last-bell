@@ -128,6 +128,30 @@ const ITEMS = {
   salts: { n: 'Smelly Sock', price: 70, revive: .5, d: 'Wakes up a knocked-out critter. Pee-yew.' }
 };
 
+// Night Market goods. These are never sold for scrap: they are earned with math.
+Object.assign(ITEMS, {
+  potion: { n: 'Healing Potion', heal: 120, d: 'Heals 120 HP.' },
+  tonic: { n: 'Phoenix Tonic', revive: 1, d: 'Wakes a knocked-out critter at FULL health.' },
+  venom: { n: 'Venom Vial', foe: 'venom', d: 'Throw at a foe. It stings right away and gives the foe the Icks.' },
+  power: { n: 'Power Potion', buff: 'atk', d: "Sharply raises your critter's ATK for the rest of the battle." },
+  stone: { n: 'Stoneskin Potion', buff: 'def', d: "Sharply raises your critter's DEF for the rest of the battle." },
+  bolt: { n: 'Scroll of Sparks', foe: 'bolt', d: 'Zaps a foe with lightning. Extra strong against ROT and GHOST types.' },
+  frost: { n: 'Freeze Scroll', foe: 'frost', d: 'Freezes a foe so it loses its next turn.' },
+  moon: { n: 'Moonlight Scroll', party: .5, d: 'Heals your whole team by half.' }
+});
+const SWORDS = [
+  { n: 'Stick Sword', d: 'A very, very good stick. Every hero starts somewhere.' },
+  { n: 'Scrap Saber', d: 'Hammered from a car bumper. Hums when zombies are near.' },
+  { n: 'Stop-Sign Slicer', d: 'Zombies must obey all traffic signs.' },
+  { n: 'Lightning Blade', d: 'Quenched in a real lightning strike. Still crackles.' },
+  { n: 'Bellbreaker', d: 'Forged for one job: cracking the Last Bell.' }
+];
+const CHARMS = {
+  luck: { n: 'Friendship Charm', d: 'Wild critters are easier to befriend.' },
+  hint: { n: 'Owl Charm', d: 'Crosses out one wrong answer on multiple-choice questions.' },
+  retry: { n: 'Second-Chance Charm', d: 'Once per battle, a missed Brain Blast can be tried again.' },
+  xp: { n: "Scholar's Amulet", d: 'Your critters earn 25% more XP.' }
+};
 const BADGES = {
   first: ['First Friend', 'Made a monster buddy.'],
   brain10: ['Big Brain', 'Answered 10 questions right.'],
@@ -152,6 +176,9 @@ const BADGES = {
   rescue25: ['Lighthouse', 'Rescued 25 kids. The Nest is a town now.'],
   ace: ['Test Ace', 'Scored 9 or 10 on a practice test.'],
   grad: ['Moving Up', 'Mastered every skill in a grade.'],
+  blade: ['Armed and Brainy', 'Earned your first sword at the Night Market.'],
+  bellbreaker: ['Bellbreaker', 'Earned the legendary blade.'],
+  shopper: ['Market Regular', 'Won 15 Night Market challenges.'],
   comics: ['Collector', 'Found all 8 Captain Cosmos comics.']
 };
 const BRAIN_RANKS = [[0, 'Zombie Bait'], [10, 'Rookie'], [25, 'Sidekick'], [50, 'Brainiac'], [90, 'Mastermind'], [140, 'Mega Mind'], [200, 'Galaxy Brain'], [300, 'LEGEND']];

@@ -686,6 +686,7 @@ const Learn = {
       const s = SKILLS[q.skill], type = q.type || 'mc', quiet = mode.test || mode.hold, n = q.choices.length;
       const PAD = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', '.', '⌫', 'OK'], word = pick(['BRAIN BLAST!', 'NAILED IT!', 'BIG BRAIN!']);
       let sel = 0, ok = null, picked = -1, t = 0, hits = [], inp = '';
+      const cut = type === 'mc' && n === 4 && !mode.test && G.gear && G.gear.charms.hint ? pick([0, 1, 2, 3].filter(i => i !== q.a)) : -1;
       const marks = new Set();
       const finish = () => { UI.pop(m); res(ok); };
       const settle = good => {
@@ -696,6 +697,7 @@ const Learn = {
       const choose = i => {
         if (ok !== null) return;
         if (type === 'multi') { if (i === n) { if (!marks.size) { Snd.sfx('no'); return; } settle(marks.size === q.as.length && q.as.every(x => marks.has(x))); } else { marks.has(i) ? marks.delete(i) : marks.add(i); Snd.sfx('move'); } return; }
+        if (i === cut) { Snd.sfx('no'); return; }
         picked = i; settle(i === q.a);
       };
       const key = k => {
@@ -778,6 +780,7 @@ const Learn = {
               if (type === 'multi') { rbox(72, y + h / 2 - 12, 24, 24, 6, on ? '#ffd76a' : 'rgba(255,255,255,.12)', '#ffd76a', 2); if (on) text('✓', 84, y + h / 2 - 15, '#1a1030', 'center'); }
               else text('ABCDEF'[i], 84, y + (h - cs) / 2 - 2, '#ffd76a', 'center');
               lines[i].forEach((l, j) => text(l, 116, y + (h - lines[i].length * (cs + 2)) / 2 + j * (cs + 2) - 1, '#fff'));
+              if (i === cut && !done) { ctx.fillStyle = 'rgba(20,12,44,.72)'; ctx.beginPath(); ctx.roundRect(56, y, W - 112, h, 14); ctx.fill(); ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(116, y + h / 2); ctx.lineTo(W - 90, y + h / 2); ctx.stroke(); setFont(20); text('OWL CHARM', W - 80, y + h / 2 - 11, '#ffd76a', 'right'); }
               hits.push({ x: 56, y, w: W - 112, h, i });
               y += h + gap;
             });
@@ -790,6 +793,19 @@ const Learn = {
       };
       UI.push(m);
     });
+  },
+  // Night Market challenge. Higher tiers mean more questions, typed answers, word problems, and finally next-grade math.
+  trialInfo(tier) { const g = G.learn.grade, up = tier >= 4 && g < 6; return { n: [2, 3, 3, 4, 5][tier - 1], typed: tier >= 3, up, allow: tier <= 2 ? 1 : 0, g: up ? g + 1 : g }; },
+  async trial(tier, title) {
+    const T = this.trialInfo(tier), pool = this.forGrade(T.g, 'math'); let miss = 0, last = null;
+    for (let i = 0; i < T.n; i++) {
+      let id = tier >= 3 && i === T.n - 1 ? 'word' : pick(pool.filter(x => x.id !== last)).id; last = id;
+      let q; for (let k = 0; k < 6; k++) { q = SKILLS[id].gen(T.g); if (!T.typed || /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) break; }
+      q.skill = id; if (T.typed && /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) { q.type = 'num'; q.ans = q.choices[q.a]; }
+      const ok = await this.ask(q, `${title}   ${i + 1} OF ${T.n}`, T.up);
+      if (!ok && ++miss > T.allow) return false;
+    }
+    return true;
   },
   // A ten-question practice test under test conditions: mixed formats, no hints, score report at the end.
   async testDay() {

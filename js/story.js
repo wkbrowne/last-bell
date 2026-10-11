@@ -6,6 +6,7 @@ SPEAKERS = {
   guide: { n: 'Field Guide', spr: 'comic', human: false, col: '#7fe0d8' }, radio: { n: 'Walkie-Talkie', col: '#9fe8f0' },
   coach: { n: 'Coach Krunk', spr: 'coach', human: false, col: '#b8e0a0' }, cop: { n: 'Officer Scoot', spr: 'mallcop', human: false, col: '#b8e0a0' },
   doc: { n: 'Dr. Flatline', spr: 'flatline', human: false, col: '#b8e0a0' }, butler: { n: 'The Butler', spr: 'butler', human: false, col: '#b8e0a0' },
+  clank: { n: 'Old Clank', spr: 'clanker', human: false, col: '#c9d2de' }, newt: { n: 'Nana Newt', spr: 'newt', human: false, col: '#ffb07a' }, flick: { n: 'Professor Flicker', spr: 'flicker', human: false, col: '#9ff0e2' },
   bell: { n: 'The Bellringer', spr: 'bellringer', human: false, col: '#ff8a7a' }
 };
 const ENT = [];
@@ -74,6 +75,7 @@ const TALKS = [
 // ------------------------------------------------------------ first-visit zone chatter
 const ZONE_FIRST = {
   suburbs: async () => { await say('dex', 'Elm Street. Apocalypse Rule #2: Tall grass means critters. Or zombies. Or both.'); },
+  lot: async () => { await say('dex', 'Lanterns? Out here? ...Is that a suit of armor selling SWORDS?'); await say('guide', 'FIELD GUIDE: The Night Market. Friendly monsters trade here, but never for scrap. Every item is won with a math challenge. Better items, harder math.'); },
   park: async () => { await say('dex', 'Pembry Park. The Boltbugs like the pond. Good place to make friends.'); },
   school: async () => { await say('dex', 'Wexler Middle School. I never thought I would break IN to this place.'); await say('dex', 'The floors are grimy in the halls. Zombies like grimy.'); },
   downtown: async () => { await say('dex', 'Downtown. The Galleria mall is straight ahead. Mega Battery, here we come.'); },
@@ -326,6 +328,8 @@ const Story = {
     const c = await ask('dex', '...', ['"Yeah. It was. I was wrong."', '"I want my mom back, you big ding-dong."']);
     await say('dex', c === 0 ? "I thought being alone meant being free. It just meant being alone." : "And my friends. And homework. Okay, SOME homework.");
     await say('priya', 'His bell turns brains OFF. So we turn ours all the way ON.'); await say('bash', 'For the ferns!'); await say('wren', 'For everybody.');
+    if (G.gear.sword >= 5) { await say('dex', 'Also, I brought something. An old friend of yours made it.'); await say('bell', 'THAT BLADE. THE ARMOR... BETRAYS ME.'); await say(null, '(Use the Bellbreaker from the CREW menu. Against the Bellringer, it hits twice as hard.)'); }
+    else if (G.gear.sword) await say('dex', "And I've got a sword now. So. That's new.");
     if (!(await bossFight({ foes: [['gloomwing', 33, 'Bell Bat'], ['clanker', 33, 'Bell Guard'], ['bellringer', 36]], bg: 'manor', music: 'finale', intro: 'THE BELLRINGER raises his terrible bell!' }))) return;
     setFlag('bellSilenced'); Snd.stop();
     Fx.flash = 1; await tween(Fx, 'flash', 0, 900);
@@ -390,6 +394,13 @@ stash('world', 80, 86, 'd', { soda: 2, snack: 3 }, 50); stash('world', 118, 71, 
 stash('world', 10, 40, 'g', { slush: 1, salts: 1 }, 80); stash('world', 56, 22, 'h', { soda: 3, wipes: 3 }); stash('world', 70, 10, 'i', { slush: 1, snack: 5 });
 stash('world', 114, 10, 'j', { soda: 3, salts: 1 }, 100); stash('world', 24, 50, 'k', { slush: 2, wipes: 3 }); stash('world', 22, 80, 'l', { slush: 2, salts: 2 }, 120); stash('world', 30, 5, 'm', { slush: 3, salts: 2 });
 comic('world', 37, 80, 1); comic('world', 55, 79, 3); comic('world', 100, 77, 5); comic('world', 49, 10, 6);
+// the Night Market (in the Lost Lot, south of Maple Court)
+sign('world', 37, 69, 'THE NIGHT MARKET. No scrap. No coupons. Pay with BRAINS (the thinking kind).');
+E({ map: 'world', x: 38, y: 71, spr: 'stall1' }); E({ map: 'world', x: 41, y: 71, spr: 'stall2' }); E({ map: 'world', x: 44, y: 71, spr: 'stall3' });
+E({ map: 'world', x: 38, y: 72, spr: 'clanker', act: () => nightShop('forge') });
+E({ map: 'world', x: 41, y: 72, spr: 'newt', act: () => nightShop('brew') });
+E({ map: 'world', x: 44, y: 72, spr: 'flicker', act: () => nightShop('magic') });
+camp('world', 41, 75);
 // school
 E({ map: 'school', x: 23, y: 9, spr: 'barricade', if: () => !flag('coach'), act: () => Story.labDoor() });
 E({ map: 'school', x: 28, y: 17, spr: 'coach', if: () => !flag('coach'), act: () => Story.coach() });

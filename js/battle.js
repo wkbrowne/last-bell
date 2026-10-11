@@ -86,7 +86,7 @@ const Battle = {
     while (true) {
       const me = G.party[st.pi], foe = st.foes[st.fi];
       st.msg = `What will ${cname(me)} do?`;
-      const i = await menu(['FIGHT', 'CREW', 'BAG', 'SWAP', 'RUN'].map((l, k) => ({ label: l, disabled: k === 1 && !G.crew.length })), { x: 664, by: H - 12, w: 284, cancel: false, sel: 0 });
+      const i = await menu(['FIGHT', 'CREW', 'BAG', 'SWAP', 'RUN'].map((l, k) => ({ label: l, disabled: k === 1 && !G.crew.length && !G.gear.sword })), { x: 664, by: H - 12, w: 284, cancel: false, sel: 0 });
       if (i === 0) {
         st.msg = '';
         const mi = await menu(me.moves.map(id => { const m = MOVES[id]; return { label: m.n, right: m.t + (m.p ? '  ' + m.p : '   —'), rcol: TYPES[m.t].col }; }), {
@@ -99,21 +99,27 @@ const Battle = {
           }
         });
         if (mi < 0) continue;
-        const ok = await Learn.quiz(st.combo >= 2 ? `BRAIN BLAST!   COMBO ×${st.combo}` : 'BRAIN BLAST!');
+        let ok = await Learn.quiz(st.combo >= 2 ? `BRAIN BLAST!   COMBO ×${st.combo}` : 'BRAIN BLAST!');
+        if (!ok && G.gear.charms.retry && !st.used.retry) { st.used.retry = true; await bsay('The Second-Chance Charm glows. Try another one!'); ok = await Learn.quiz('SECOND CHANCE!'); }
         st.combo = ok ? st.combo + 1 : 0;
         return { k: 'move', m: me.moves[mi], ok };
       }
       if (i === 1) {
-        const ci = await menu(G.crew.map(id => ({ label: `${CREW[id].n}: ${CREW[id].ab}`, disabled: st.used[id] })), { x: 12, by: H - 12, w: 640, onDraw: s => { panel(664, BOX_Y + 2, 284, BOX_H - 4); setFont(24); wrap(CREW[G.crew[s]].abd + ' (Once per battle. Free!)', 244).forEach((l, k) => text(l, 684, BOX_Y + 22 + k * 26, '#e8e0f4')); } });
+        const acts = (G.gear.sword ? ['sword'] : []).concat(G.crew);
+        const ci = await menu(acts.map(id => id === 'sword' ? { label: `Dex: ${SWORDS[G.gear.sword - 1].n}`, disabled: st.used.sword, col: '#ffd76a' } : { label: `${CREW[id].n}: ${CREW[id].ab}`, disabled: st.used[id] }), { x: 12, by: H - 12, w: 640, onDraw: s => { panel(664, BOX_Y + 2, 284, BOX_H - 4); setFont(24); wrap((acts[s] === 'sword' ? 'Dex jumps in with his blade! Answer a question to strike at full power.' : CREW[acts[s]].abd) + ' (Once per battle. Free!)', 244).forEach((l, k) => text(l, 684, BOX_Y + 22 + k * 26, '#e8e0f4')); } });
         if (ci < 0) continue;
-        await this.crew(G.crew[ci]); continue;
+        if (acts[ci] === 'sword') { await this.strike(); if (foe.hp <= 0) return { k: 'item' }; } else await this.crew(acts[ci]);
+        continue;
       }
       if (i === 2) {
         const ids = Object.keys(ITEMS).filter(id => G.bag[id] > 0);
         if (!ids.length) { await bsay('Your bag is empty!'); continue; }
         const bi = await menu(ids.map(id => ({ label: ITEMS[id].n, right: '×' + G.bag[id] })), { x: 12, by: H - 12, w: 640, onDraw: s => { panel(664, BOX_Y + 2, 284, BOX_H - 4); setFont(24); wrap(ITEMS[ids[s]].d, 244).forEach((l, k) => text(l, 684, BOX_Y + 22 + k * 26, '#e8e0f4')); } });
         if (bi < 0) continue;
-        const id = ids[bi];
+        const id = ids[bi], it = ITEMS[id];
+        if (it.foe) { await this.useOnFoe(id); return { k: 'item' }; }
+        if (it.buff) { G.bag[id]--; me.st[it.buff] = Math.min(3, me.st[it.buff] + 2); Snd.sfx('heal'); await bsay(`${cname(me)} gulps the ${it.n}. ${it.buff.toUpperCase()} rose sharply!`); return { k: 'item' }; }
+        if (it.party) { G.bag[id]--; Snd.sfx('heal'); for (const c of G.party) if (c.hp > 0) { c.hp = Math.min(maxHp(c), c.hp + Math.floor(maxHp(c) * it.party)); c.dhp = c.hp; } await bsay('Soft moonlight washes over your whole team. Everyone feels better!'); return { k: 'item' }; }
         if (id === 'snack') {
           if (SPECIES[foe.sp].z) { await bsay("Zombies don't want snacks. They want BRAINS. (Too bad you're using yours.)"); continue; }
           if (o.kind !== 'wild') { await bsay("That critter already has a friend!"); continue; }
@@ -146,6 +152,30 @@ const Battle = {
     st.pi = i; st.py = 0; st.px = -500; st.part.add(i);
     const c = G.party[i]; c.dhp = c.hp;
     await tween(st, 'px', 0, 300, easeOut); await bsay(`Go, ${cname(c)}!`);
+  },
+  // Dex's own once-per-battle attack. The better the blade, the bigger the hit.
+  async strike() {
+    const st = this.st, foe = st.foes[st.fi], tier = G.gear.sword, sw = SWORDS[tier - 1], bane = tier === 5 && foe.sp === 'bellringer';
+    st.used.sword = true;
+    await say('dex', pick([`${sw.n}, don't fail me now!`, 'My turn!', 'Hey, ugly! Heads up!']));
+    const ok = await Learn.ask(Learn.make(pick(Learn.forGrade(G.learn.grade, 'math')).id), 'SWORD STRIKE!');
+    const d = Math.max(1, Math.floor(maxHp(foe) * (.1 + .05 * tier) * (ok ? 1 : .5) * (bane ? 2 : 1)));
+    foe.hp = Math.max(0, foe.hp - d); Snd.sfx('crit'); this.flash(false, d, 'GRIT'); Fx.shake = 10; tween(Fx, 'shake', 0, 300);
+    if (ok) st.banner = { t0: performance.now(), txt: bane ? 'BELLBREAKER!' : 'SWORD STRIKE!' };
+    await tween(foe, 'dhp', foe.hp, 350);
+    await bsay(bane ? 'The Bellbreaker rings like thunder. This is what it was made for!' : ok ? `A clean hit with the ${sw.n}!` : 'A glancing blow. The answer was off, so the swing was too.');
+  },
+  async useOnFoe(id) {
+    const st = this.st, foe = st.foes[st.fi], it = ITEMS[id], mh = maxHp(foe); G.bag[id]--;
+    await bsay(`Dex ${it.foe === 'venom' ? 'throws' : 'unrolls'} the ${it.n}!`);
+    let d = 0;
+    if (it.foe === 'venom') { d = Math.floor(mh * .12); foe.status = 'ick'; }
+    if (it.foe === 'bolt') d = Math.floor(mh * .22 * typeMult('SPARK', SPECIES[foe.sp].t));
+    if (it.foe === 'frost') { d = Math.floor(mh * .08); foe.stun = true; }
+    d = Math.max(1, d); foe.hp = Math.max(0, foe.hp - d); Snd.sfx('crit'); this.flash(false, d, it.foe === 'venom' ? 'ROT' : it.foe === 'bolt' ? 'SPARK' : 'GHOST');
+    if (it.foe === 'bolt') { Fx.flash = .7; tween(Fx, 'flash', 0, 300); Snd.sfx('thunder'); }
+    await tween(foe, 'dhp', foe.hp, 350);
+    await bsay(it.foe === 'venom' ? `${cname(foe)} is covered in venom. It has the Icks!` : it.foe === 'bolt' ? 'KRAKOOM! Lightning hammers the foe!' : `${cname(foe)} is frozen solid. It will miss its next turn!`);
   },
   async crew(id) {
     const st = this.st, me = G.party[st.pi], foe = st.foes[st.fi], bond = G.bond[id] || 0;
@@ -182,6 +212,7 @@ const Battle = {
     d *= (SPECIES[u.sp].t === m.t ? 1.5 : 1) * eff * (crit ? 1.5 : 1) * (.85 + Math.random() * .15);
     if (brain === true) d *= 1.3 + .1 * Math.min(5, st.combo);
     if (brain === false) d *= .6;
+    if (isP && G.gear.sword) d *= 1 + .06 * G.gear.sword;
     d = Math.max(1, Math.floor(d));
     t.hp = Math.max(0, t.hp - d);
     Snd.sfx(eff > 1 || brain ? 'crit' : 'hit'); this.flash(!isP, d, m.t);
@@ -218,7 +249,7 @@ const Battle = {
     await bsay('Dex tosses a Critter Snack!');
     if (brain) await bsay('Dex says something really smart and soothing. The critter is impressed!');
     for (let i = 0; i < 3; i++) { await tween(st, 'ey', -18, 120); await tween(st, 'ey', 0, 120); await sleep(180); }
-    const p = sp.rate * (1 - .65 * foe.hp / maxHp(foe)) + (foe.status ? .12 : 0) + (brain ? .25 : 0);
+    const p = sp.rate * (1 - .65 * foe.hp / maxHp(foe)) + (foe.status ? .12 : 0) + (brain ? .25 : 0) + (G.gear.charms.luck ? .2 : 0);
     if (Math.random() < p) {
       Snd.sfx('catch');
       await bsay(`${sp.n} munches happily... and hops over to your side!`);
@@ -235,7 +266,7 @@ const Battle = {
     Snd.sfx('faint'); await Promise.all([tween(st, 'ey', 200, 350), tween(st, 'ea', 0, 350)]);
     await bsay(sp.z ? `${cname(foe)} flops over, snoring.` : `${cname(foe)} is knocked out!`);
     G.seen[foe.sp] = (G.seen[foe.sp] || 0) + 2;
-    const base = Math.floor(sp.xp * foe.lvl / 5 * (1 + .03 * G.badges.length));
+    const base = Math.floor(sp.xp * foe.lvl / 5 * (1 + .03 * G.badges.length) * (G.gear.charms.xp ? 1.25 : 1));
     for (let i = 0; i < G.party.length; i++) {
       const c = G.party[i]; if (c.hp <= 0) continue;
       await this.giveXP(c, st.part.has(i) ? base : Math.floor(base / 2), i === st.pi);
