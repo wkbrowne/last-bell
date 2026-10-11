@@ -663,6 +663,7 @@ const Learn = {
   record(q, ok) {
     const L = G.learn, k = this.sk(q.skill);
     k.n++; L.total++;
+    { const eg = G.eggs && G.eggs.find(x => !x.hatched); if (ok && eg && SKILLS[q.skill]) { if (SKILLS[q.skill].sub === 'math') eg.wm = Math.min(20, eg.wm + 1); else eg.we = Math.min(20, eg.we + 1); } }
     if (ok) { k.r++; L.right++; L.streak++; L.best = Math.max(L.best, L.streak); k.miss = Math.max(0, k.miss - 1); k.cs = (k.cs || 0) + 1; if (!k.m && k.cs >= 4 && k.n >= 5) { k.m = true; k.slip = 0; (L.fresh = L.fresh || []).push(q.skill); } }
     else { k.miss++; L.streak = 0; k.cs = 0; if (k.m) { k.slip = (k.slip || 0) + 1; if (k.slip >= 2) { k.m = false; k.slip = 0; } } }
   },
@@ -804,6 +805,16 @@ const Learn = {
       q.skill = id; if (T.typed && /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) { q.type = 'num'; q.ans = q.choices[q.a]; }
       const ok = await this.ask(q, `${title}   ${i + 1} OF ${T.n}`, T.up);
       if (!ok && ++miss > T.allow) return false;
+    }
+    return true;
+  },
+  // The test a dragon egg sets before it lets itself be picked up: math and English, turn about, one miss allowed.
+  async eggTrial(k) {
+    const g = G.learn.grade, n = [6, 6, 8, 8, 10][k - 1], ma = shuffle(this.forGrade(g, 'math').slice()), en = shuffle(this.forGrade(g, 'ela').slice()); let miss = 0;
+    for (let i = 0; i < n; i++) {
+      const src = i % 2 ? en : ma, sk = src[Math.floor(i / 2) % src.length], q = this.make(sk.id);
+      if (!q.type && !q.partB && sk.sub === 'math' && /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) { q.type = 'num'; q.ans = q.choices[q.a]; }
+      if (!(await this.ask(q, `EGG TRIAL   ${i + 1} OF ${n}`)) && ++miss > 1) return false;
     }
     return true;
   },

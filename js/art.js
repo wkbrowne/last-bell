@@ -104,6 +104,40 @@ const CR = {
   bellringer() { const a = '#45306e', b = '#27183f'; glow(50, 40, 50, '#ff3b30', .22); pol([8, 96, 20, 44, 32, 28, 68, 28, 80, 44, 92, 96], a); pol([38, 96, 44, 50, 56, 50, 62, 96], b); el(16, 62, 9, 15, a, .3); el(84, 62, 9, 15, a, -.3); el(50, 30, 24, 24, a); el(50, 34, 16, 17, '#120a1e', 0, true); glow(43, 32, 10, '#ff3b30', 1); glow(57, 32, 10, '#ff3b30', 1); dot(43, 32, 3.6, '#ff6a5a'); dot(57, 32, 3.6, '#ff6a5a'); pol([30, 14, 30, 0, 38, 8, 44, -2, 50, 8, 56, -2, 62, 8, 70, 0, 70, 14], '#ffcb3d'); ln([16, 70, 16, 78], '#6a4a2a', 3); g.beginPath(); g.moveTo(4, 96); g.quadraticCurveTo(6, 78, 16, 76); g.quadraticCurveTo(26, 78, 28, 96); g.closePath(); g.fillStyle = grad(16, 86, 14, '#ffcb3d'); g.fill(); g.stroke(); dot(16, 96, 3, '#b98c12'); }
 };
 
+const DRCOL = { ember: ['#e8483a', '#8a1f2a', '#ffd23f', '#ff9a3a'], tide: ['#3f9ae8', '#1f4a9c', '#d6f4ff', '#7fe0f0'], storm: ['#8e6be8', '#4a2f9a', '#ffe98a', '#c8b0ff'], whisper: ['#4fc88a', '#1f7a4a', '#eaffd0', '#a8f0c0'], story: ['#3a48b0', '#1a2260', '#ffd0f0', '#b7a4ff'] };
+function dragon(elm, st) {
+  const [a, b, c, w] = DRCOL[elm], k = st - 1, hy = 44 - k * 5, by = 75 - k * 1.5, ws = [15, 30, 42][k], wt = [46, 26, 6][k];
+  if (st === 3) glow(50, 50, 54, w, .4);
+  for (const s of [-1, 1]) {
+    const x0 = 50 + s * 13, x1 = 50 + s * (13 + ws);
+    pol([x0, by - 9, x1, wt, x1 + s * 4, wt + 16 + k * 6, x1 - s * ws * .3, wt + 13 + k * 7, x1 - s * ws * .42, wt + 27 + k * 8, x1 - s * ws * .68, wt + 22 + k * 8, x0, by + 3], w);
+    if (k) { ln([x0, by - 7, x1, wt + 2], b, 2.4); ln([x0, by - 5, x1 - s * ws * .3, wt + 13 + k * 7], b, 2); ln([x0, by - 3, x1 - s * ws * .68, wt + 22 + k * 8], b, 2); }
+    if (elm === 'story') for (let i = 0; i < 2 + k; i++) dot(x1 - s * ws * (.25 + i * .2), wt + 8 + i * 6, 1.8, '#fff7c0');
+  }
+  ln([58, by + 9, 80 + k * 3, by + 12, 89 + k * 3, by - 4 - k * 5], OUT, 9 + k); ln([58, by + 9, 80 + k * 3, by + 12, 89 + k * 3, by - 4 - k * 5], b, 5.5 + k);
+  const tx = 89 + k * 3, tyy = by - 4 - k * 5;
+  if (elm === 'ember') { pol([tx - 6, tyy + 2, tx, tyy - 16, tx + 7, tyy + 2], '#ff8a2a'); pol([tx - 3, tyy + 2, tx, tyy - 8, tx + 3, tyy + 2], '#ffe14a'); } else pol([tx - 7, tyy + 3, tx, tyy - 11, tx + 7, tyy + 3], w);
+  feet(50, 94, 10 + k * 3, b);
+  if (k) for (const s of [-1, 1]) el(50 + s * (17 + k * 4), by + 1, 5, 8, a, s * .4);
+  el(50, by, 15 + k * 4.5, 14 + k * 3.5, a); el(50, by + 3, 8 + k * 3, 9 + k * 2.5, c, 0, true);
+  for (let i = 0; i < 2 + k; i++) arc(50, by - 4 + i * 5, 7 + k * 2.5, .5, 2.64, tint(c, -.25), 1.6);
+  for (const s of [-1, 1]) { pol([50 + s * 9, hy - 13, 50 + s * (15 + k * 3), hy - 28 - k * 6, 50 + s * 17, hy - 9], c); if (st === 3) pol([50 + s * 18, hy - 8, 50 + s * 31, hy - 22, 50 + s * 22, hy - 2], c); }
+  if (k) pol([43, hy - 16, 46, hy - 26, 50, hy - 18, 54, hy - 27, 57, hy - 16], b);
+  if (elm === 'tide') for (const s of [-1, 1]) pol([50 + s * 20, hy - 6, 50 + s * 33, hy - 2, 50 + s * 22, hy + 8], w);
+  if (elm === 'whisper') for (const s of [-1, 1]) pol([50 + s * 20, hy - 4, 50 + s * 34, hy - 14, 50 + s * 24, hy + 6], w);
+  el(50, hy, 23 - k, 20 - k, a); el(50, hy + 9, 13, 8, tint(a, .2), 0, true); dot(46, hy + 7, 1.5, b); dot(54, hy + 7, 1.5, b);
+  if (st === 1) eyes(50, hy - 2, 10, 6.5, { det: 1 }); else if (st === 2) eyes(50, hy - 2, 10, 6.2, { angry: 1, white: '#fff3a8' });
+  else { glow(40, hy - 2, 12, w, .9); glow(60, hy - 2, 12, w, .9); eyes(50, hy - 2, 10, 6, { angry: 1, white: c, iris: b, pup: .45 }); }
+  if (st === 3) mouth(50, hy + 13, 8, 'teeth'); else mouth(50, hy + 13, 5, 'fang');
+  if (elm === 'storm') { glow(50, hy - 22, 12, '#ffe14a', .8); pol([50, hy - 30, 46, hy - 22, 50, hy - 22, 47, hy - 14, 55, hy - 24, 51, hy - 24], '#ffe14a'); }
+  if (elm === 'story') pol([50, hy - 15, 52, hy - 10, 57, hy - 10, 53, hy - 7, 55, hy - 2, 50, hy - 5, 45, hy - 2, 47, hy - 7, 43, hy - 10, 48, hy - 10], '#ffe14a');
+  if (elm === 'ember' && k) { pol([44, hy + 16, 50, hy + 30, 56, hy + 16], '#ff8a2a'); }
+}
+function eggArt(elm) { const [a, b, c, w] = DRCOL[elm];
+  el(50, 88, 38, 9, '#7a5230'); for (const [x, y, x2, y2] of [[16, 86, 40, 92], [84, 86, 60, 92], [24, 92, 76, 84], [30, 82, 70, 90]]) ln([x, y, x2, y2], '#b98a54', 3);
+  glow(50, 54, 46, w, .65); el(50, 54, 22, 30, a);
+  g.save(); g.beginPath(); g.ellipse(50, 54, 21, 29, 0, 0, 6.3); g.clip(); for (const [x, y, r] of [[40, 40, 6], [60, 50, 7], [44, 64, 6], [58, 72, 5], [54, 32, 4]]) { dot(x, y, r, b, .55); arc(x, y, r, 3.3, 6, c, 1.6); } g.restore(); shine(41, 40, 5, 9); }
+for (const elm in DRCOL) [1, 2, 3].forEach(st => { CR[elm + st] = () => dragon(elm, st); });
 // ------------------------------------------------------------ people & zombies (chibi kit)
 const HUM = {
   dex: { skin: '#a86b42', hair: '#1c1410', style: 'cap', spiky: 1, cap: '#e5483d', jacket: '#2b3a67', shirt: '#f6b93b', emblem: 1, pants: '#3a3f52', shoes: '#e5483d', scarf: '#e5483d', pack: '#6a5238', gloves: '#22202c', eye: '#5a3a1e' },
@@ -262,6 +296,7 @@ function stall(col, icon) {
   for (let x = 5; x < 100; x += 10) { g.beginPath(); g.arc(x, 46, 5, 0, Math.PI); g.fillStyle = col; g.fill(); g.stroke(); }
   el(50, 22, 17, 17, '#2a1f38', 0, true); icon();
 }
+for (const elm in DRCOL) OB['egg_' + elm] = () => eggArt(elm);
 // tall map props, authored in a w x h unit box anchored at bottom-centre
 const shadow = (x, y, rx, ry) => { g.save(); g.globalAlpha = .22; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 6.3); g.fillStyle = '#000'; g.fill(); g.restore(); };
 const PROPS = {

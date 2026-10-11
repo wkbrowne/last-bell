@@ -335,6 +335,7 @@ const Story = {
     Fx.flash = 1; await tween(Fx, 'flash', 0, 900);
     await say('bell', 'SO... MUCH... THINKING...'); await say(null, 'The great bell cracks down the middle. The sound that comes out is tiny. Ding.');
     await say(null, 'Outside, all across Wexler Falls, a thousand zombies stop walking. One by one, they sit down and fall asleep.');
+    await say(null, 'And far beneath the manor, in the dark where the Bell used to reach, something warm rolls over. The eggs are waking up.');
     await badge('bell'); healAll();
     await say('priya', "The ferry can dock now. Dex... let's go meet your mom.");
     setObj('Go to the pier at Wexler Harbor (south of the hospital) and sound the horn.');
@@ -401,6 +402,13 @@ E({ map: 'world', x: 38, y: 72, spr: 'clanker', act: () => nightShop('forge') })
 E({ map: 'world', x: 41, y: 72, spr: 'newt', act: () => nightShop('brew') });
 E({ map: 'world', x: 44, y: 72, spr: 'flicker', act: () => nightShop('magic') });
 camp('world', 41, 75);
+// dragon eggs: one where each of the big bosses stood guard
+const eggE = (map, x, y, elm, need, cold) => E({ map, x, y, spr: 'egg_' + elm, if: () => !G.eggs.some(g => g.el === elm), act: () => eggNest(elm, need, cold) });
+eggE('school', 30, 4, 'ember', 'coach', 'A strange warm egg sits on the shelf. It trembles every time a whistle blows in the gym. It will not let you near while Coach Krunk is still stomping around.');
+eggE('mall', 16, 15, 'tide', 'cop', 'Something round and blue glows at the bottom of the fountain. Every time the scooter squeaks past upstairs, it sinks deeper. Deal with Officer Scoot first.');
+eggE('world', 114, 86, 'storm', 'krush', 'A crackling egg is wedged under a pile of scrap. Sparks jump off it. The big crusher keeps glaring at you. Better calm it down first.');
+eggE('world', 50, 9, 'whisper', 'broadcast', 'A pale green egg rests on the crypt steps. You can hear it whispering, but the words slide away. It is waiting for something. A voice on the air, maybe.');
+eggE('manor', 5, 27, 'story', 'butler', 'An egg the color of the night sky sits among the oldest books. The Butler would never let you touch it.');
 // school
 E({ map: 'school', x: 23, y: 9, spr: 'barricade', if: () => !flag('coach'), act: () => Story.labDoor() });
 E({ map: 'school', x: 28, y: 17, spr: 'coach', if: () => !flag('coach'), act: () => Story.coach() });

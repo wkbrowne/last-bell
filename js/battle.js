@@ -213,6 +213,7 @@ const Battle = {
     if (brain === true) d *= 1.3 + .1 * Math.min(5, st.combo);
     if (brain === false) d *= .6;
     if (isP && G.gear.sword) d *= 1 + .06 * G.gear.sword;
+    if (isP && m.t === 'DRAGON' && brain === true) d *= 1 + .08 * Math.min(5, st.combo);
     d = Math.max(1, Math.floor(d));
     t.hp = Math.max(0, t.hp - d);
     Snd.sfx(eff > 1 || brain ? 'crit' : 'hit'); this.flash(!isP, d, m.t);

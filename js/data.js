@@ -71,6 +71,33 @@ const MOVES = {
 };
 
 // b: [hp, atk, def, spd]; ls: learnset; evo: [level, into]; rate: befriend chance; xp: yield
+// Dragons: a seventh type with its own magic. Nothing is strong against a dragon except another dragon.
+TYPES.DRAGON = { col: '#ff9a4a', beats: ['ROT', 'GHOST', 'GRIT'], weak: ['DRAGON'] };
+Object.assign(MOVES, {
+  drbite: { n: 'Dragon Bite', t: 'DRAGON', p: 55, d: 'A bite with a spark of old magic in it.' },
+  cinder: { n: 'Cinder Breath', t: 'DRAGON', p: 65, fDef: -1, ch: 30, d: 'A cone of embers. May melt the foe\'s DEF.' },
+  kindle: { n: 'Kindle', t: 'DRAGON', p: 0, sAtk: 1, d: 'Stokes the inner fire. Raises ATK.' },
+  inferno: { n: 'Inferno Spell', t: 'DRAGON', p: 100, acc: 90, recoil: .1, d: 'A roaring pillar of dragonfire. Singes you a little too.' },
+  riptide: { n: 'Riptide Spell', t: 'DRAGON', p: 70, fAtk: -1, ch: 40, d: 'A crashing wave. May wash away the foe\'s ATK.' },
+  tidalhymn: { n: 'Tidal Hymn', t: 'DRAGON', p: 0, heal: .4, d: 'An old sea-song. Heals 40%.' },
+  frostnova: { n: 'Frost Nova', t: 'DRAGON', p: 90, acc: 90, stun: 30, d: 'A burst of ice. May freeze the foe for a turn.' },
+  thunderrune: { n: 'Thunder Rune', t: 'DRAGON', p: 70, stun: 25, d: 'A glowing rune that cracks like thunder. May stun.' },
+  stormcall: { n: 'Storm Call', t: 'DRAGON', p: 0, sAtk: 1, d: 'Calls the storm closer. Raises ATK.' },
+  skysplit: { n: 'Sky Splitter', t: 'DRAGON', p: 110, acc: 85, d: 'Lightning straight from the clouds. Can miss.' },
+  wordpower: { n: 'Word of Power', t: 'DRAGON', p: 60, pri: 1, d: 'One perfect word. Always strikes first.' },
+  spellbind: { n: 'Spellbind', t: 'DRAGON', p: 50, stun: 50, d: 'Ties the foe up in a sentence it cannot finish. Often stuns.' },
+  runicroar: { n: 'Runic Roar', t: 'DRAGON', p: 95, fDef: -1, ch: 30, d: 'A roar written in glowing letters.' },
+  starfall: { n: 'Starfall', t: 'DRAGON', p: 80, drain: .3, d: 'Falling stars. Heals you for some of the damage.' },
+  moonward: { n: 'Moon Ward', t: 'DRAGON', p: 0, heal: .5, d: 'A circle of moonlight. Heals 50%.' },
+  supernova: { n: 'Supernova', t: 'DRAGON', p: 120, acc: 80, recoil: .15, d: 'The biggest spell there is. It costs a little.' }
+});
+const DRAGONS = {
+  ember: { egg: 'Ember Egg', n: ['Cinderling', 'Blazewing', 'Infernox'], d: 'Fire magic. Hatched from an egg that was never cold.', ls: [[1, 'drbite'], [1, 'cinder'], [14, 'kindle'], [24, 'inferno']] },
+  tide: { egg: 'Tide Egg', n: ['Driplet', 'Tidewing', 'Maelstrom'], d: 'Water and ice magic. Sings when it rains.', ls: [[1, 'drbite'], [1, 'riptide'], [14, 'tidalhymn'], [24, 'frostnova']] },
+  storm: { egg: 'Storm Egg', n: ['Sparkscale', 'Stormwing', 'Thunderlord'], d: 'Lightning magic. The storm follows it around.', ls: [[1, 'drbite'], [1, 'thunderrune'], [14, 'stormcall'], [24, 'skysplit']] },
+  whisper: { egg: 'Whisper Egg', n: ['Murmur', 'Galewing', 'Wordwyrm'], d: 'Word magic. Its spells are made of sentences.', ls: [[1, 'drbite'], [1, 'wordpower'], [14, 'spellbind'], [24, 'runicroar']] },
+  story: { egg: 'Story Egg', n: ['Starlet', 'Dreamwing', 'Mythos'], d: 'Star magic. It is older than the town.', ls: [[1, 'drbite'], [1, 'starfall'], [14, 'moonward'], [24, 'supernova']] }
+};
 const SPECIES = {
   scrapup: { n: 'Scrapup', t: 'GRIT', b: [45, 50, 55, 40], evo: [16, 'junkhound'], rate: .5, xp: 62, desc: 'A junkyard pup made of spare parts. Loyal. Squeaky.',
     ls: [[1, 'tackle'], [5, 'rustbite'], [8, 'guardup'], [12, 'bite'], [15, 'scraptoss'], [23, 'ironslam'], [30, 'crush']] },
@@ -117,6 +144,7 @@ const SPECIES = {
   flatline: { n: 'Dr. Flatline', t: 'ROT', z: 1, b: [95, 88, 75, 65], xp: 200, scale: 1.2, ls: [[1, 'scalpel'], [1, 'malpractice'], [1, 'flatliner'], [1, 'moan']] },
   bellringer: { n: 'The Bellringer', t: 'GHOST', z: 1, b: [120, 98, 90, 70], xp: 300, scale: 1.4, ls: [[1, 'toll'], [1, 'deadring'], [1, 'knell'], [1, 'nightmare']] }
 };
+for (const el in DRAGONS) [1, 2, 3].forEach(st => { SPECIES[el + st] = { n: DRAGONS[el].n[st - 1], t: 'DRAGON', b: [[70, 72, 66, 68], [90, 95, 85, 85], [115, 120, 105, 100]][st - 1], rate: 0, xp: 250, dragon: el, stage: st, scale: [1, 1.15, 1.35][st - 1], desc: DRAGONS[el].d, ls: DRAGONS[el].ls }; });
 for (const id in SPECIES) { const s = SPECIES[id]; s.id = id; if (s.evo) { const e = SPECIES[s.evo[1]]; if (!e.ls) e.ls = s.ls; } }
 
 const ITEMS = {
@@ -179,6 +207,10 @@ const BADGES = {
   blade: ['Armed and Brainy', 'Earned your first sword at the Night Market.'],
   bellbreaker: ['Bellbreaker', 'Earned the legendary blade.'],
   shopper: ['Market Regular', 'Won 15 Night Market challenges.'],
+  egg: ['Egg Keeper', 'Passed an Egg Trial and won a dragon egg.'],
+  hatch: ['Dragon Hatcher', 'Hatched a dragon with math AND English.'],
+  rider: ['Dragon Rider', 'Flew on dragonback.'],
+  clutch: ['Keeper of the Clutch', 'Hatched all five dragons.'],
   comics: ['Collector', 'Found all 8 Captain Cosmos comics.']
 };
 const BRAIN_RANKS = [[0, 'Zombie Bait'], [10, 'Rookie'], [25, 'Sidekick'], [50, 'Brainiac'], [90, 'Mastermind'], [140, 'Mega Mind'], [200, 'Galaxy Brain'], [300, 'LEGEND']];
