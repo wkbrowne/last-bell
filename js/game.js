@@ -623,9 +623,78 @@ function sceneBg(dim) {
   drawRain(t * 1000, 150, .32, 330); drawStorm(t * 1000, 400, 4000, 9000);
   if (dim) { ctx.fillStyle = `rgba(8,4,22,${dim})`; ctx.fillRect(0, 0, W, H); }
 }
+// The title-screen dragon: a big side-on fire dragon sweeping across the sky, drawn and animated by hand.
+function titleDragon(t) {
+  const flap = Math.sin(t * 3.1), bob = Math.sin(t * 1.5) * 10, N = 48, P = [];
+  for (let i = 0; i <= N; i++) {
+    const u = i / N;
+    const x = 912 - u * 610 + Math.sin(u * 3.1) * 10;
+    const y = 308 + bob + Math.sin(u * 6.2 - t * 2.2) * 30 * (1 - u * .6) + (u > .7 ? Math.pow((u - .7) / .3, 1.4) * 78 : 0) - (u < .28 ? (.28 - u) * 190 : 0);
+    const r = (u < .5 ? 5 + Math.pow(u / .5, .8) * 33 : u < .76 ? 38 - (u - .5) / .26 * 15 : 23 - (u - .76) / .24 * 2) * 1.32;
+    P.push([x, y, r]);
+  }
+  const circ = (x, y, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.3); ctx.fill(); };
+  const poly = (pts, fill, stroke, lw) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 3; ctx.stroke(); } };
+  const OUTL = '#16040e';
+  ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const wing = (sx, sy, sc, ph, mem, bone, edge) => {
+    const f = Math.sin(t * 3.1 + ph);
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(-.12 + f * .1); ctx.scale(sc, sc * (.8 + f * .28));
+    const W0 = [45, -118], tips = [[-64, -246], [96, -262], [214, -176], [262, -52]];
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W0[0], W0[1]); ctx.lineTo(tips[0][0], tips[0][1]);
+    for (let i = 1; i < tips.length; i++) ctx.quadraticCurveTo((tips[i - 1][0] + tips[i][0]) / 2 * .72 + W0[0] * .28, (tips[i - 1][1] + tips[i][1]) / 2 * .72 + W0[1] * .28, tips[i][0], tips[i][1]);
+    ctx.quadraticCurveTo(190, 2, 150, 22); ctx.closePath();
+    const g = ctx.createLinearGradient(0, -260, 120, 20); g.addColorStop(0, mem[0]); g.addColorStop(1, mem[1]); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = edge; ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = bone; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W0[0], W0[1]); ctx.stroke();
+    ctx.lineWidth = 5.5; for (const tp of tips) { ctx.beginPath(); ctx.moveTo(W0[0], W0[1]); ctx.lineTo(tp[0], tp[1]); ctx.stroke(); }
+    poly([W0[0] - 6, W0[1] + 4, W0[0] - 2, W0[1] - 26, W0[0] + 8, W0[1] - 2], '#f2d9a0', edge, 2.5);
+    ctx.restore();
+  };
+  const S = P[Math.round(N * .5)];
+  wing(S[0] - 120, S[1] - S[2] * .4, 1.12, 1.1, ['#7a1622', '#3a0812'], '#3a0812', OUTL);         // far wing
+  { const T = P[0], T2 = P[2], a = Math.atan2(T[1] - T2[1], T[0] - T2[0]); ctx.save(); ctx.translate(T[0], T[1]); ctx.rotate(a); poly([-4, -4, 34, -20, 22, 0, 34, 20, -4, 4], '#c8323a', OUTL, 4); ctx.restore(); }   // tail spade
+  for (const [x, y, r] of P) circ(x, y, r + 4.5, OUTL);
+  for (let i = 5; i < N - 6; i += 2) {                                                              // back spikes
+    const a = P[i - 1], b = P[i + 1], c = P[i], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = dy / l, ny = -dx / l, s = nx * 0 + ny < 0 ? 1 : -1;
+    const h = c[2] * .75 + 6; poly([c[0] - dx / l * 9 + nx * s * c[2] * .8, c[1] - dy / l * 9 + ny * s * c[2] * .8, c[0] + nx * s * (c[2] + h) + 8, c[1] + ny * s * (c[2] + h), c[0] + dx / l * 9 + nx * s * c[2] * .8, c[1] + dy / l * 9 + ny * s * c[2] * .8], '#f2d9a0', OUTL, 3);
+  }
+  for (const [x, y, r] of P) circ(x, y, r, '#a3202e');
+  for (let i = 0; i <= N; i++) { const [x, y, r] = P[i], u = i / N; if (u > .14 && u < .95) circ(x + 2, y + r * .46, r * .58, '#f0a83a'); }
+  for (let i = 8; i < N - 2; i += 3) { const [x, y, r] = P[i]; ctx.strokeStyle = 'rgba(150,80,10,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + 2, y + r * .46, r * .56, .5, 2.6); ctx.stroke(); }
+  for (const [x, y, r] of P) circ(x - r * .15, y - r * .42, r * .42, 'rgba(255,130,110,.28)');
+  for (const u of [.42, .6]) { const L = P[Math.round(N * u)], k = Math.sin(t * 2 + u * 9) * 5;                 // legs and claws
+    ctx.strokeStyle = OUTL; ctx.lineWidth = 26; ctx.beginPath(); ctx.moveTo(L[0], L[1] + L[2] * .5); ctx.lineTo(L[0] - 12, L[1] + L[2] + 20 + k); ctx.stroke();
+    ctx.strokeStyle = '#8a1a26'; ctx.lineWidth = 18; ctx.stroke();
+    for (const c of [-10, 0, 10]) poly([L[0] - 16 + c, L[1] + L[2] + 20 + k, L[0] - 24 + c * 1.4, L[1] + L[2] + 38 + k, L[0] - 8 + c, L[1] + L[2] + 24 + k], '#f2d9a0', OUTL, 2); }
+  wing(S[0] + 16, S[1] - S[2] * .7, 1.3, 0, ['#e03c44', '#7a1622'], '#5a0f1a', OUTL);              // near wing
+  // head
+  const H = P[N], Hb = P[N - 4], a2 = Math.atan2(H[1] - Hb[1], -(H[0] - Hb[0])), jaw = .34 + Math.sin(t * 1.8) * .1, breathing = Math.sin(t * .8) > -.35;
+  ctx.save(); ctx.translate(H[0], H[1]); ctx.scale(-1.55, 1.55); ctx.rotate(a2);
+  poly([-6, -12, -70, -46, -58, -34, -16, -2], '#f2d9a0', OUTL, 3.5); poly([-8, -2, -62, -14, -50, -6, -10, 8], '#e0c488', OUTL, 3.5);
+  ctx.save(); ctx.translate(12, 8); ctx.rotate(jaw); poly([-4, -2, 54, 0, 62, 6, 50, 13, -6, 12], '#8a1a26', OUTL, 4); for (let x = 10; x < 52; x += 10) poly([x, 0, x + 4, -9, x + 8, 0], '#fffbe6', OUTL, 1.5); ctx.restore();
+  ctx.fillStyle = OUTL; ctx.beginPath(); ctx.ellipse(8, 0, 30, 21, 0, 0, 6.3); ctx.fill(); circ(8, 0, 24, '#a3202e'); ctx.fillStyle = '#a3202e'; ctx.beginPath(); ctx.ellipse(8, 0, 26, 17, 0, 0, 6.3); ctx.fill();
+  poly([14, -15, 70, -9, 80, -1, 72, 7, 16, 9], '#a3202e', OUTL, 4); ctx.fillStyle = '#a3202e'; ctx.fillRect(10, -11, 16, 18);
+  for (let x = 28; x < 70; x += 10) poly([x, 7, x + 4, 16, x + 8, 7], '#fffbe6', OUTL, 1.5);
+  circ(68, -3, 2.6, OUTL); poly([6, -17, 24, -24, 30, -13], '#7a1622', OUTL, 3);
+  const eg = ctx.createRadialGradient(22, -5, 1, 22, -5, 26); eg.addColorStop(0, 'rgba(255,240,120,.95)'); eg.addColorStop(1, 'rgba(255,200,60,0)'); ctx.fillStyle = eg; ctx.fillRect(-6, -32, 56, 54);
+  ctx.fillStyle = '#ffe14a'; ctx.beginPath(); ctx.ellipse(22, -5, 8, 5.5, -.2, 0, 6.3); ctx.fill(); ctx.strokeStyle = OUTL; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fillStyle = OUTL; ctx.beginPath(); ctx.ellipse(23, -5, 2, 5, -.2, 0, 6.3); ctx.fill();
+  ctx.restore();
+  // fire breath (or smoke between breaths)
+  const ca = Math.cos(a2), sa = Math.sin(a2), mx = H[0] - (ca * 74 - sa * 6) * 1.55, my = H[1] + (sa * 74 + ca * 6) * 1.55, fx = -ca, fy = sa + .12;
+  ctx.globalCompositeOperation = breathing ? 'lighter' : 'source-over';
+  for (let i = 0; i < 64; i++) {
+    const p = (t * 1.5 + i / 64) % 1, hsh = Math.sin(i * 91.7) * .5, d = p * (breathing ? 360 : 90), sp = hsh * p * (breathing ? 170 : 40);
+    const x = mx + fx * d - fy * sp, y = my + fy * d + fx * sp + (breathing ? 0 : -p * 50), r = (breathing ? 9 : 5) + p * (breathing ? 38 : 16);
+    ctx.globalAlpha = (1 - p) * (breathing ? .5 : .22);
+    circ(x, y, r, breathing ? (p < .22 ? '#fff7c0' : p < .55 ? '#ffb03a' : '#e8483a') : '#8a8498');
+  }
+  if (breathing) { ctx.globalAlpha = .5 + .15 * Math.sin(t * 20); const gx = mx + fx * 330, gy = my + fy * 330, gg = ctx.createRadialGradient(gx, gy, 10, gx, gy, 220); gg.addColorStop(0, 'rgba(255,150,50,.55)'); gg.addColorStop(1, 'rgba(255,150,50,0)'); ctx.fillStyle = gg; ctx.fillRect(gx - 220, gy - 220, 440, 440); }
+  ctx.restore();
+}
 function titleDraw() {
   const t = performance.now() / 1000;
   sceneBg(0);
+  titleDragon(t);
   const put = (im, x, y, s, bob) => { ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(x, y - 2, s * .28, s * .08, 0, 0, 6.3); ctx.fill(); ctx.drawImage(im, x - s / 2, y - s * .945 + (bob || 0), s, s); };
   put(Art.sprite('nest'), 640, 560, 300);
   put(Art.sprite('shambler'), 880 + Math.sin(t * .8) * 14, 640, 150, Math.sin(t * 2) * 3);
@@ -645,7 +714,7 @@ function titleDraw() {
     const fall = (t * 120 + i * 97) % 420; if (i % 3 === 0 && fall < 300) { ctx.globalAlpha = 1 - fall / 300; ctx.beginPath(); ctx.ellipse(x + 4.5, ty + 110 + len + fall, 4, 6.5, 0, 0, 6.3); ctx.fill(); ctx.globalAlpha = 1; }
   }
   setFont(20, true); text('A ZOMBIE QUEST FOR BIG BRAINS', W / 2, ty + 142, '#c8ffb8', 'center');
-  if (PL.titleWait) { ctx.globalAlpha = .6 + .4 * Math.sin(t * 5); setFont(20, true); text('TAP  OR  PRESS  Z', W / 2, ty + 186, '#ffffff', 'center'); ctx.globalAlpha = 1; }
+  if (PL.titleWait) { rbox(W / 2 - 170, 676, 340, 38, 19, 'rgba(26,14,58,.8)', '#f2c14e', 2.5); ctx.globalAlpha = .6 + .4 * Math.sin(t * 5); setFont(17, true); text('TAP  OR  PRESS  Z', W / 2, 683, '#ffffff', 'center'); ctx.globalAlpha = 1; }
 }
 
 async function titleFlow() {
