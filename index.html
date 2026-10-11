@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LAST BELL — A Zombie Quest</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lilita+One&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #07060c; overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+  body { display: flex; align-items: center; justify-content: center; }
+  #wrap { position: relative; width: min(100vw, 133.333vh); height: min(75vw, 100vh); }
+  canvas { width: 100%; height: 100%; display: block; background: #000; touch-action: none; }
+  #touch { position: absolute; inset: 0; pointer-events: none; display: none; }
+  #touch.on { display: block; }
+  #touch > div { position: absolute; pointer-events: auto; touch-action: none; }
+  #dpad { left: 2.5%; bottom: 4%; width: 24%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.10) 0 22%, rgba(20,16,36,.55) 23% 100%);
+    border: 2px solid rgba(201,162,74,.7); }
+  #dpad::before { content: '▲\A◀　▶\A▼'; white-space: pre; position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center; text-align: center; color: rgba(255,235,180,.8);
+    font: 3.2vmin/1.9 sans-serif; pointer-events: none; }
+  .btn { width: 11.5%; aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font: bold 3.6vmin sans-serif; color: #fff3cf; border: 2px solid rgba(201,162,74,.8); }
+  #bA { right: 3%; bottom: 13%; background: rgba(60,150,80,.6); }
+  #bB { right: 16%; bottom: 4%; background: rgba(150,60,70,.55); }
+  #bM { right: 2%; top: 2%; width: 8%; background: rgba(20,16,36,.6); font-size: 3vmin; }
+  .btn.down, #dpad.down { filter: brightness(1.6); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="720"></canvas>
+  <div id="touch">
+    <div id="dpad"></div>
+    <div id="bB" class="btn">RUN</div>
+    <div id="bA" class="btn">A</div>
+    <div id="bM" class="btn">☰</div>
+  </div>
+</div>
+<script src="js/engine.js?v=18"></script>
+<script src="js/snd.js?v=18"></script>
+<script src="js/art.js?v=18"></script>
+<script src="js/data.js?v=18"></script>
+<script src="js/learn.js?v=18"></script>
+<script src="js/world.js?v=18"></script>
+<script src="js/battle.js?v=18"></script>
+<script src="js/story.js?v=18"></script>
+<script src="js/game.js?v=18"></script>
+</body>
+</html>
