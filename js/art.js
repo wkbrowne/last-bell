@@ -116,6 +116,14 @@ const HUM = {
   mallcop: { z: 1, skin: '#84b08a', hair: '#33303a', style: 'cop', cap: '#27325c', shirt: '#42558c', pants: '#2c3660', shoes: '#111118', wide: 36, prop: 'scooter' },
   flatline: { z: 1, skin: '#84b08a', hair: '#3a3038', style: 'mess', shirt: '#f5f5fa', pants: '#5a6a80', shoes: '#111118', coat: 1, prop: 'mirror' }
 };
+// Pretenders: six ordinary-looking grown-ups (w0..w5) and what they really are (w0z..w5z).
+[{ skin: '#f0c8a0', hair: '#6a4a2a', style: 'slick', shirt: '#5a8ad0', pants: '#3a3f52', shoes: '#22202c' },
+ { skin: '#c98d5e', hair: '#1c1410', style: 'long', shirt: '#e07aa0', pants: '#4a4a6a', shoes: '#f4f4f4' },
+ { skin: '#8a5a3c', hair: '#1c1410', style: 'buzz', shirt: '#f0f0f0', pants: '#2f4a7a', shoes: '#22202c', stripe: '#d6453a' },
+ { skin: '#f4d8b8', hair: '#c9c9d6', style: 'bun', shirt: '#8fd0a0', pants: '#6a5a4a', shoes: '#ffffff' },
+ { skin: '#d79a68', hair: '#3a2a1a', style: 'mess', shirt: '#f6b93b', pants: '#3a3f52', shoes: '#e5483d' },
+ { skin: '#f0c8a0', hair: '#e0b24f', style: 'long', shirt: '#7a5fd0', pants: '#22262e', shoes: '#f4f4f4' }
+].forEach((c, i) => { HUM['w' + i] = Object.assign({ grin: 1, eye: '#3a2a1a' }, c); HUM['w' + i + 'z'] = Object.assign({}, c, { z: 1, skin: '#84b08a' }); });
 function hair(c, dir, y, back) {
   const s = c.style, h = c.hair, sd = dir === 'left' ? -1 : dir === 'right' ? 1 : 0, bs = sd || -1;
   if (back) {
@@ -198,8 +206,8 @@ function human(c, dir, frame) {
         ln([fx - 3.5, HY + 15.5, fx - 3.5, HY + 19], '#a0101e', 2);
         ln([fx - 12, HY - 8, fx - 5, HY - 6], tint(c.skin, -.35), 1.8); ln([fx - 9.5, HY - 10, fx - 8.5, HY - 5], tint(c.skin, -.35), 1.4); dot(fx + 10, HY + 8, 2.8, tint(c.skin, -.35), .7);
       } else {
-        for (const s of [-1, 1]) { const ex = fx + s * es; g.save(); g.lineWidth = 2; el(ex, HY + 2.5, 4.3, 4.5, '#ffffff', 0, true); g.restore(); dot(ex + sd * 1.2, HY + 3, 3, c.eye || '#3a2a1a'); dot(ex + sd * 1.2, HY + 3, 1.5, '#15101c'); dot(ex - 1.1 + sd, HY + 1.4, 1.1, '#ffffff'); ln([ex + s * 5.8, HY - 3.8, ex - s * 4.6, HY - 1.2], OUT, 2.8); }
-        arc(fx + 1.5, HY + 7.6, 4.2, .5, 2.2, OUT, 2.4); ln([fx + 5.2, HY + 9.4, fx + 6.6, HY + 7.6], OUT, 2.2);
+        for (const s of [-1, 1]) { const ex = fx + s * es; g.save(); g.lineWidth = 2; el(ex, HY + 2.5, 4.3, 4.5, '#ffffff', 0, true); g.restore(); dot(ex + sd * 1.2, HY + 3, 3, c.eye || '#3a2a1a'); dot(ex + sd * 1.2, HY + 3, 1.5, '#15101c'); dot(ex - 1.1 + sd, HY + 1.4, 1.1, '#ffffff'); if (!c.grin) ln([ex + s * 5.8, HY - 3.8, ex - s * 4.6, HY - 1.2], OUT, 2.8); }
+        if (c.grin) mouth(fx, HY + 9.6, 6.4, 'teeth'); else { arc(fx + 1.5, HY + 7.6, 4.2, .5, 2.2, OUT, 2.4); ln([fx + 5.2, HY + 9.4, fx + 6.6, HY + 7.6], OUT, 2.2); }
         if (c.eyeblack) for (const s of [-1, 1]) ln([fx + s * es - 3.4, HY + 8.2, fx + s * es + 3.4, HY + 8.2], '#22202c', 2.6);
         if (c.bandage) { g.save(); g.lineWidth = 1.4; g.translate(fx, HY + 5.4); g.rotate(-.2); rr(-5, -1.8, 10, 3.6, 1.6, '#fff3e0', true); g.restore(); }
       }

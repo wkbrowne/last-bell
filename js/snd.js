@@ -154,13 +154,15 @@ const Snd = {
         setInterval(() => this.tick(), 40);
       } catch (e) { console.warn('no audio', e); }
     }
-    if (this.ac && this.ac.state === 'suspended') this.ac.resume();
+    if (this.ac && this.ac.state === 'suspended' && !this.hidden) this.ac.resume();
     if (this.ac && this.pending) { const p = this.pending; this.pending = null; this.curName = null; this.play(p); }
   },
   setRain(level, muffled) {
     const k = level + (muffled ? 'm' : ''); if (!this.rainG || this.rainK === k) return; this.rainK = k;
     const t = this.ac.currentTime; this.rainG.gain.setTargetAtTime(level * .085, t, .4); this.rainF.frequency.setTargetAtTime(muffled ? 480 : 5200, t, .4);
   },
+  // Silence everything while the app or tab is in the background.
+  hide(h) { this.hidden = h; if (!this.ac) return; if (h) this.ac.suspend(); else this.ac.resume(); },
   toggleMute() { this.muted = !this.muted; if (this.master) this.master.gain.value = this.muted ? 0 : .7; return this.muted; },
   play(name) {
     if (this.curName === name) return;
@@ -261,3 +263,7 @@ const Snd = {
     }
   }
 };
+
+document.addEventListener('visibilitychange', () => Snd.hide(document.hidden));
+addEventListener('pagehide', () => Snd.hide(true));
+addEventListener('pageshow', () => Snd.hide(document.hidden));

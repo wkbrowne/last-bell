@@ -12,6 +12,7 @@ const Battle = {
       fi: 0, pi: G.party.findIndex(c => c.hp > 0), ex: 500, px: -500, ey: 0, py: 0, ea: 1, pa: 1, ef: 0, pf: 0,
       used: {}, block: false, scan: false, combo: 0, msg: '', part: new Set(), parts: [], splats: [], banner: null
     };
+    if (o.look) st.foes[0].look = o.look;
     if (st.pi < 0) return 'lose';
     for (const c of G.party.concat(st.foes)) { c.st = { atk: 0, def: 0 }; c.stun = false; c.dhp = c.hp; }
     st.part.add(st.pi);
@@ -308,7 +309,7 @@ const Battle = {
     const drawC = (c, x, y, size, a, fl) => {
       const br = 1 + Math.sin(now / 430 + x) * .03, hit = fl > 0 ? Math.sin(fl * 40) * fl * 12 : 0;
       ctx.globalAlpha = a * .3; ctx.fillStyle = '#0a041e'; ctx.beginPath(); ctx.ellipse(x, y - 4, size * .3, size * .07, 0, 0, 6.3); ctx.fill();
-      ctx.globalAlpha = a; ctx.drawImage(Art.sprite(c.sp, fl > .55), x - size / 2 + sh + hit, y - size * .945 * br, size, size * br); ctx.globalAlpha = 1;
+      ctx.globalAlpha = a; ctx.drawImage(Art.sprite(c.look || c.sp, fl > .55), x - size / 2 + sh + hit, y - size * .945 * br, size, size * br); ctx.globalAlpha = 1;
     };
     if (SPECIES[foe.sp].z && st.ea > 0) { const pu = .5 + .2 * Math.sin(now / 300), q = ctx.createRadialGradient(700 + st.ex, 250, 10, 700 + st.ex, 250, 230); q.addColorStop(0, `rgba(170,255,110,${.34 * pu * st.ea})`); q.addColorStop(1, 'rgba(170,255,110,0)'); ctx.fillStyle = q; ctx.fillRect(470 + st.ex, 20, 460, 460); }
     drawC(foe, 700 + st.ex, 290 + st.ey, 250 * (SPECIES[foe.sp].scale || 1), st.ea, st.ef);

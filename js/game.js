@@ -62,7 +62,62 @@ const entAt = (map, x, y) => ENT.find(e => e.map === map && e.x === x && e.y ===
 function passable(x, y) {
   const m = MAPS[G.map].m; if (x < 0 || y < 0 || x >= m.w || y >= m.h) return false;
   if (TINFO[m.t[y][x]].s) return false;
+  if (G.map === 'world' && wandAt(x, y)) return false;
   const e = entAt(G.map, x, y); return !(e && e.solid);
+}
+// ---- Pretenders: townsfolk who stroll around looking perfectly normal... until you get close.
+const WAND = [];
+const wandAt = (x, y) => WAND.find(w => w.state !== 'gone' && ((w.x === x && w.y === y) || (w.moving && w.tx === x && w.ty === y)));
+function wandCan(x, y) {
+  const m = MAPS.world.m; if (x < 1 || y < 1 || x >= m.w - 1 || y >= m.h - 1) return false;
+  const inf = TINFO[m.t[y][x]]; if (inf.s) return false;
+  if (entAt('world', x, y) || wandAt(x, y) || (x === G.x && y === G.y) || (PL.moving && x === PL.tx && y === PL.ty)) return false;
+  return zoneAt('world', x, y).id !== 'maple';
+}
+function spawnWanderer() {
+  if (G.map !== 'world' || !flag('starter') || WAND.length >= 4) return;
+  for (let i = 0; i < 14; i++) {
+    const a = Math.random() * 6.3, d = 8 + Math.random() * 4, x = Math.round(G.x + Math.cos(a) * d * 1.2), y = Math.round(G.y + Math.sin(a) * d * .9);
+    if (!wandCan(x, y) || TINFO[MAPS.world.m.t[y][x]].enc) continue;
+    WAND.push({ x, y, px: x * 16, py: y * 16, dir: pick(DIRKEYS), moving: false, t: 0, wait: 400, look: rint(0, 5), state: 'walk', step: 0 }); return;
+  }
+}
+function wandUpdate(dt) {
+  if (G.map !== 'world') { WAND.length = 0; return; }
+  if (Script.n > 0 || Battle.on || UI.busy) return;
+  for (const w of WAND) {
+    if (w.state !== 'walk') continue;
+    if (w.moving) {
+      w.t += dt / 300;
+      if (w.t >= 1) { w.moving = false; w.x = w.tx; w.y = w.ty; w.px = w.x * 16; w.py = w.y * 16; w.wait = Math.random() < .6 ? 0 : 300 + Math.random() * 1600; }
+      else { w.px = (w.fx + (w.tx - w.fx) * w.t) * 16; w.py = (w.fy + (w.ty - w.fy) * w.t) * 16; }
+    } else if ((w.wait -= dt) <= 0) {
+      const d = Math.random() < .65 ? w.dir : pick(DIRKEYS), nx = w.x + DV[d][0], ny = w.y + DV[d][1]; w.dir = d;
+      if (wandCan(nx, ny)) { w.moving = true; w.t = 0; w.fx = w.x; w.fy = w.y; w.tx = nx; w.ty = ny; w.step++; } else w.wait = 250;
+    }
+  }
+  for (let i = WAND.length - 1; i >= 0; i--) if (WAND[i].state === 'gone' || Math.abs(WAND[i].x - G.x) + Math.abs(WAND[i].y - G.y) > 20) WAND.splice(i, 1);
+  if (!PL.moving) { const w = WAND.find(k => k.state === 'walk' && !k.moving && Math.abs(k.x - G.x) + Math.abs(k.y - G.y) <= 2); if (w) script(() => pretender(w)); }
+}
+async function pretender(w) {
+  w.state = 'turn';
+  const dx = G.x - w.x, dy = G.y - w.y; w.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  const z = zoneAt('world', w.x, w.y);
+  Snd.sfx('no');
+  await say(null, pick(['The stranger stops walking. Its head tilts... a little too far.', '"Lovely weather," says the stranger. It is NOT lovely weather.', 'The stranger smiles at you. The smile keeps going.', 'The stranger waves. Then it keeps waving. And waving.']));
+  Fx.shake = 7; Snd.sfx('enc'); await sleep(950);
+  w.z = true; Fx.flash = .85; tween(Fx, 'flash', 0, 320); tween(Fx, 'shake', 0, 320); Snd.sfx('thunder'); await sleep(380);
+  if (!flag('pretender')) {
+    setFlag('pretender');
+    await say('dex', 'A PRETENDER! They look totally normal, right up until they smell brains.');
+    await say('guide', 'FIELD GUIDE: Pretenders cast no shadow, and a flash of lightning shows what they really are. Keep your distance... or get ready to fight.');
+  }
+  const zs = (z.enc || []).filter(e => SPECIES[e[0]].z), e = zs.length ? pick(zs) : ['shambler', 3, 5];
+  const res = await Battle.run({ foes: [[e[0], rint(e[1], e[2]) + 1, 'Pretender']], look: 'w' + w.look + 'z', kind: 'wild', bg: z.bg, intro: 'The Pretender drops the act and lunges!' });
+  w.state = 'gone'; PL.grace = 5;
+  if (res === 'lose') { await blackout(); return; }
+  if (res === 'win') { G.scrap += 10; await say(null, 'The Pretender curls up on the ground and starts to snore. +10 bonus scrap.'); }
+  await afterBattle();
 }
 function enterWorld() {
   Scene = 'world'; PL.px = G.x * 16; PL.py = G.y * 16; PL.moving = false; PL.zone = null; checkZone(true);
@@ -73,7 +128,7 @@ function checkZone(quiet) {
   PL.zone = z.id; PL.banner = 2600; PL.bannerText = z.n; Snd.play(z.music);
   if (!quiet && ZONE_FIRST[z.id] && !flag('z_' + z.id)) { setFlag('z_' + z.id); script(ZONE_FIRST[z.id]); }
 }
-function warpTo(map, x, y, dir) { G.map = map; G.x = x; G.y = y; if (dir) G.dir = dir; PL.px = x * 16; PL.py = y * 16; PL.moving = false; PL.zone = null; }
+function warpTo(map, x, y, dir) { WAND.length = 0; G.map = map; G.x = x; G.y = y; if (dir) G.dir = dir; PL.px = x * 16; PL.py = y * 16; PL.moving = false; PL.zone = null; }
 async function doWarp(w) { Snd.sfx('door'); await fadeOut(220); warpTo(w[0], w[1], w[2], w[3]); checkZone(); await fadeIn(220); }
 async function blackout() {
   await say(null, 'Your critters are all tuckered out! Dex scoops them up and dashes to safety.');
@@ -98,6 +153,7 @@ async function wild(z) {
 }
 function arrive() {
   G.steps++;
+  if (Math.random() < .3) spawnWanderer();
   checkZone();
   if (Script.n > 0) return;
   if (PL.pendingOffer) { PL.pendingOffer = false; script(() => Learn.maybeOffer()); return; }
@@ -107,10 +163,12 @@ function arrive() {
 function interact() {
   const [dx, dy] = DV[G.dir], x = G.x + dx, y = G.y + dy, e = entAt(G.map, x, y);
   if (e && e.act) { script(() => e.act(e)); return; }
+  const wn = G.map === 'world' && wandAt(x, y); if (wn && wn.state === 'walk') { script(() => pretender(wn)); return; }
   if (tileAt(G.map, x, y) === 'D') script(() => say(null, pick(['Locked. Something inside goes "uuuugh."', 'Locked tight.', "Nobody's home. Well. Nobody you want to meet."])));
 }
 function worldUpdate(dt, pr) {
   G.time += dt; if (PL.banner > 0) PL.banner -= dt;
+  wandUpdate(dt);
   if (Script.n > 0 || Battle.on) return;
   if (PL.moving) {
     PL.t += dt / (Input.held.run ? 80 : 130);
@@ -181,6 +239,7 @@ function worldDraw() {
   }
   for (const b of m.b) if ((b.x + b.w) * 48 > camX - 60 && b.x * 48 < camX + W + 60 && (b.y + b.h) * 48 > camY - 20 && b.y * 48 - 400 < camY + H) list.push({ y: (b.y + b.h) * 48 - 6, b });
   for (const e of entsOn(G.map)) { list.push({ y: (e.y + 1) * 48 - 1, e }); if (e.spr === 'fire') lights.push([e.x * 48 + 24, e.y * 48 + 20, 230, 1]); if (e.spr === 'nest') lights.push([e.x * 48 + 24, e.y * 48 - 40, 150, 1]); }
+  if (world) for (const w of WAND) if (w.state !== 'gone') list.push({ y: w.py * 3 + 47, w });
   list.push({ y: pxY + 48, pl: true }); list.sort((a, b) => a.y - b.y);
   const oval = (x, y, rx, ry) => { ctx.fillStyle = 'rgba(10,4,30,.26)'; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 6.3); ctx.fill(); };
   for (const o of list) {
@@ -188,6 +247,11 @@ function worldDraw() {
       const fr = PL.moving ? [1, 0, 2, 0][(PL.step * 2 + (PL.t > .5 ? 1 : 0)) % 4] : 0, S = 104, hop = PL.moving ? -Math.abs(Math.sin(PL.t * Math.PI)) * 4 : Math.sin(now / 500) * 1.2;
       oval(pxX + 24, pxY + 43, 23, 8);
       ctx.drawImage(Art.human('dex', G.dir, fr), pxX + 24 - S / 2, pxY + 46 - S * .945 + hop, S, S);
+    } else if (o.w) {
+      // no shadow under a Pretender, and lightning shows its true face
+      const w = o.w, S = 104, turning = w.state === 'turn' && !w.z, real = w.z || (turning && Math.sin(now / 45) > 0) || now - Storm.t0 < 260;
+      const fr = w.moving ? [1, 0, 2, 0][(w.step * 2 + (w.t > .5 ? 1 : 0)) % 4] : 0, jit = turning ? (Math.random() - .5) * 6 : 0;
+      ctx.drawImage(Art.human('w' + w.look + (real ? 'z' : ''), w.dir, fr), w.px * 3 + 24 - S / 2 + jit, w.py * 3 + 46 - S * .945, S, S);
     } else if (o.b) { const a = Art.building(o.b); ctx.drawImage(a.c, o.b.x * 48 - 12, o.b.y * 48 - 64, a.w, a.h); }
     else if (o.e) {
       const e = o.e, S = (ESIZE[e.spr] || (HUM[e.spr] ? 98 : 82)) * (ESIZE[e.spr] ? 1 : (e.big || 1)), cx = e.x * 48 + 24, by = e.y * 48 + 45;

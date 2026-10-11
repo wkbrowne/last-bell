@@ -42,8 +42,8 @@ public class MainActivity extends Activity {
         if (focus) immersive();
     }
 
-    @Override protected void onPause() { super.onPause(); web.onPause(); }
-    @Override protected void onResume() { super.onResume(); web.onResume(); immersive(); }
+    @Override protected void onPause() { web.evaluateJavascript("typeof Snd!=='undefined'&&Snd.hide(true)", null); super.onPause(); web.onPause(); }
+    @Override protected void onResume() { super.onResume(); web.onResume(); immersive(); web.evaluateJavascript("typeof Snd!=='undefined'&&Snd.hide(false)", null); }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
     @Override public void onBackPressed() { web.evaluateJavascript("Input.presses.push('b')", null); }
 }
