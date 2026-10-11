@@ -6,6 +6,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e1444">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lilita+One&display=swap" rel="stylesheet">
 <style>
@@ -41,14 +45,15 @@
     <div id="bM" class="btn">☰</div>
   </div>
 </div>
-<script src="js/engine.js?v=18"></script>
-<script src="js/snd.js?v=18"></script>
-<script src="js/art.js?v=18"></script>
-<script src="js/data.js?v=18"></script>
-<script src="js/learn.js?v=18"></script>
-<script src="js/world.js?v=18"></script>
-<script src="js/battle.js?v=18"></script>
-<script src="js/story.js?v=18"></script>
-<script src="js/game.js?v=18"></script>
+<script src="js/engine.js?v=19"></script>
+<script src="js/snd.js?v=19"></script>
+<script src="js/art.js?v=19"></script>
+<script src="js/data.js?v=19"></script>
+<script src="js/learn.js?v=19"></script>
+<script src="js/world.js?v=19"></script>
+<script src="js/battle.js?v=19"></script>
+<script src="js/story.js?v=19"></script>
+<script src="js/game.js?v=19"></script>
+<script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </body>
 </html>
