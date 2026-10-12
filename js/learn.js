@@ -872,6 +872,7 @@ const Learn = {
             }
           }
         },
+        get hits() { return ok === null ? hits : []; },
         tap(x, y) {
           if (ok !== null) { if (!quiet && t > 500) finish(); return; }
           if (sayHit && inRect(x, y, sayHit)) { speakNow(); return; }

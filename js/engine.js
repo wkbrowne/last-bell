@@ -244,12 +244,13 @@ function menu(items, o) {
   return new Promise(res => {
     items = items.map(i => typeof i === 'string' ? { label: i } : i);
     let sel = clamp(o.sel || 0, 0, items.length - 1), top = 0;
-    const rows = Math.min(items.length, o.rows || 9), rh = 38;
+    // on a touch screen the rows are taller, so small fingers can hit them
+    const rh = Touch.enabled ? 50 : 38, rows = Math.min(items.length, o.rows || 9, Math.floor((H - 46 - (o.title ? 38 : 0)) / rh)), pad = (rh - 38) / 2;
     setFont(28);
     const w = o.w || Math.max(...items.map(i => ctx.measureText(i.label + (i.right ? '    ' + i.right : '')).width)) + 84;
     const h = rows * rh + 28 + (o.title ? 38 : 0);
     const x = o.x != null ? o.x : W - w - 14;
-    const y = o.by != null ? o.by - h : (o.y != null ? o.y : H - h - 14);
+    const y = Math.max(6, Math.min(o.by != null ? o.by - h : (o.y != null ? o.y : H - h - 14), H - h - 6));
     const m = {
       update(dt, pr) {
         for (const k of pr) {
@@ -264,6 +265,7 @@ function menu(items, o) {
         if (sel < top) top = sel;
         if (sel >= top + rows) top = sel - rows + 1;
       },
+      get hits() { const y0 = y + 14 + (o.title ? 38 : 0); return items.slice(top, top + rows).map((it, j) => it.disabled ? null : { x, y: y0 + j * rh, w, h: rh, i: top + j }).filter(Boolean); },
       tap(tx, ty) {
         if (!inRect(tx, ty, { x, y, w, h })) { if (o.cancel !== false) { UI.pop(m); res(-1); } return; }
         const y0 = y + 14 + (o.title ? 38 : 0);
@@ -284,9 +286,9 @@ function menu(items, o) {
         for (let r = 0; r < rows; r++) {
           const i = top + r, it = items[i]; if (!it) break;
           const col = it.disabled ? '#6d6680' : (i === sel ? '#fff' : (it.col || '#cfc7dd'));
-          if (i === sel) { rbox(x + 12, yy - 4, w - 24, rh - 3, 11, 'rgba(255,215,106,.18)', 'rgba(255,215,106,.55)', 1.5); text('▶', x + 20, yy, '#ffd76a'); }
-          text(it.label, x + 48, yy, col);
-          if (it.right) text(it.right, x + w - 22, yy, it.rcol || col, 'right');
+          if (i === sel) { rbox(x + 12, yy - 4, w - 24, rh - 3, 11, 'rgba(255,215,106,.18)', 'rgba(255,215,106,.55)', 1.5); text('▶', x + 20, yy + pad, '#ffd76a'); }
+          text(it.label, x + 48, yy + pad, col);
+          if (it.right) text(it.right, x + w - 22, yy + pad, it.rcol || col, 'right');
           yy += rh;
         }
         if (top > 0) text('▲', x + w - 30, y + 6, '#c9a24a');
