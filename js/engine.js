@@ -395,7 +395,10 @@ function drawStorm(now, groundY, gapMin, gapMax, bolt) {
 // The tablet app speaks through Android's own voice (LBSpeech bridge); a browser uses its built-in voices.
 const Speak = {
   id: 0, on: false, bad: false, done: null, tm: 0, VKEY: 'lastbell_voice', RKEY: 'lastbell_rate',
-  can() { try { return !this.bad && (window.LBSpeech ? !!window.LBSpeech.ok() : !!(window.speechSynthesis && window.SpeechSynthesisUtterance)); } catch (e) { return false; } },
+  dev() { try { return !this.bad && (window.LBSpeech ? !!window.LBSpeech.ok() : !!(window.speechSynthesis && window.SpeechSynthesisUtterance)); } catch (e) { return false; } },
+  can() { return this.dev() || Voice.ready(); },
+  // which voice reads: the game's own natural voice when the device can keep up, unless a grown-up picked another
+  mode() { const want = this.get(this.VKEY, ''); if (want === '*game') return Voice.ready() ? 'game' : 'dev'; if (want) return this.dev() ? 'dev' : 'game'; return Voice.good() || !this.dev() ? 'game' : 'dev'; },
   duck(d) { try { if (Snd.master && !Snd.muted) Snd.master.gain.value = d ? .1 : .7; } catch (e) {} },
   get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
@@ -416,7 +419,9 @@ const Speak = {
       return s; };
     return list.map(v => Object.assign(v, { score: score(v) })).sort((a, b) => b.score - a.score);
   },
-  voiceName() { const want = this.get(this.VKEY, ''), vs = this.voices(); return (vs.find(v => v.name === want) || vs[0] || {}).name || ''; },
+  // on a tablet the engine's own default is used unless a grown-up picked a voice; in a browser, the best-ranked one
+  voiceName() { const want = this.get(this.VKEY, ''), vs = this.voices(); return (vs.find(v => v.name === want) || (window.LBSpeech ? {} : vs[0]) || {}).name || ''; },
+  label() { if (!this.can()) return 'none on this device'; if (this.mode() === 'game') return 'Story voice'; return this.voiceName() ? this.pretty(this.voiceName()) : 'Tablet voice'; },
   pretty(n) { return String(n || 'Device voice').replace(/^(Microsoft|Google)\s+/i, '').replace(/\s*-\s*English.*$/i, '').replace(/\(.*?\)/g, '').replace(/en[-_]us[-_]x[-_]/i, 'Voice ').replace(/[-_#]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 26); },
   // make text sound right when spoken: math signs become words, shouted words are not spelled out, gaps become "blank"
   clean(t) {
@@ -428,7 +433,7 @@ const Speak = {
       .replace(/\b([A-Z]{2,})\b/g, w => /^(OK|TV|ABC|II|III|IV)$/.test(w) ? w : w.toLowerCase())
       .replace(/\.\.\./g, ', ').replace(/\s+/g, ' ').trim();
   },
-  stop() { this.id++; clearTimeout(this.tm); if (!this.on) return; this.on = false; this.duck(false); try { if (window.LBSpeech) window.LBSpeech.stop(); else speechSynthesis.cancel(); } catch (e) {} },
+  stop() { this.id++; clearTimeout(this.tm); if (!this.on) return; this.on = false; this.duck(false); Voice.stop(); try { if (window.LBSpeech) window.LBSpeech.stop(); else if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} },
   // spoken a sentence at a time, so there is a natural breath between sentences and long passages are never cut off
   say(text) {
     this.stop(); if (!this.can()) return Promise.resolve(false);
@@ -438,13 +443,23 @@ const Speak = {
       const id = ++this.id, end = ok => { if (id !== this.id) return; this.id++; clearTimeout(this.tm); this.on = false; this.duck(false); res(ok); };
       this.on = true; this.duck(true);
       const name = this.voiceName(), rate = this.rate(); let i = 0;
+      if (this.mode() === 'game') {
+        const step = async () => {
+          if (id !== this.id) return; if (i >= parts.length) { end(true); return; }
+          const buf = await Voice.get(parts[i++], rate); if (id !== this.id) return;
+          if (!buf) { end(false); return; }
+          if (i < parts.length) Voice.get(parts[i], rate);
+          Voice.play(buf, () => { this.tm = setTimeout(step, 140); });
+        };
+        step(); return;
+      }
       const next = ok => {
         if (id !== this.id) return; clearTimeout(this.tm);
         if (ok === false || i >= parts.length) { end(ok !== false); return; }
         const t = parts[i++]; this.done = next; this.tm = setTimeout(() => next(true), 3500 + t.length * 120);
         try {
-          if (window.LBSpeech) { window.LBSpeech.setup(name, rate, 1.06); window.LBSpeech.speak(t); }
-          else { const u = new SpeechSynthesisUtterance(t), v = speechSynthesis.getVoices().find(x => x.name === name); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US'; u.rate = rate; u.pitch = 1.06; u.onend = () => next(true); u.onerror = () => next(false); this.keep = u; speechSynthesis.speak(u); }
+          if (window.LBSpeech) { window.LBSpeech.setup(name, rate, 1); window.LBSpeech.speak(t); }
+          else { const u = new SpeechSynthesisUtterance(t), v = speechSynthesis.getVoices().find(x => x.name === name); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US'; u.rate = rate; u.onend = () => next(true); u.onerror = () => next(false); this.keep = u; speechSynthesis.speak(u); }
         } catch (e) { this.bad = true; end(false); }
       };
       next(true);

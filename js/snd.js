@@ -140,7 +140,7 @@ const Snd = {
     if (!this.ac) {
       try {
         const AC = window.AudioContext || window.webkitAudioContext;
-        const ac = this.ac = new AC();
+        const ac = this.ac = new AC(); setTimeout(() => { try { Voice.start(); } catch (e) {} }, 1500);
         this.master = ac.createGain(); this.master.gain.value = this.muted ? 0 : .7; this.master.connect(ac.destination);
         const pw = d => { const n = 24, re = new Float32Array(n), im = new Float32Array(n); for (let i = 1; i < n; i++) re[i] = 2 / (i * Math.PI) * Math.sin(i * Math.PI * d); return ac.createPeriodicWave(re, im); };
         this.waves = { pulse: pw(.25) };
