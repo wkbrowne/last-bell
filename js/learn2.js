@@ -306,7 +306,7 @@ const GRAM2 = [
   I(2, 'I can tie my shoes by ___.', 'myself', ['me', 'I', 'mine'], '"Myself" goes with "I."'),
   I(2, 'Wren runs ___.', 'quickly', ['quick', 'quickness', 'quicked'], 'The word tells HOW she runs, so it needs -ly: quickly.'),
   I(2, 'The ___ dragon slept in the cave.', 'quiet', ['quietly', 'quieted', 'quietness'], 'The word describes the dragon (a thing), so use quiet, not quietly.'),
-  I(2, 'Bash spoke ___ to the ferns.', 'softly', ['soft', 'softness', 'softer'], 'The word tells HOW he spoke, so it needs -ly: softly.'),
+  I(2, 'Bash spoke ___ to the ferns.', 'softly', ['soft', 'softness', 'soften'], 'The word tells HOW he spoke, so it needs -ly: softly.'),
   I(2, 'Which would you say to your principal?', 'Good morning. May I ask a question?', ["Hey, what's up?", 'Yo!', 'Gimme a sec.'], 'With grown-ups at school we use polite, formal words.'),
   I(2, 'Which sentence is the most POLITE and formal?', 'I would like some water, please.', ['Gimme water.', 'Water. Now.', 'I wanna drink.'], 'Formal language uses whole words and "please."'),
   I(2, 'What does the compound word "birdhouse" mean?', 'a house for a bird', ['a bird that is a house', 'a very big bird', 'a house shaped like a bird'], 'A compound word joins two words. Bird + house is a house for a bird.'),
@@ -339,6 +339,10 @@ SENT.push(
   I(2, 'Put the words in order to make a sentence:  ran / the / fast / critter', 'The critter ran fast.', ['Ran the fast critter.', 'Critter the fast ran.', 'Fast critter the ran.'], 'Start with who (the critter), then what it did (ran fast).'),
   I(2, 'Which sentence tells you the MOST?', 'The tiny gray critter ran under the porch.', ['The critter ran.', 'It ran.', 'Critter.'], 'Adding describing words and where it happened makes a sentence tell more.'),
   I(2, '"Dex is tall. Dex is fast."  Which sentence joins them?', 'Dex is tall and fast.', ['Dex is tall Dex is fast.', 'Dex tall fast.', 'Dex is tall, fast is Dex.'], 'Use "and" to join two ideas about the same person.'),
+  I(2, 'Which is a COMPLETE sentence?', 'Dex found a map.', ['Found a map.', 'Dex and the map.', 'A very old map.'], 'A complete sentence tells WHO (Dex) and WHAT HE DID (found a map).'),
+  I(2, 'Which one is a QUESTION?', 'Where is my hat?', ['My hat is red.', 'Find my hat.', 'What a nice hat!'], 'A question asks something and ends with a question mark.'),
+  I(2, 'Which one is a COMMAND? (It tells someone to do something.)', 'Close the door.', ['The door is closed.', 'Is the door closed?', 'What a big door!'], 'A command tells someone what to do.'),
+  I(2, '"The dog barked. The cat ran."  Which sentence joins them?', 'The dog barked, and the cat ran.', ['The dog barked the cat ran.', 'The dog and barked the cat ran.', 'The dog barked, the cat.'], 'Use a comma and the word "and" to join two whole sentences.'),
   I(2, 'Which one is NOT a complete sentence?', 'The big red.', ['The bell rang.', 'Wren ran home.', 'It is raining.'], '"The big red" does not tell what happened. Red what? Did what?'));
 SKILLS.sentence.g = [2, 6]; SKILLS.sentence.std = 'L.2.1f · L.4.1f · L.5.1 · L.6.1';
 PUNCT.push(
@@ -419,7 +423,7 @@ const Pic = {
   bars(p, x, y, w, h, cx, cy) {
     const n = p.vals.length, mx = Math.max(...p.vals), top = Math.ceil(mx / 2) * 2, bx = x + 70, by = y + h - 40, bh = h - 62, bw = Math.min(110, (w - 140) / n - 26);
     ctx.font = '600 15px ' + FONT_B; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
-    for (let v = 0; v <= top; v += top > 5 ? 2 : 1) { const gy = by - v / top * bh; ctx.strokeStyle = v ? 'rgba(42,31,56,.18)' : this.ink; ctx.lineWidth = v ? 1.2 : 3; ctx.beginPath(); ctx.moveTo(bx, gy); ctx.lineTo(x + w - 40, gy); ctx.stroke(); ctx.fillStyle = this.ink; ctx.fillText(v, bx - 8, gy); }
+    for (let v = 0; v <= top; v++) { const gy = by - v / top * bh, lab = top <= 5 || v % 2 === 0; ctx.strokeStyle = v ? `rgba(42,31,56,${lab ? .3 : .14})` : this.ink; ctx.lineWidth = v ? 1.2 : 3; ctx.beginPath(); ctx.moveTo(bx, gy); ctx.lineTo(x + w - 40, gy); ctx.stroke(); if (lab) { ctx.fillStyle = this.ink; ctx.fillText(v, bx - 8, gy); } }
     ctx.strokeStyle = this.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - bh - 6); ctx.stroke();
     p.vals.forEach((v, i) => { const px = bx + 30 + i * ((w - 140) / n), hh = v / top * bh; ctx.fillStyle = ['#7fd14f', '#57bdee', '#f6b93b', '#e07aa0'][i % 4]; ctx.fillRect(px, by - hh, bw, hh); ctx.strokeStyle = this.ink; ctx.lineWidth = 2.5; ctx.strokeRect(px, by - hh, bw, hh); ctx.fillStyle = this.ink; ctx.font = '700 17px ' + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(p.labels[i], px + bw / 2, by + 8); });
   },

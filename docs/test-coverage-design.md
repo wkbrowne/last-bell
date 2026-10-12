@@ -129,3 +129,39 @@ every other skill still came up at least five times.
   sight-word sets containing sound-alikes (where/wear, their/there), synonym questions that could offer a
   second right answer, "persons" and "waked" as wrong answers, a subtraction that could go negative, an
   ambiguous bedtime question, and letter greetings described as sentences.
+
+## Question sweep and engine tightening (v1.12)
+
+**Questions.** Every generator and item bank was read line by line, then 234,000 generated questions were machine-checked:
+each bare sum was recomputed, and every question was checked for four distinct choices, no wrong choice equal in value to
+the right one (for example 3/6 offered against 1/2), and no negative or broken choices below Grade 6. Fixed: a fraction
+question that could offer an equal-value wrong answer; decimal subtraction that could go below zero; negative wrong
+choices in Grade 3–5 subtraction, rows and order-of-operations items; skip counting that ran past 1,000; a wrong
+explanation for "10 more than 195"; and an adverb item with a defensible second answer. Bar charts now have a line for
+every unit so odd values can be read exactly.
+
+**Type-the-answer.** A question is only turned into a typed answer when it makes sense without its choices. "Which number
+is EVEN?" used to be able to appear with a blank box.
+
+**Kinds of question.** Each question has a *kind*: its wording with the particular numbers removed ("47 + 28 = ?" and
+"35 + 49 = ?" are one kind; "7 + 8 = ?" is another; each English item is its own kind).
+
+- A miss comes back three questions later as the **same kind**, not a random question from the skill.
+- A missed kind must then be answered right **twice** before it is cleared, and it is favoured whenever that skill comes up.
+- New questions prefer kinds not yet seen, so English items do not repeat until the bank has been used up.
+- **Mastered** now means: four right in a row, at least five tries, right answers on up to six different kinds, and no
+  missed kind still open. A lesson's three-in-a-row proof starts with the kind that was missed.
+- Skills still being learned come up every round; only mastered skills are spaced out for review.
+- After four misses in a row on a skill the quick retries stop (a lesson is offered instead), so one hard kind cannot
+  take over a session.
+- Two slips un-master a skill, but slips are forgiven after three right in a row.
+
+**Grade 2 lessons.** Add & Subtract, Place Value, Mystery Numbers, Telling Time and Word Problems have Grade 2 wording
+(the shared text taught multiplication, thousands and elapsed time).
+
+**Grade 2 banks.** Subject-verb agreement, sound-alikes, context clues, word parts, parts of speech, sentences and
+spelling each gained items, so none has fewer than nine.
+
+**Simulated learners (Grade 2, 33 skills).** Always right: everything mastered after about 230 questions. Right 80% of
+the time: 28 of 33 mastered after 400. Three weak skills at 35%: they get about a fifth of the questions and every other
+skill still appears at least six times in 300.

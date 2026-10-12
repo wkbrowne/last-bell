@@ -424,7 +424,7 @@ const Speak = {
   clean(t) {
     return String(t)
       .replace(/[★☆▸▶◀♥♡·•]/g, ' ').replace(/kzzt/gi, ' ').replace(/_{2,}/g, ' blank ')
-      .replace(/(\d)\s*\/\s*(\d)/g, '$1 over $2').replace(/\?\s*([+×÷−=])/g, 'what number $1').replace(/=\s*\?/g, 'equals what')
+      .replace(/\s\/\s/g, ', ').replace(/(\d)\s*\/\s*(\d)/g, '$1 over $2').replace(/\?\s*([+×÷−=])/g, 'what number $1').replace(/=\s*\?/g, 'equals what')
       .replace(/×/g, ' times ').replace(/÷/g, ' divided by ').replace(/−/g, ' minus ').replace(/(\d)\s*-\s*(\d)/g, '$1 minus $2').replace(/\+/g, ' plus ').replace(/=/g, ' equals ')
       .replace(/(\d)¢/g, '$1 cents').replace(/(\d)°/g, '$1 degrees').replace(/</g, ' is less than ').replace(/>/g, ' is greater than ').replace(/\bR(\d)/g, 'remainder $1')
       .replace(/\b([A-Z]{2,})\b/g, w => /^(OK|TV|ABC|II|III|IV)$/.test(w) ? w : w.toLowerCase())

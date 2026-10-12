@@ -11,13 +11,19 @@ function fr(n, d) { const g = gcd(n, d); n /= g; d /= g; if (d === 1) return Str
 const d2 = h => (h / 100).toFixed(2).replace(/\.?0+$/, '');
 const num = x => String(parseFloat(Number(x).toFixed(5)));
 
+// the value of a number, fraction or mixed number written as text (null for anything else)
+const valOf = t => { t = String(t).replace(/,/g, '').trim(); let m;
+  if ((m = t.match(/^(-?\d+) (\d+)\/(\d+)$/))) return +m[1] + m[2] / m[3];
+  if ((m = t.match(/^(-?\d+)\/(\d+)$/))) return m[1] / m[2];
+  return /^-?\d+(\.\d+)?$/.test(t) ? +t : null; };
 function mc(q, ans, wrongs, why, extra) {
   ans = String(ans);
-  const opts = [ans];
-  for (const w of shuffle(wrongs.map(String))) if (!opts.includes(w) && opts.length < 4) opts.push(w);
+  const opts = [ans], av = valOf(ans), same = w => { const v = valOf(w); return av !== null && v !== null && Math.abs(v - av) < 1e-9; };
+  for (const w of shuffle(wrongs.map(String))) if (!opts.includes(w) && !same(w) && opts.length < 4) opts.push(w);
   const n = Number(ans.replace(/,/g, ''));
   for (let k = 1; opts.length < 4 && k < 30; k++) {
-    const w = isNaN(n) || /[ /R]/.test(ans) ? ['none of these', 'all of these', 'not enough information'][k - 1] : (ans.includes(',') ? fmt(n + k * (k % 2 ? 1 : -1) * 2) : num(n + k * (k % 2 ? 1 : -1) * 2));
+    const v = n + k * (k % 2 ? 1 : -1) * 2;
+    const w = isNaN(n) || /[ /R]/.test(ans) ? ['none of these', 'not enough information', 'all of these'][k - 1] : (n >= 0 && v < 0 ? null : ans.includes(',') ? fmt(v) : num(v));
     if (w && !opts.includes(w)) opts.push(w);
   }
   shuffle(opts);
@@ -37,7 +43,7 @@ const MATH = {
     if (g <= 2) {
       const t = rint(0, 6);
       if (t === 4) { const b = rint(110, 299), a = rint(b + 15, 680), add = coin(), A = add ? a + b : a - b; return mc(`${a} ${add ? '+' : '−'} ${b} = ?`, A, [A + 10, A - 10, A + 100, A - 100, A + 1].filter(x => x > 0), `Work one place at a time: hundreds, tens, then ones. ${a} ${add ? '+' : '−'} ${b} = ${A}.`); }
-      if (t === 5) { const n = rint(120, 880), d = pick([10, 100]), more = coin(), A = more ? n + d : n - d; return mc(`What is ${d} ${more ? 'more' : 'less'} than ${n}?`, A, [more ? n - d : n + d, more ? n + d * (d === 10 ? 10 : .1) : n - d * (d === 10 ? 10 : .1), n + (more ? 1 : -1), A + (d === 10 ? 100 : 10)].filter(x => x > 0 && x !== A), `Only the ${d === 10 ? 'tens' : 'hundreds'} digit changes. It goes ${more ? 'up' : 'down'} by one: ${A}.`); }
+      if (t === 5) { const n = rint(120, 880), d = pick([10, 100]), more = coin(), A = more ? n + d : n - d; return mc(`What is ${d} ${more ? 'more' : 'less'} than ${n}?`, A, [more ? n - d : n + d, more ? n + d * (d === 10 ? 10 : .1) : n - d * (d === 10 ? 10 : .1), n + (more ? 1 : -1), A + (d === 10 ? 100 : 10)].filter(x => x > 0 && x !== A), d === 10 && Math.floor(n / 10) % 10 === (more ? 9 : 0) ? (more ? `${n} already has 9 tens. One more ten makes 10 tens, and that is another hundred: ${A}.` : `${n} has no tens to take away, so trade 1 hundred for 10 tens. Then take one ten away: ${A}.`) : `Only the ${d === 10 ? 'tens' : 'hundreds'} digit changes. It goes ${more ? 'up' : 'down'} by one: ${A}.`); }
       if (t === 6) { const a = rint(11, 29), b = rint(11, 29), c = rint(11, 29), S = a + b + c; return mc(`${a} + ${b} + ${c} = ?`, S, [S + 10, S - 10, S + 1, a + b, S - 2], `Add the tens: ${a - a % 10} + ${b - b % 10} + ${c - c % 10} = ${S - a % 10 - b % 10 - c % 10}. Add the ones: ${a % 10} + ${b % 10} + ${c % 10} = ${a % 10 + b % 10 + c % 10}. Together: ${S}.`); }
       if (t === 0) { const a = rint(4, 9), b = rint(3, 9), s = a + b; return mc(`${a} + ${b} = ?`, s, [s + 1, s - 1, s + 2, s - 2, s + 10], s > 10 ? `Make a ten! ${a} needs ${10 - a} more to make 10. That leaves ${b - (10 - a)} more: 10 + ${b - (10 - a)} = ${s}.` : `Start at ${a} and count on ${b} more. You land on ${s}.`); }
       if (t === 1) { const s = rint(11, 18), b = rint(3, 9); return mc(`${s} − ${b} = ?`, s - b, [s - b + 1, s - b - 1, s - b + 2, s + b, s - b + 10].filter(x => x >= 0), `Think of it as adding: ${b} + ? = ${s}. Since ${b} + ${s - b} = ${s}, the answer is ${s - b}.`); }
@@ -46,7 +52,7 @@ const MATH = {
     }
     const big = g >= 4, a = rint(big ? 1200 : 120, big ? 8999 : 899), b = rint(big ? 300 : 100, big ? a - 100 : Math.min(a - 10, 499));
     if (coin()) { const s = a + b; return mc(coin() ? `${fmt(a)} + ${fmt(b)} = ?` : `Munch has ${fmt(a)} bottle caps. He finds ${fmt(b)} more. How many does he have now?`, fmt(s), [s + 10, s - 10, s + 100, s - 100, s + 1].map(fmt), `Line up the place values and add: ${fmt(a)} + ${fmt(b)} = ${fmt(s)}.`); }
-    const s = a - b; return mc(coin() ? `${fmt(a)} − ${fmt(b)} = ?` : `There were ${fmt(a)} zombies downtown. ${fmt(b)} wandered off. How many are left?`, fmt(s), [s + 10, s - 10, s + 100, s - 100, a + b].map(fmt), `Line up the place values and subtract, regrouping when you need to: ${fmt(a)} − ${fmt(b)} = ${fmt(s)}.`);
+    const s = a - b; return mc(coin() ? `${fmt(a)} − ${fmt(b)} = ?` : `There were ${fmt(a)} zombies downtown. ${fmt(b)} wandered off. How many are left?`, fmt(s), [s + 10, s - 10, s + 100, s - 100, a + b].filter(x => x > 0).map(fmt), `Line up the place values and subtract, regrouping when you need to: ${fmt(a)} − ${fmt(b)} = ${fmt(s)}.`);
   } },
   mult: { n: 'Multiplication', std: '3.OA.7 · 4.NBT.5 · 5.NBT.5', g: [3, 5], gen(g) {
     let a, b, why;
@@ -115,7 +121,7 @@ const MATH = {
       const big = coin(), m = big ? Math.max(...uniq) : Math.min(...uniq);
       return mc(`Which decimal is the ${big ? 'GREATEST' : 'LEAST'}?`, d2(m), uniq.filter(x => x !== m).map(d2), `Line up the decimal points. It helps to write them all with two places (0.4 is 0.40). Then compare like whole numbers.`); }
     if (g >= 6 && coin()) { const a = rint(11, 99), b = rint(2, 9), p = a * b; return mc(`${(a / 10).toFixed(1)} × 0.${b} = ?`, d2(p), [d2(p * 10), d2(p * 100), d2(p + 10), (p / 1000).toFixed(3)], `Multiply like whole numbers: ${a} × ${b} = ${p}. There are 2 decimal places in all, so the answer is ${d2(p)}.`); }
-    const a = rint(105, 2999), b = rint(15, 999);
+    const a = rint(105, 2999), b = rint(15, Math.min(999, a - 10));
     if (coin()) { const s = a + b; return mc(coin() ? `${d2(a)} + ${d2(b)} = ?` : `A Zap Cola costs $${(a / 100).toFixed(2)} and a snack costs $${(b / 100).toFixed(2)}. What is the total?`, d2(s), [s + 10, s - 10, s + 100, s + 1, s - 100].map(d2), `Line up the decimal points, then add: ${d2(a)} + ${d2(b)} = ${d2(s)}.`); }
     const s = a - b; return mc(`${d2(a)} − ${d2(b)} = ?`, d2(s), [s + 10, s - 10, s + 100, s + 1, a + b].map(d2), `Line up the decimal points, then subtract: ${d2(a)} − ${d2(b)} = ${d2(s)}.`);
   } },
@@ -136,7 +142,7 @@ const MATH = {
     }
     if (g <= 3) {
       if (t === 0) { const p = rint(3, 9), n = rint(3, 8), paid = Math.ceil((p * n + 1) / 10) * 10 + pick([0, 10]); return mc(`Munch sells Critter Snacks for ${p} scrap each. Dex buys ${n} snacks and pays with ${paid} scrap. How much change does he get?`, paid - p * n, [p * n, paid - p - n, paid + p * n, paid - p * n + 10, paid - p * n - 1].filter(x => x >= 0), `First find the cost: ${n} × ${p} = ${p * n}. Then subtract from what he paid: ${paid} − ${p * n} = ${paid - p * n}.`); }
-      if (t === 1) { const r = rint(3, 9), c = rint(4, 9), k = rint(2, 9); return mc(`Zombies stand in ${r} rows of ${c} on the football field. Then ${k} wander off. How many zombies are still on the field?`, r * c - k, [r * c, r * c + k, r + c - k, r * c - k - 1, r + c + k], `First multiply: ${r} × ${c} = ${r * c}. Then subtract the ones who left: ${r * c} − ${k} = ${r * c - k}.`); }
+      if (t === 1) { const r = rint(3, 9), c = rint(4, 9), k = rint(2, 9); return mc(`Zombies stand in ${r} rows of ${c} on the football field. Then ${k} wander off. How many zombies are still on the field?`, r * c - k, [r * c, r * c + k, r + c - k, r * c - k - 1, r + c + k].filter(x => x > 0), `First multiply: ${r} × ${c} = ${r * c}. Then subtract the ones who left: ${r * c} − ${k} = ${r * c - k}.`); }
       const a = rint(12, 40), b = rint(12, 40), e = rint(2, 6), tot = (a + b) - (a + b) % e || e; const a2 = tot - b > 0 ? tot - b : a;
       return mc(`Bash picks ${a2} tomatoes on Monday and ${tot - a2} on Tuesday. He packs them into bags of ${e}. How many bags does he fill?`, tot / e, [tot, tot / e + 1, tot / e - 1, tot - e, a2 / 1 | 0].filter(x => x > 0), `Add first: ${a2} + ${tot - a2} = ${tot}. Then divide into bags: ${tot} ÷ ${e} = ${tot / e}.`);
     }
@@ -166,7 +172,7 @@ const MATH = {
     const a = rint(2, 9), b = rint(2, 9), c = rint(2, 6), d = rint(1, 9), t = rint(0, g >= 6 ? 4 : 2);
     const why = 'Remember the order: parentheses first, then exponents, then × and ÷ (left to right), then + and − (left to right).';
     if (t === 0) return mc(`${a} + ${b} × ${c} = ?`, a + b * c, [(a + b) * c, a * b + c, a + b + c, a + b * c + 1], why + ` ${b} × ${c} = ${b * c}, then ${a} + ${b * c} = ${a + b * c}.`);
-    if (t === 1) return mc(`(${a} + ${b}) × ${c} − ${d} = ?`, (a + b) * c - d, [a + b * c - d, (a + b) * (c - d), (a + b) * c + d, a + b * c + d], why + ` (${a} + ${b}) = ${a + b}, then × ${c} = ${(a + b) * c}, then − ${d}.`);
+    if (t === 1) { const e = Math.min(d, 7); return mc(`(${a} + ${b}) × ${c} − ${e} = ?`, (a + b) * c - e, [a + b * c - e, (a + b) * (c - e), (a + b) * c + e, a + b * c + e].filter(x => x > 0 || g >= 6), why + ` (${a} + ${b}) = ${a + b}, then × ${c} = ${(a + b) * c}, then − ${e}.`); }
     if (t === 2) return mc(`${a * c} ÷ ${a} + ${b} × ${d} = ?`, c + b * d, [(c + b) * d, a * c / a + b + d, c * b + d, c + b * d + a], why + ` ${a * c} ÷ ${a} = ${c} and ${b} × ${d} = ${b * d}. Then ${c} + ${b * d} = ${c + b * d}.`);
     if (t === 3) { const s = a + 2; return mc(`${s}² − ${b} × ${c} = ?`, s * s - b * c, [(s * s - b) * c, s * 2 - b * c, s * s - b - c, s * s + b * c], why + ` ${s}² = ${s * s}, ${b} × ${c} = ${b * c}, so ${s * s} − ${b * c} = ${s * s - b * c}.`); }
     return mc(`2 × ${a}² = ?`, 2 * a * a, [4 * a * a, 4 * a, 2 * a * 2, a * a + 2], why + ` Do the exponent first: ${a}² = ${a * a}. Then 2 × ${a * a} = ${2 * a * a}.`);
@@ -176,7 +182,7 @@ const MATH = {
       const a = rint(3, 12), b = rint(3, 9), t = rint(0, 2);
       if (t === 0) return mc(`? + ${a} = ${a + b}`, b, [b + 1, b - 1, a + b, b + 2, a], `Use the opposite: ${a + b} − ${a} = ${b}. Check it: ${b} + ${a} = ${a + b}.`);
       if (t === 1) return mc(`${a + b} − ? = ${a}`, b, [b + 1, b - 1, a + b, b + 2, a], `How far is it from ${a} up to ${a + b}? Count on: it is ${b}.`);
-      const k = pick([2, 5, 10, 100]), st = k === 10 ? rint(11, 59) : k * rint(1, 8); return mc(`Skip count! What number comes next?  ${st}, ${st + k}, ${st + 2 * k}, ${st + 3 * k}, ?`, st + 4 * k, [st + 4 * k + 1, st + 3 * k + 1, st + 5 * k, st + 4 * k - 1], `The numbers go up by ${k} each time. ${st + 3 * k} + ${k} = ${st + 4 * k}.`);
+      const k = pick([2, 5, 10, 100]), st = k === 10 ? rint(11, 59) : k * rint(1, k === 100 ? 5 : 8); return mc(`Skip count! What number comes next?  ${st}, ${st + k}, ${st + 2 * k}, ${st + 3 * k}, ?`, st + 4 * k, [st + 4 * k + 1, st + 3 * k + 1, st + 5 * k, st + 4 * k - 1], `The numbers go up by ${k} each time. ${st + 3 * k} + ${k} = ${st + 4 * k}.`);
     }
     const a = rint(2, 9), b = rint(2, 9), t = rint(0, g >= 4 ? 3 : 1);
     if (t === 0) return mc(`? × ${a} = ${a * b}`, b, [b + 1, b - 1, a * b - a, a, b + 2].filter(x => x > 0), `Use the opposite operation: ${a * b} ÷ ${a} = ${b}.`);
@@ -300,6 +306,14 @@ const SVA = [
   I(2, 'Dex ___ a red cap.', 'has', ['have', 'having', 'haves'], 'One person has. More than one have.'),
   I(2, 'We ___ happy today.', 'are', ['is', 'am', 'be'], 'Use "are" with we, you, and they.'),
   I(2, 'She ___ to school yesterday.', 'walked', ['walk', 'walks', 'walking'], '"Yesterday" means it already happened, so add -ed: walked.'),
+  I(2, 'The dogs ___ loudly.', 'bark', ['barks', 'barking', 'barkes'], 'More than one dog: they bark. No -s on the action word.'),
+  I(2, 'My mom ___ the bus to work.', 'rides', ['ride', 'riding', 'rided'], 'One mom rides. Add -s when there is just one.'),
+  I(2, 'I ___ seven years old.', 'am', ['is', 'are', 'be'], 'Use "am" with I: I am.'),
+  I(2, 'Bash ___ a fern yesterday.', 'planted', ['plant', 'plants', 'planting'], '"Yesterday" means it already happened, so add -ed: planted.'),
+  I(2, 'The birds ___ south last fall.', 'flew', ['fly', 'flyed', 'flies'], '"Last fall" already happened. The past of fly is flew.'),
+  I(2, 'He ___ not like peas.', 'does', ['do', 'doing', 'done'], 'Use "does" with he, she, and it.'),
+  I(2, 'Tomorrow we ___ go to the park.', 'will', ['did', 'was', 'has'], '"Tomorrow" has not happened yet, so use "will."'),
+  I(2, 'The cat and the dog ___ friends.', 'are', ['is', 'am', 'be'], 'A cat AND a dog is two animals: they are.'),
   I(3, 'The zombies ___ slowly down Elm Street.', 'walk', ['walks', 'walking', 'is walk'], '"Zombies" is plural (more than one), so the verb has no -s: they walk.'),
   I(3, 'Priya ___ a new gadget every week.', 'builds', ['build', 'building', 'are build'], '"Priya" is one person, so the verb gets an -s: she builds.'),
   I(3, 'Bash and Wren ___ guarding the gate.', 'are', ['is', 'am', 'be'], 'Two people joined by "and" make a plural subject: they are.'),
@@ -321,6 +335,14 @@ const HOMO = [
   I(2, 'I ___ a snack for lunch.', 'ate', ['eight', 'aet', 'ait'], 'ATE means you already ate it. EIGHT is the number 8.'),
   I(2, 'Come over ___!', 'here', ['hear', 'heer', 'hir'], 'HERE is a place. You HEAR with your EAR.'),
   I(2, 'Dex has ___ critters.', 'two', ['to', 'too', 'tow'], 'TWO is the number 2.'),
+  I(2, 'I got a ___ bike for my birthday.', 'new', ['knew', 'nue', 'noo'], 'NEW means not old. KNEW means you already knew it.'),
+  I(2, 'Please ___ your name on the paper.', 'write', ['right', 'rite', 'wright'], 'You WRITE with a pencil. RIGHT is the opposite of left or wrong.'),
+  I(2, 'Turn ___ at the corner.', 'right', ['write', 'rite', 'wright'], 'RIGHT is a direction. You WRITE with a pencil.'),
+  I(2, 'The wind ___ my hat off.', 'blew', ['blue', 'bloo', 'blewe'], 'BLEW is what the wind did. BLUE is a color.'),
+  I(2, 'I ___ the answer!', 'know', ['no', 'kno', 'noe'], 'KNOW is in your brain. NO is the opposite of yes.'),
+  I(2, 'I want to come ___!', 'too', ['to', 'two', 'tu'], 'TOO means "also." It has an extra o, too.'),
+  I(2, 'We read a ___ about a brave knight.', 'tale', ['tail', 'tayl', 'tael'], 'A TALE is a story. A TAIL is on a dog.'),
+  I(2, 'The dog wagged its ___.', 'tail', ['tale', 'tayl', 'taile'], 'A TAIL is on a dog. A TALE is a story.'),
   I(3, 'The zombies left ___ shoes behind.', 'their', ['there', "they're", 'thier'], '"Their" shows something belongs to them.'),
   I(3, '___ going to need a bigger net.', "They're", ['Their', 'There', 'Theyre'], '"They\'re" is short for "they are."'),
   I(3, 'Put the snack over ___.', 'there', ['their', "they're", 'thare'], '"There" names a place.'),
@@ -368,7 +390,7 @@ const PUNCT = [
   I(6, null, 'Wren packed three things: a rope, a map, and a flashlight.', ['Wren packed three things, a rope a map and a flashlight.', 'Wren packed: three things a rope, a map, and a flashlight.', 'Wren packed three things a rope, a map, and, a flashlight.'], 'A colon can introduce a list after a complete sentence.'),
   I(6, null, 'Mr. Munch (a very large critter) runs the shop.', ['Mr. Munch (a very large critter runs the shop).', 'Mr. Munch a very large critter (runs the shop).', '(Mr. Munch) a very large critter runs the shop.'], 'Parentheses hold extra information. The sentence should still make sense without it.')
 ];
-const SPELL = [[2, 'said', 'sed', 'sayd', 'siad'], [2, 'they', 'thay', 'tha', 'thei'], [2, 'were', 'wer', 'wure', 'wher'], [2, 'could', 'cood', 'coud', 'culd'], [2, 'when', 'whenn', 'whin', 'wehn'], [2, 'little', 'littel', 'litle', 'littul'], [2, 'what', 'wut', 'waht', 'whut'], [2, 'does', 'duz', 'doez', 'dos'], [2, 'friend', 'frend', 'freind', 'frind'], [2, 'very', 'vry', 'verry', 'vere'],
+const SPELL = [[2, 'said', 'sed', 'sayd', 'siad'], [2, 'they', 'thay', 'tha', 'thei'], [2, 'were', 'wer', 'wure', 'wher'], [2, 'could', 'cood', 'coud', 'culd'], [2, 'when', 'whenn', 'whin', 'wehn'], [2, 'little', 'littel', 'litle', 'littul'], [2, 'what', 'wut', 'waht', 'whut'], [2, 'does', 'duz', 'doez', 'dos'], [2, 'friend', 'frend', 'freind', 'frind'], [2, 'very', 'vry', 'verry', 'vere'], [2, 'who', 'hoo', 'woh', 'whoo'], [2, 'many', 'meny', 'manny', 'menny'], [2, 'pretty', 'pritty', 'prety', 'preety'], [2, 'other', 'uther', 'othr', 'othur'], [2, 'would', 'woud', 'wuld', 'woold'], [2, 'house', 'howse', 'hous', 'huose'], [2, 'before', 'befor', 'bifore', 'beefore'], [2, 'always', 'allways', 'alwayz', 'olways'], [2, 'people', 'peeple', 'pepole', 'peple'],
   [3, 'because', 'becuase', 'becaus', 'becuz'], [3, 'friend', 'freind', 'frend', 'friand'], [3, 'people', 'peeple', 'poeple', 'pepole'], [3, 'school', 'skool', 'scool', 'shcool'], [3, 'different', 'diffrent', 'diferent', 'differant'], [3, 'favorite', 'favrite', 'faverite', 'favorit'], [3, 'enough', 'enuff', 'enouf', 'anough'], [3, 'caught', 'cought', 'caugt', 'cawt'], [3, 'thought', 'thout', 'thougt', 'thaught'], [3, 'again', 'agen', 'agian', 'agin'],
   [4, 'believe', 'beleive', 'belive', 'beleeve'], [4, 'beautiful', 'beutiful', 'beautifull', 'butiful'], [4, 'surprise', 'suprise', 'surprize', 'serprise'], [4, 'calendar', 'calender', 'calandar', 'kalendar'], [4, 'island', 'iland', 'ileland', 'islend'], [4, 'probably', 'probly', 'probaly', 'prabably'], [4, 'weird', 'wierd', 'weerd', 'wird'], [4, 'library', 'libary', 'librery', 'liberry'], [4, 'February', 'Febuary', 'Februery', 'Feburary'],
   [5, 'necessary', 'neccessary', 'necesary', 'nessesary'], [5, 'separate', 'seperate', 'separete', 'seprate'], [5, 'definitely', 'definately', 'definitly', 'defanitely'], [5, 'embarrass', 'embarass', 'embaras', 'imbarrass'], [5, 'restaurant', 'restarant', 'resturant', 'restaurent'], [5, 'temperature', 'temperture', 'tempature', 'temprature'], [5, 'receive', 'recieve', 'receeve', 'receve'], [5, 'government', 'goverment', 'governmant', 'govenment'],
@@ -380,7 +402,7 @@ const SYN = [[2, 'glad', 'happy', 'sad'], [2, 'small', 'little', 'big'], [2, 'co
   [5, 'abundant', 'plentiful', 'scarce'], [5, 'cautious', 'careful', 'reckless'], [5, 'conceal', 'hide', 'reveal'], [5, 'hostile', 'unfriendly', 'friendly'], [5, 'obvious', 'clear', 'hidden'], [5, 'reluctant', 'unwilling', 'eager'], [5, 'vacant', 'empty', 'occupied'],
   [6, 'benevolent', 'kind', 'cruel'], [6, 'diligent', 'hardworking', 'lazy'], [6, 'frigid', 'freezing', 'scorching'], [6, 'novice', 'beginner', 'expert'], [6, 'tranquil', 'peaceful', 'chaotic'], [6, 'ominous', 'threatening', 'promising'], [6, 'candid', 'honest', 'deceptive']
 ].map(r => ({ g: r[0], w: r[1], s: r[2], o: r[3] }));
-const AFFIX = [[2, 'redo', 're-', 'again'], [2, 'unkind', 'un-', 'not'], [2, 'careful', '-ful', 'full of'], [2, 'helpless', '-less', 'without'], [2, 'preschool', 'pre-', 'before'],
+const AFFIX = [[2, 'redo', 're-', 'again'], [2, 'unkind', 'un-', 'not'], [2, 'careful', '-ful', 'full of'], [2, 'helpless', '-less', 'without'], [2, 'preschool', 'pre-', 'before'], [2, 'retell', 're-', 'again'], [2, 'unsafe', 'un-', 'not'], [2, 'joyful', '-ful', 'full of'], [2, 'spotless', '-less', 'without'], [2, 'preview', 'pre-', 'before'], [2, 'unfair', 'un-', 'not'], [2, 'reread', 're-', 'again'], [2, 'painful', '-ful', 'full of'], [2, 'hopeless', '-less', 'without'],
   [3, 'unhappy', 'un-', 'not'], [3, 'rebuild', 're-', 'again'], [3, 'preheat', 'pre-', 'before'], [3, 'misspell', 'mis-', 'wrongly'], [3, 'fearless', '-less', 'without'], [3, 'hopeful', '-ful', 'full of'], [3, 'teacher', '-er', 'a person who'],
   [4, 'disagree', 'dis-', 'the opposite of'], [4, 'overcooked', 'over-', 'too much'], [4, 'submarine', 'sub-', 'under'], [4, 'washable', '-able', 'able to be'], [4, 'darkness', '-ness', 'the state of being'], [4, 'midnight', 'mid-', 'middle'],
   [5, 'international', 'inter-', 'between'], [5, 'transport', 'trans-', 'across'], [5, 'antivirus', 'anti-', 'against'], [5, 'semicircle', 'semi-', 'half'], [5, 'telescope', 'tele', 'far away'], [5, 'aquarium', 'aqua', 'water'], [5, 'portable', 'port', 'to carry'],
@@ -391,6 +413,12 @@ const CONTEXT = [
   I(2, 'Dex was EXHAUSTED after running all day, so he fell asleep fast.', 'very tired', ['very hungry', 'very happy', 'very cold'], 'He ran all day and fell asleep fast. He was very tired.'),
   I(2, 'The soup was SCORCHING, so I blew on it to cool it down.', 'very hot', ['very cold', 'very sweet', 'very thick'], 'You blow on food to cool it when it is very hot.'),
   I(2, 'She was DELIGHTED and could not stop smiling.', 'very happy', ['very sleepy', 'very angry', 'very lost'], 'Someone who cannot stop smiling is very happy.'),
+  I(2, 'The room was SILENT. Nobody made a sound.', 'very quiet', ['very dark', 'very big', 'very messy'], '"Nobody made a sound" tells you silent means very quiet.'),
+  I(2, 'Bash was FURIOUS. He stomped his feet and yelled.', 'very angry', ['very happy', 'very sleepy', 'very shy'], 'Stomping and yelling are what very angry people do.'),
+  I(2, 'The box was ENORMOUS. It was bigger than a car.', 'very big', ['very small', 'very old', 'very light'], '"Bigger than a car" tells you enormous means very big.'),
+  I(2, 'Wren felt DROWSY, so she yawned and closed her eyes.', 'sleepy', ['hungry', 'angry', 'silly'], 'Yawning and closing your eyes are clues for sleepy.'),
+  I(2, 'The path was NARROW, so we had to walk one at a time.', 'not wide', ['not safe', 'not long', 'not clean'], 'If only one person fits at a time, the path is not wide.'),
+  I(2, 'Dex was STARVING, so he ate two whole pizzas.', 'very hungry', ['very tired', 'very cold', 'very scared'], 'Someone who eats two whole pizzas is very hungry.'),
   I(3, 'The zombie was so SLUGGISH that a snail passed it.', 'slow', ['fast', 'angry', 'shiny'], 'The clue is that a snail passed it. Snails are slow!'),
   I(3, 'Bash was FAMISHED after skipping lunch, so he ate three sandwiches.', 'very hungry', ['very sleepy', 'very lost', 'very cold'], 'He skipped lunch and ate three sandwiches. Those clues point to hungry.'),
   I(3, 'The basement was so DIM that Dex needed his Boltbug to see.', 'dark', ['bright', 'wet', 'loud'], 'He needed a light to see, so it must have been dark.'),
@@ -428,6 +456,12 @@ const POS = [
   I(2, 'The frog jumped high.|VERB', 'jumped', ['frog', 'high', 'The'], 'A verb is an action word. Jumping is the action.'),
   I(2, 'I ate a red apple.|ADJECTIVE', 'red', ['ate', 'apple', 'I'], 'An adjective describes something. "Red" tells what kind of apple.'),
   I(2, 'The happy critter danced.|ADJECTIVE', 'happy', ['critter', 'danced', 'The'], '"Happy" describes the critter, so it is an adjective.'),
+  I(2, 'The girl kicked the ball.|VERB', 'kicked', ['girl', 'ball', 'The'], 'Kicking is the action, so "kicked" is the verb.'),
+  I(2, 'A tiny bug sat on a leaf.|ADJECTIVE', 'tiny', ['bug', 'sat', 'leaf'], '"Tiny" tells what kind of bug, so it is an adjective.'),
+  I(2, 'My brother sings loudly.|NOUN', 'brother', ['sings', 'loudly', 'My'], 'A brother is a person, so "brother" is a noun.'),
+  I(2, 'The bell rang at noon.|VERB', 'rang', ['bell', 'noon', 'The'], 'Ringing is what the bell did, so "rang" is the verb.'),
+  I(2, 'Wren found a shiny coin.|ADJECTIVE', 'shiny', ['found', 'coin', 'Wren'], '"Shiny" describes the coin, so it is an adjective.'),
+  I(2, 'The owl flew silently away.|ADVERB', 'silently', ['owl', 'flew', 'The'], 'An adverb tells HOW something is done. The owl flew silently.'),
   I(3, 'The sleepy zombie bumped into a mailbox.|ADJECTIVE', 'sleepy', ['zombie', 'bumped', 'into'], 'An adjective describes a noun. "Sleepy" describes the zombie.'),
   I(3, 'The Gloop wiggled happily across the floor.|VERB', 'wiggled', ['Gloop', 'happily', 'floor'], 'A verb is an action word. Wiggling is the action.'),
   I(3, 'Priya built a tiny radio.|NOUN', 'radio', ['built', 'tiny', 'a'], 'A noun is a person, place, or thing. A radio is a thing.'),
@@ -639,26 +673,69 @@ const LESSONS = {
   reading: ['Read the passage first. Then read the question carefully. Then go BACK to the passage and find the answer. Good readers always look back!', 'The MAIN IDEA is what the whole passage is mostly about, not just one little detail.', 'For "why" and "how do you know" questions, hunt for evidence. Point to the exact sentence that proves your answer.']
 };
 
+// Grade 2 versions of the lessons whose main text is pitched at older grades.
+const LESSON_G2 = {
+  addsub: ['For small numbers, make a ten. 8 + 5: the 8 needs 2 more to make 10. That leaves 3. So 10 + 3 = 13.', 'For bigger numbers, add the tens and the ones on their own. 47 + 28: the tens are 40 + 20 = 60. The ones are 7 + 8 = 15. Then 60 + 15 = 75.', 'To subtract, take away the tens first, then the ones. 63 − 25: first 63 − 20 = 43. Then 43 − 5 = 38.'],
+  place: ['Where a digit sits tells you what it is worth. In 472, the 4 is worth 400, the 7 is worth 70, and the 2 is worth 2.', 'From right to left the places are ones, tens, hundreds. Ten ones make a ten. Ten tens make a hundred.', 'You can stretch a number out: 472 = 400 + 70 + 2. To find 10 more or 10 less, only the tens change: 10 more than 472 is 482.'],
+  unknown: ['A mystery number is a number wearing a mask. In ? + 6 = 14, something plus 6 makes 14.', 'To unmask it, use the opposite. Adding and subtracting are opposites: 14 − 6 = 8. Check it: 8 + 6 = 14.', 'For skip counting, find the jump. 15, 20, 25: each one is 5 more. So the next number is 30.'],
+  time: ['A clock has two hands. The SHORT hand shows the hour. The LONG hand shows the minutes.', 'For the long hand, count by fives around the clock. The 1 means 5 minutes, the 2 means 10, the 3 means 15, and so on.', 'Half past means 30 minutes after the hour. Quarter past means 15 after. Quarter to means 15 before the next hour. And a.m. is the morning; p.m. is the afternoon and night.'],
+  word: ['Word problems are little stories. Read it once just to picture it. Then ask: what is the question REALLY asking for?', '"In all" and "altogether" mean add. "How many are left" and "how many more" mean subtract.', 'Some stories have two steps. Do the first step and write the answer down. Then use it for the second step. Last, check: does my answer make sense?']
+};
+
 // ============================================================ ENGINE
 const Learn = {
   st() { return G.learn; },
   sk(id) { const s = G.learn.sk, k = id + '@' + G.learn.grade; return s[k] || (s[k] = { n: 0, r: 0, miss: 0, m: false, cs: 0 }); },
   forGrade(g, sub) { return Object.values(SKILLS).filter(s => g >= s.g[0] && g <= s.g[1] && (!sub || s.sub === sub) && (s.needs !== 'speech' || Speak.can())); },
   teacher() { return flag('priya') ? 'priya' : 'guide'; },
-  make(id, gOver) {
-    const L = G.learn, g = gOver || L.grade; let q;
-    const S = SKILLS[id];
-    for (let i = 0; i < 8; i++) { q = (S.multi && Math.random() < .25 && S.multi(g)) || null; if (!q || q.choices.length < 5) q = S.gen(g); if (!L.recent.includes(q.q + (q.passage ? q.ptitle : ''))) break; }
-    if (!q.type && !q.partB && S.sub === 'math' && Math.random() < .3 && /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) { q.type = 'num'; q.ans = q.choices[q.a]; }
-    L.recent.push(q.q + (q.passage ? q.ptitle : '')); if (L.recent.length > 24) L.recent.shift();
+  // A question may be asked as "type the answer" only when it makes sense without seeing the choices.
+  typable(q) { return !q.type && !q.partB && !/\b(Which|Select)\b/.test(q.q) && /^[\d,]+(\.\d+)?$/.test(q.choices[q.a]); },
+  // The KIND of question, ignoring the particular numbers: "47 + 28 = ?" and "35 + 49 = ?" are the same kind,
+  // "7 + 8 = ?" and "346 + 278 = ?" are not. English items and passage questions are each their own kind.
+  sig(q, sub) {
+    let t = (q.type === 'multi' ? 'M|' : '') + (q.ptitle || '') + '|' + q.q;
+    if (sub === 'math') {
+      // bare sums keep the SIZE of their numbers (1, 2 or 3 digits); in longer questions any number is just "a number"
+      t = t.replace(/\d+/g, d => t.length <= 24 ? '#'.repeat(Math.min(3, d.length)) : '#').replace(/Gloops|Boltbugs|Gnawbies|Zaprats|Murdles/g, 'X')
+        .replace(/\b(one|two|three|four|five|six|seven|eight|nine|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b/g, 'N')
+        .replace(/# (one-dollar bills?|quarters?|dimes?|nickels?|penn(y|ies))/g, 'C').replace(/C((,| and) C)+/g, 'C').replace(/[ap]\.m\./g, 'm');
+    } else if (q.type !== 'multi') t += '|' + q.choices[q.a] + (q.say || '');
+    let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36);
+  },
+  // want = a kind to ask again (a retry of something missed). Otherwise prefer kinds this child has not had yet,
+  // so that a skill is not "mastered" on its easy kinds alone and English items do not repeat until the bank runs out.
+  make(id, gOver, want) {
+    const L = G.learn, g = gOver || L.grade, S = SKILLS[id], k = gOver ? null : this.sk(id);
+    const one = () => { let c = (S.multi && Math.random() < .25 && S.multi(g)) || null; if (!c || c.choices.length < 5) c = S.gen(g); c.sig = this.sig(c, S.sub); return c; };
+    const key = c => c.q + (c.passage ? c.ptitle : '');
+    let q = null;
+    if (want) { for (let i = 0; i < 250 && !q; i++) { const c = one(); if (c.sig === want) q = c; } if (k && k.w && k.w[want]) { k.wf = q ? 0 : (k.wf || 0) + 1; if (k.wf >= 3) { delete k.w[want]; k.wf = 0; } } }
+    if (!q) {
+      const seen = k ? (k.seen = k.seen || []) : []; let fb = null;
+      for (let i = 0; i < 10 && !q; i++) { const c = one(); if (L.recent.includes(key(c))) continue; fb = fb || c; if (!seen.includes(c.sig)) q = c; }
+      if (!q) { q = fb || one(); if (k) k.seen = []; }
+    }
+    if (k) { k.seen = k.seen || []; if (!k.seen.includes(q.sig)) k.seen.push(q.sig); if (k.seen.length > 40) k.seen.shift(); }
+    if (S.sub === 'math' && Math.random() < .3 && this.typable(q)) { q.type = 'num'; q.ans = q.choices[q.a]; }
+    L.recent.push(key(q)); if (L.recent.length > 24) L.recent.shift();
     q.skill = id; return q;
   },
+  weak(k) { return k.w ? Object.keys(k.w) : []; },
+  // how many different kinds of question a skill has at this grade (counted once by sampling), and how many must be answered right
+  kinds(id) { const g = G.learn.grade, key = id + '@' + g, C = this._kinds || (this._kinds = {}); if (!C[key]) { const S = SKILLS[id], set = new Set(); for (let i = 0; i < 150; i++) { const c = (S.multi && i % 4 === 0 && S.multi(g)) || S.gen(g); set.add(this.sig(c, S.sub)); } C[key] = set.size; } return C[key]; },
+  breadth(id) { return Math.min(6, this.kinds(id)); },
   // ADAPTIVE PRACTICE
   // Each skill sits in a box from 0 (shaky) to 4 (rock solid). A right answer moves it up a box, a miss sends it to box 0.
-  //  - Weak skills: a miss comes back three questions later (at most one question in three is a retry), and box-0 skills are dealt twice per round.
-  //  - Strengths: still come back as REVIEW, but less often the higher the box (every round, then every 2nd, 3rd, 4th).
+  //  - Weak skills: a miss comes back three questions later as the SAME KIND of question (at most one question in three is a retry),
+  //    and box-0 skills are dealt twice per round. A missed kind has to be answered right twice, on different days of the deck, before it is cleared.
+  //  - Skills still being learned come up every round. Once MASTERED they come back as REVIEW, less often the higher the box
+  //    (every round, then every 2nd, 3rd, 4th).
+  //  - A kind that keeps being missed is not hammered: after four misses in a row the quick retries stop, it stays in the
+  //    normal rounds, and a lesson is offered instead.
   //  - Mastered skills sometimes come back one grade harder as a STRETCH; a badly missed skill gets an easier WARM-UP first.
   // Stretch and warm-up questions never count for or against mastery.
+  // MASTERED = four right in a row, at least five tries, right answers on up to six different kinds of question,
+  // and no missed kind still waiting to be cleared.
   box(k) { return k.box == null ? (k.m ? 3 : 1) : k.box; },
   next() {
     const L = G.learn; L.retry = L.retry || [];
@@ -671,11 +748,11 @@ const Learn = {
       L.gap = 0;
       const r = L.retry.splice(ri, 1)[0], k = this.sk(r.id), s = SKILLS[r.id];
       if (k.miss >= 3 && s.g[0] < L.grade && !r.warmed) { L.retry.unshift({ id: r.id, at: L.total, warmed: 1 }); const q = this.make(r.id, L.grade - 1); q.noRec = 1; q.tag = 'WARM-UP'; return q; }
-      const q = this.make(r.id); q.tag = 'ONE MORE TRY'; return q;
+      const q = this.make(r.id, null, r.sig); q.tag = 'ONE MORE TRY'; return q;
     }
     if (!L.deck || !L.deck.length || L.deckG !== L.grade) {
       L.deckG = L.grade; L.cycle = (L.cycle || 0) + 1;
-      const build = sub => { const out = []; for (const sk of this.forGrade(L.grade, sub)) { const k = this.sk(sk.id), b = this.box(k); if (k.n > 0 && L.cycle % [1, 1, 2, 3, 4][b]) continue; out.push(sk.id); if (k.n > 0 && b === 0) out.push(sk.id); } return shuffle(out); };
+      const build = sub => { const out = []; for (const sk of this.forGrade(L.grade, sub)) { const k = this.sk(sk.id), b = this.box(k); if (k.m && L.cycle % [1, 1, 2, 3, 4][b]) continue; out.push(sk.id); if (k.n > 0 && b === 0) out.push(sk.id); } return shuffle(out); };
       let a = build('math'), b = build('ela'); if (!a.length && !b.length) { a = shuffle(this.forGrade(L.grade, 'math').map(x => x.id)); b = shuffle(this.forGrade(L.grade, 'ela').map(x => x.id)); }
       L.deck = []; while (a.length || b.length) { if (a.length) L.deck.push(a.shift()); if (b.length) L.deck.push(b.shift()); }
       // open each round with something he is good at
@@ -684,7 +761,7 @@ const Learn = {
     const id = L.deck.shift(); if (!live(id)) return this.make(pick(this.forGrade(L.grade)).id);
     const k = this.sk(id), s = SKILLS[id];
     if (k.m && this.box(k) >= 3 && s.g[1] > L.grade && Math.random() < .35) { const q = this.make(id, L.grade + 1); q.noRec = 1; q.tag = `STRETCH: GRADE ${L.grade + 1}`; return q; }
-    const q = this.make(id); if (k.m || this.box(k) >= 3) q.tag = 'REVIEW'; return q;
+    const wk = this.weak(k)[0], q = this.make(id, null, wk && Math.random() < .7 ? wk : null); if (k.m || this.box(k) >= 3) q.tag = 'REVIEW'; return q;
   },
   standing() { const all = this.forGrade(G.learn.grade); return { weak: all.filter(s => { const k = this.sk(s.id); return k.n > 0 && (this.box(k) === 0 || k.miss >= 2); }), strong: all.filter(s => { const k = this.sk(s.id); return k.m || (k.n > 0 && this.box(k) >= 3); }) }; },
   pickFocus() {
@@ -698,8 +775,19 @@ const Learn = {
     k.n++; L.total++;
     if (typeof dayTick === 'function') dayTick(q.skill, ok);
     { const eg = G.eggs && G.eggs.find(x => !x.hatched); if (ok && eg && SKILLS[q.skill]) { if (SKILLS[q.skill].sub === 'math') eg.wm = Math.min(20, eg.wm + 1); else eg.we = Math.min(20, eg.we + 1); } }
-    if (ok) { k.r++; L.right++; L.streak++; L.best = Math.max(L.best, L.streak); k.miss = Math.max(0, k.miss - 1); k.cs = (k.cs || 0) + 1; k.box = Math.min(4, this.box(k) + 1); if (!k.m && k.cs >= 4 && k.n >= 5) { k.m = true; k.slip = 0; (L.fresh = L.fresh || []).push(q.skill); } }
-    else { k.miss++; L.streak = 0; k.cs = 0; k.box = 0; L.retry = L.retry || []; if (!this.focus && !L.retry.some(r => r.id === q.skill) && L.retry.length < 6) L.retry.push({ id: q.skill, at: L.total + 3 }); if (k.m) { k.slip = (k.slip || 0) + 1; if (k.slip >= 2) { k.m = false; k.slip = 0; } } }
+    const h = q.sig;
+    if (ok) {
+      k.r++; L.right++; L.streak++; L.best = Math.max(L.best, L.streak); k.miss = Math.max(0, k.miss - 1); k.cs = (k.cs || 0) + 1; k.box = Math.min(4, this.box(k) + 1);
+      if (h && k.w && k.w[h] && --k.w[h] <= 0) delete k.w[h];
+      if (h) { k.ok = k.ok || []; if (!k.ok.includes(h)) k.ok.push(h); if (k.ok.length > 12) k.ok.shift(); }
+      if (k.m && k.cs >= 3) k.slip = 0;
+      if (!k.m && k.cs >= 4 && k.n >= 5 && !this.weak(k).length && (k.ok || []).length >= this.breadth(q.skill)) { k.m = true; k.slip = 0; (L.fresh = L.fresh || []).push(q.skill); }
+    } else {
+      k.miss = Math.min(6, k.miss + 1); L.streak = 0; k.cs = 0; k.box = 0; L.retry = L.retry || [];
+      if (h) { k.w = k.w || {}; k.w[h] = 2; const ks = Object.keys(k.w); if (ks.length > 5) delete k.w[ks[0]]; }
+      if (!this.focus && k.miss < 4 && !L.retry.some(r => r.id === q.skill) && L.retry.length < 6) L.retry.push({ id: q.skill, at: L.total + 3, sig: h });
+      if (k.m) { k.slip = (k.slip || 0) + 1; if (k.slip >= 2) { k.m = false; k.slip = 0; } }
+    }
   },
   async quiz(title, id) { return this.ask(id ? this.make(id) : this.next(), title); },
   // Presents one item the way the real tests do. Formats: single choice, 'multi' (select all that apply),
@@ -845,8 +933,8 @@ const Learn = {
     const T = this.trialInfo(tier), pool = this.forGrade(T.g, 'math'); let miss = 0, last = null;
     for (let i = 0; i < T.n; i++) {
       let id = tier >= 3 && i === T.n - 1 ? 'word' : pick(pool.filter(x => x.id !== last)).id; last = id;
-      let q; for (let k = 0; k < 6; k++) { q = SKILLS[id].gen(T.g); if (!T.typed || /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) break; }
-      q.skill = id; if (T.typed && /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) { q.type = 'num'; q.ans = q.choices[q.a]; }
+      let q; for (let k = 0; k < 6; k++) { q = SKILLS[id].gen(T.g); if (!T.typed || this.typable(q)) break; }
+      q.skill = id; q.sig = this.sig(q, 'math'); if (T.typed && this.typable(q)) { q.type = 'num'; q.ans = q.choices[q.a]; }
       const ok = await this.ask(q, `${title}   ${i + 1} OF ${T.n}`, T.up);
       if (!ok && ++miss > T.allow) return false;
     }
@@ -857,7 +945,7 @@ const Learn = {
     const g = G.learn.grade, n = [6, 6, 8, 8, 10][k - 1], ma = shuffle(this.forGrade(g, 'math').slice()), en = shuffle(this.forGrade(g, 'ela').slice()); let miss = 0;
     for (let i = 0; i < n; i++) {
       const src = i % 2 ? en : ma, sk = src[Math.floor(i / 2) % src.length], q = this.make(sk.id);
-      if (!q.type && !q.partB && sk.sub === 'math' && /^-?[\d,]+(\.\d+)?$/.test(q.choices[q.a])) { q.type = 'num'; q.ans = q.choices[q.a]; }
+      if (sk.sub === 'math' && this.typable(q)) { q.type = 'num'; q.ans = q.choices[q.a]; }
       if (!(await this.ask(q, `EGG TRIAL   ${i + 1} OF ${n}`)) && ++miss > 1) return false;
     }
     return true;
@@ -911,22 +999,23 @@ const Learn = {
     const s = SKILLS[id], who = this.teacher(), k = this.sk(id), prev = Snd.curName;
     Snd.play('nest');
     await say(who, `LESSON: ${s.n.toUpperCase()}`, { col: '#ffd76a' });
-    for (const p of LESSONS[id]) await say(who, p);
+    const les = (G.learn.grade <= 2 && LESSON_G2[id]) || LESSONS[id];
+    for (const p of les) await say(who, p);
     if (typeof LPIC !== 'undefined' && LPIC[id]) await Pic.show(s.n, LPIC[id]);
     await say(who, 'Now show me. Get THREE in a row and this skill is officially MASTERED.');
     let row = 0, fails = 0;
     while (row < 3) {
-      const ok = await this.ask(this.make(id), `PROVE IT!   ${row} OF 3 DONE`);
+      const ok = await this.ask(this.make(id, null, this.weak(k)[0]), `PROVE IT!   ${row} OF 3 DONE`);
       if (ok) row++;
       else {
         row = 0; fails++;
         const c = await ask(who, pick(['So close. That one is sneaky. Want to go again?', 'Mistakes are how brains grow. Seriously, that is science. Again?', 'No worries. Even Captain Cosmos misses sometimes. One more try?']), ['Try again', 'Hear the lesson again', 'Take a break']);
-        if (c === 1) for (const p of LESSONS[id]) await say(who, p);
+        if (c === 1) for (const p of les) await say(who, p);
         if (c === 2) { await say(who, 'Good call. Brains need rest too. Come back to STUDY HALL whenever you want.'); Snd.play(prev); return false; }
       }
     }
     Snd.sfx('badge');
-    const first = !k.m; k.m = true; k.miss = 0; k.slip = 0; k.cs = 4;
+    const first = !k.m; k.m = true; k.miss = 0; k.slip = 0; k.cs = 4; k.w = {}; k.box = Math.max(3, this.box(k));
     await say(null, `★ SKILL MASTERED: ${s.n} ★`, { col: '#ffd76a' });
     if (first) { G.scrap += 40; give('soda', 1, true); await say(who, 'Told you that you could do it. Here: 40 scrap and a Zap Cola. You earned them.'); }
     else await say(who, 'Still got it! Practice keeps your brain sharp.');
