@@ -844,7 +844,7 @@ const Learn = {
         if (ok !== null) return;
         if (type === 'multi') { if (i === n) { if (!marks.size) { Snd.sfx('no'); return; } settle(marks.size === q.as.length && q.as.every(x => marks.has(x))); } else { marks.has(i) ? marks.delete(i) : marks.add(i); Snd.sfx('move'); } return; }
         if (i === cut || struck.has(i)) { Snd.sfx('no'); return; }
-        if (i !== q.a && canHint && !tries) { tries = 1; struck.add(i); hint = Learn.hintFor(q, q.choices[i]); Snd.sfx('wrong'); return; }
+        if (i !== q.a && canHint && !tries) { tries = 1; struck.add(i); hint = Learn.hintFor(q, q.choices[i]); Snd.sfx('wrong'); for (let k = 1; k < n; k++) { const j = (i + k) % n; if (j !== cut) { sel = j; break; } } return; }
         picked = i; late = tries > 0 && i === q.a; settle(i === q.a && !tries);
       };
       const key = k => {
@@ -863,12 +863,12 @@ const Learn = {
             if (ok !== null) { if (!quiet && t > 500 && (k === 'a' || k === 'b')) { finish(); return; } continue; }
             if (k === 'read') { speakNow(); continue; }
             if (type === 'num') {
-              if (k.length === 2 && k[0] === 'd') key(k[1]); else if (k === 'bksp') key('⌫');
+              if (k.length === 2 && k[0] === 'd') { key(k[1]); sel = 12; } else if (k === 'bksp') key('⌫');
               else if (k === 'up') sel = sel === 12 ? 9 : (sel + 12 - 3) % 12; else if (k === 'down') sel = sel === 12 ? 0 : (sel + 3) % 12;
               else if (k === 'left') sel = (sel + 12) % 13; else if (k === 'right') sel = (sel + 1) % 13; else if (k === 'a') key(PAD[sel]);
             } else {
               const rows = type === 'multi' ? n + 1 : n;
-              if (k === 'up') { sel = (sel + rows - 1) % rows; Snd.sfx('move'); } if (k === 'down') { sel = (sel + 1) % rows; Snd.sfx('move'); } if (k === 'a') choose(sel);
+              const dead = j => j === cut || struck.has(j); if (k === 'up') { do sel = (sel + rows - 1) % rows; while (dead(sel)); Snd.sfx('move'); } if (k === 'down') { do sel = (sel + 1) % rows; while (dead(sel)); Snd.sfx('move'); } if (k === 'a') choose(sel);
             }
           }
         },
