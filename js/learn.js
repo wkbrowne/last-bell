@@ -828,7 +828,7 @@ const Learn = {
       const canHint = !quiet && !mode.demo && !mode.noHint && !Learn.hold && (type === 'num' || (type === 'mc' && n === 4));
       // read-aloud: listening items speak on their own; young readers also get a "read to me" button
       const sayText = q.say && Speak.can() ? q.say : null;
-      const readText = !sayText && Speak.can() && G.learn.grade <= 3 ? (q.passage ? q.passage + ' ... ' : '') + q.q.replace(/_{2,}/g, 'blank') + (type === 'num' ? '' : ' ... ' + q.choices.map((c, i) => 'ABCDEF'[i] + ': ' + c).join(' ... ')) : null;
+      const readText = !sayText && Speak.can() && G.learn.grade <= 3 ? (q.passage ? q.passage + ' ... ' : '') + q.q.replace(/_{2,}/g, 'blank') + (type === 'num' ? '' : ' ... The choices are: ' + q.choices.map((c, i) => 'Choice ' + 'ABCDEF'[i] + '. ' + c).join(' ... ')) : null;
       const speakNow = () => { if (sayText || readText) Speak.say(sayText || readText); };
       if (sayText) Timers.add(350, speakNow);
       const cut = type === 'mc' && n === 4 && !mode.test && G.gear && G.gear.charms.hint ? pick([0, 1, 2, 3].filter(i => i !== q.a)) : -1;
