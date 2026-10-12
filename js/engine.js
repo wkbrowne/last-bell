@@ -63,10 +63,11 @@ const Input = { held: {}, presses: [], taps: [] };
 const KEYS = {
   ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right', KeyZ: 'a', Enter: 'a', Space: 'a', KeyX: 'b', Escape: 'b',
-  KeyM: 'mute', ShiftLeft: 'run', ShiftRight: 'run'
+  KeyM: 'mute', KeyR: 'read', ShiftLeft: 'run', ShiftRight: 'run'
 };
 const DIRKEYS = ['up', 'down', 'left', 'right'];
 addEventListener('keydown', e => {
+  if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;      // typing in the answer box
   if (/^[0-9.]$/.test(e.key)) { Input.presses.push('d' + e.key); Snd.unlock(); return; }
   if (e.code === 'Backspace') { Input.presses.push('bksp'); e.preventDefault(); return; }
   const k = KEYS[e.code]; if (!k) return;
@@ -381,4 +382,41 @@ function drawStorm(now, groundY, gapMin, gapMax, bolt) {
     ctx.restore();
   }
   ctx.fillStyle = `rgba(215,228,255,${fl * (bolt === false ? .45 : 1)})`; ctx.fillRect(0, 0, W, H);
+}
+
+// ---------------------------------------------------------------- read-aloud
+// The tablet app speaks through Android's own voice (LBSpeech bridge); a browser uses its built-in voices.
+const Speak = {
+  id: 0, on: false, bad: false, done: null, tm: 0,
+  can() { try { return !this.bad && (window.LBSpeech ? !!window.LBSpeech.ok() : !!(window.speechSynthesis && window.SpeechSynthesisUtterance)); } catch (e) { return false; } },
+  duck(d) { try { if (Snd.master && !Snd.muted) Snd.master.gain.value = d ? .12 : .7; } catch (e) {} },
+  stop() { this.id++; clearTimeout(this.tm); if (!this.on) return; this.on = false; this.duck(false); try { if (window.LBSpeech) window.LBSpeech.stop(); else speechSynthesis.cancel(); } catch (e) {} },
+  say(text) {
+    this.stop(); if (!this.can()) return Promise.resolve(false);
+    return new Promise(res => {
+      const id = ++this.id, fin = ok => { if (id !== this.id) return; this.id++; clearTimeout(this.tm); this.on = false; this.duck(false); res(ok); };
+      this.on = true; this.duck(true); this.done = fin;
+      this.tm = setTimeout(() => fin(true), 4000 + text.length * 110);
+      try {
+        if (window.LBSpeech) window.LBSpeech.speak(text);
+        else { const u = new SpeechSynthesisUtterance(text); u.rate = .9; u.lang = 'en-US'; u.onend = () => fin(true); u.onerror = () => fin(false); this.keep = u; speechSynthesis.speak(u); }
+      } catch (e) { this.bad = true; fin(false); }
+    });
+  }
+};
+window.lbSpeechDone = ok => { if (Speak.done) Speak.done(ok); };
+try { if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {}
+
+// ---------------------------------------------------------------- typing box (a real text field over the canvas)
+function typeAnswer(label, opts) {
+  opts = opts || {};
+  return new Promise(res => {
+    const box = document.getElementById('typebox'), inp = document.getElementById('typein'), ok = document.getElementById('typeok'), no = document.getElementById('typecancel');
+    document.getElementById('typelabel').textContent = label; inp.value = opts.value || ''; inp.placeholder = opts.placeholder || 'Type here...'; inp.rows = opts.rows || 3; no.textContent = opts.cancel || 'Skip';
+    box.hidden = false; setTimeout(() => { try { inp.focus(); } catch (e) {} }, 60);
+    const m = { update() {}, draw() { if (opts.draw) opts.draw(); }, tap() {} }; UI.push(m);
+    const close = v => { box.hidden = true; ok.onclick = no.onclick = null; try { inp.blur(); } catch (e) {} UI.pop(m); res(v); };
+    ok.onclick = () => { const v = inp.value.trim(); if (!v) { inp.focus(); return; } close(v); };
+    no.onclick = () => close(null);
+  });
 }

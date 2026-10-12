@@ -631,7 +631,7 @@ const LESSONS = {
 const Learn = {
   st() { return G.learn; },
   sk(id) { const s = G.learn.sk, k = id + '@' + G.learn.grade; return s[k] || (s[k] = { n: 0, r: 0, miss: 0, m: false, cs: 0 }); },
-  forGrade(g, sub) { return Object.values(SKILLS).filter(s => g >= s.g[0] && g <= s.g[1] && (!sub || s.sub === sub)); },
+  forGrade(g, sub) { return Object.values(SKILLS).filter(s => g >= s.g[0] && g <= s.g[1] && (!sub || s.sub === sub) && (s.needs !== 'speech' || Speak.can())); },
   teacher() { return flag('priya') ? 'priya' : 'guide'; },
   make(id) {
     const L = G.learn; let q;
@@ -686,10 +686,15 @@ const Learn = {
     return new Promise(res => {
       const s = SKILLS[q.skill], type = q.type || 'mc', quiet = mode.test || mode.hold, n = q.choices.length;
       const PAD = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', '.', '⌫', 'OK'], word = pick(['BRAIN BLAST!', 'NAILED IT!', 'BIG BRAIN!']);
-      let sel = 0, ok = null, picked = -1, t = 0, hits = [], inp = '';
+      let sel = 0, ok = null, picked = -1, t = 0, hits = [], inp = '', sayHit = null;
+      // read-aloud: listening items speak on their own; young readers also get a "read to me" button
+      const sayText = q.say && Speak.can() ? q.say : null;
+      const readText = !sayText && Speak.can() && G.learn.grade <= 3 ? (q.passage ? q.passage + ' ... ' : '') + q.q.replace(/_{2,}/g, 'blank') + (type === 'num' ? '' : ' ... ' + q.choices.map((c, i) => 'ABCDEF'[i] + ': ' + c).join(' ... ')) : null;
+      const speakNow = () => { if (sayText || readText) Speak.say(sayText || readText); };
+      if (sayText) Timers.add(350, speakNow);
       const cut = type === 'mc' && n === 4 && !mode.test && G.gear && G.gear.charms.hint ? pick([0, 1, 2, 3].filter(i => i !== q.a)) : -1;
       const marks = new Set();
-      const finish = () => { UI.pop(m); res(ok); };
+      const finish = () => { Speak.stop(); UI.pop(m); res(ok); };
       const settle = good => {
         if (ok !== null) return; ok = good; t = 0;
         if (quiet) { Snd.sfx('ok'); Timers.add(300, finish); return; }
@@ -713,6 +718,7 @@ const Learn = {
           t += dt;
           for (const k of pr) {
             if (ok !== null) { if (!quiet && t > 500 && (k === 'a' || k === 'b')) { finish(); return; } continue; }
+            if (k === 'read') { speakNow(); continue; }
             if (type === 'num') {
               if (k.length === 2 && k[0] === 'd') key(k[1]); else if (k === 'bksp') key('⌫');
               else if (k === 'up') sel = sel === 12 ? 9 : (sel + 12 - 3) % 12; else if (k === 'down') sel = sel === 12 ? 0 : (sel + 3) % 12;
@@ -725,6 +731,7 @@ const Learn = {
         },
         tap(x, y) {
           if (ok !== null) { if (!quiet && t > 500) finish(); return; }
+          if (sayHit && inRect(x, y, sayHit)) { speakNow(); return; }
           const h = hits.find(r => inRect(x, y, r)); if (!h) return;
           if (type === 'num') { sel = PAD.indexOf(h.k); key(h.k); } else { sel = h.i; choose(h.i); }
         },
@@ -734,7 +741,8 @@ const Learn = {
           setFont(18, true); text((title || 'BRAIN BLAST!') + (mode.part ? '   ·   ' + mode.part : ''), 48, 34, '#ffd76a');
           ctx.drawImage(Art.sprite('brain'), W - 100, 16, 64, 64);
           setFont(24); text((s.sub === 'math' ? 'MATH' : 'ENGLISH') + ' · ' + s.n, W - 104, 36, s.sub === 'math' ? '#7fe0d8' : '#ffb0d0', 'right');
-          let y = 78; hits = [];
+          let y = 78; hits = []; sayHit = null;
+          if (sayText) { sayHit = { x: 56, y, w: 330, h: 50 }; const pu = Speak.on ? .5 + .5 * Math.sin(t / 120) : 0; rbox(sayHit.x, sayHit.y + 3, sayHit.w, sayHit.h, 25, 'rgba(8,4,20,.35)'); rbox(sayHit.x, sayHit.y, sayHit.w, sayHit.h, 25, '#2f7ab0', pu ? '#ffffff' : '#9fe0ff', 3); setFont(18, true); text(Speak.on ? 'LISTEN...' : 'HEAR IT AGAIN', sayHit.x + 165, sayHit.y + 13, '#fff', 'center'); if (q.heard) { setFont(24); text('Listening: ' + q.heard, 406, y + 12, '#9fe0ff'); } y += 64; }
           if (q.passage) {
             setFont(24); const pl = wrap(q.passage, W - 130);
             rbox(44, y, W - 88, pl.length * 25 + 46, 14, 'rgba(12,6,30,.55)', '#6a56b8', 2);
@@ -788,6 +796,7 @@ const Learn = {
             if (type === 'multi' && !done) { const r = { x: W / 2 - 130, y: y + 2, w: 260, h: 46, i: n }; rbox(r.x, r.y + 3, r.w, r.h, 23, 'rgba(8,4,20,.35)'); rbox(r.x, r.y, r.w, r.h, 23, marks.size ? '#2f9a54' : '#3a3458', sel === n ? '#ffd76a' : '#7a66d0', 3); setFont(18, true); text('SUBMIT', W / 2, r.y + 10, marks.size ? '#fff' : '#8f86a8', 'center'); hits.push(r); }
             if (done) { setFont(18, true); text(head, 56, y + 6, ok && mode.both !== false ? '#7fe08a' : '#ffb07a'); setFont(24); why.forEach((l, i) => text(l, 56, y + 34 + i * 25, '#e8e0f4')); }
           }
+          if (readText && ok === null) { sayHit = { x: 44, y: H - 70, w: 200, h: 40 }; rbox(sayHit.x, sayHit.y, sayHit.w, sayHit.h, 20, '#2f7ab0', Speak.on ? '#ffffff' : '#9fe0ff', 2.5); setFont(15, true); text(Speak.on ? 'READING...' : 'READ TO ME', sayHit.x + 100, sayHit.y + 10, '#fff', 'center'); }
           if (done && t > 500 && Math.floor(t / 400) % 2) { setFont(24); text('▼', W - 70, H - 54, '#c9a24a'); }
           if (ok !== null && quiet) { setFont(18, true); text('LOCKED IN', W / 2, H - 62, '#a8ffb8', 'center'); }
         }
@@ -905,12 +914,12 @@ const Learn = {
       setFont(24); text(`Grade ${L.grade}  ·  ${L.right}/${L.total} correct (${L.total ? Math.round(100 * L.right / L.total) : 0}%)  ·  best streak ${L.best}  ·  rank: ${brainRank(L.right)}`, 44, 64, '#e8e0f4');
       setFont(21);
       list.forEach((s, i) => {
-        const k = this.sk(s.id), col = i % 2, x = 44 + col * 446, y = 100 + Math.floor(i / 2) * (list.length > 22 ? 40 : 44);
+        const k = this.sk(s.id), col = i % 2, x = 44 + col * 446, y = 100 + Math.floor(i / 2) * Math.min(44, Math.floor(550 / Math.ceil(list.length / 2)));
         text((k.m ? '★ ' : '') + s.n, x, y, k.m ? '#ffd76a' : k.miss >= 2 ? '#ffb07a' : '#fff');
         text(k.n ? `${k.r}/${k.n}` : '—', x + 420, y, '#fff', 'right');
         { const lab = `${DOMAIN[s.id] || (s.sub === 'math' ? 'Math' : 'ELA')} · ${s.std}`; text(lab.length > 50 ? lab.slice(0, 49) + '…' : lab, x, y + 20, '#8f86a8'); }
       });
-      setFont(20); text('Grouped by i-Ready domain, with Common Core (California CCSS) codes.  ★ = mastered.', 44, H - 50, '#8f86a8');
+      setFont(20); { const w = L.writing, mz = L.maze && L.maze.length ? Math.max(...L.maze.map(x => x.s)) : null, o = L.orf && L.orf.length ? L.orf[L.orf.length - 1] : null; text(`Writing ${w ? w.r + '/' + w.n : '—'}   ·   Maze Dash best ${mz == null ? '—' : mz}   ·   Read-aloud ${o ? o.wcpm + ' words/min, ' + o.acc + '%' : '—'}   ·   ★ = mastered`, 44, H - 50, '#c8ffb8'); }
     });
   }
 };

@@ -408,19 +408,27 @@ const crewPage = () => page(() => {
 });
 async function optionsMenu() {
   while (true) {
-    const i = await menu([`Grade level: ${G.learn.grade}`, `Sound: ${Snd.muted ? 'OFF' : 'ON'}`, 'Report Card (for grown-ups)', 'Back'], { x: 300, y: 200, w: 420, title: 'OPTIONS' });
+    const i = await menu([`Grade level: ${G.learn.grade}`, `Sound: ${Snd.muted ? 'OFF' : 'ON'}`, 'Report Card (for grown-ups)', `Claude marking: ${Grader.key() ? 'ON' : 'off'}  (grown-ups)`, 'Back'], { x: 270, y: 200, w: 480, title: 'OPTIONS' });
     if (i === 0) { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }
     else if (i === 1) Snd.toggleMute();
     else if (i === 2) await Learn.report();
+    else if (i === 3) {
+      // a sum a second-grader will not do in his head keeps the key screen for grown-ups
+      const a = rint(13, 19), b = rint(6, 9), gate = await typeAnswer(`Grown-ups only. What is ${a} × ${b}?`, { rows: 1, cancel: 'Cancel', placeholder: 'answer' });
+      if (gate === null) continue; if (parseInt(gate, 10) !== a * b) { await say(null, 'Not quite. This setting is for grown-ups.'); continue; }
+      await say(null, 'With an Anthropic API key, typed sentences in the Writing Workshop are marked by Claude, with a line of feedback. The key stays on this device only. Each sentence marked is one small paid API call.');
+      const k = await typeAnswer(Grader.key() ? 'A key is saved. Paste a new one, or type "none" to remove it.' : 'Paste an Anthropic API key (it starts with sk-ant-).', { rows: 2, cancel: 'Cancel', placeholder: 'sk-ant-...' });
+      if (k === null) continue; if (/^none$/i.test(k)) { Grader.setKey(''); toast('Claude marking off'); } else { Grader.setKey(k); toast('Claude marking on'); }
+    }
     else return;
   }
 }
 async function pauseMenu() {
   while (true) {
-    const opts = [['Team', partyMenu], ['Bag', bagMenu], ['Study Hall', () => Learn.studyHall()], ['Dragons', eggsPage]];
+    const opts = [['Team', partyMenu], ['Bag', bagMenu], ['Study Hall', () => Learn.studyHall()], ['Practice & Tests', () => Learn.practiceMenu()], ['Dragons', eggsPage]];
     if (flag('canFly')) opts.push(['Fly', flyMenu]);
     opts.push(["Dex's Log", journal], ['Badges', badgesPage], ['Crew', crewPage], ['Save', async () => saveGame()], ['Options', optionsMenu], ['Close', null]);
-    const i = await menu(opts.map(o => o[0]), { x: W - 280, y: 20, w: 260, rows: 11, title: 'MENU' });
+    const i = await menu(opts.map(o => o[0]), { x: W - 300, y: 20, w: 280, rows: 12, title: 'MENU' });
     if (i < 0 || !opts[i][1]) return;
     if ((await opts[i][1]()) === 'exit') return;
   }
@@ -436,7 +444,7 @@ async function restMenu(nest) {
     if (flag('priya')) opts.push([`Answer a signal  (Night ${G.night + 1})`, () => Story.signal()]);
     if (flag('canFly') && G.map === 'world') opts.push(['Fly by dragon', () => flyMenu()]);
     opts.push([`Study Hall  ★ ${pm}/${pn}`, () => Learn.studyHall()]);
-    opts.push(['Practice Test  (10 questions)', () => Learn.testDay()]);
+    opts.push(['Practice & Tests', () => Learn.practiceMenu()]);
     opts.push([talk ? `Talk with ${CREW[talk.who].n}  ♥` : 'Sit by the fire', async () => {
       if (!talk) { await say(null, pick(['The fire crackles. For a minute, everything is okay.', 'Your critters pile up into one big, snoring heap.', "You toast a gummy worm. It's... not great. You eat it anyway."])); return; }
       const prev = Snd.curName; Snd.play('sad');

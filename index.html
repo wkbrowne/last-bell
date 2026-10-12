@@ -33,6 +33,13 @@
   #bB { right: 16%; bottom: 4%; background: rgba(150,60,70,.55); }
   #bM { right: 2%; top: 2%; width: 8%; background: rgba(20,16,36,.6); font-size: 3vmin; }
   .btn.down, #dpad.down { filter: brightness(1.6); }
+  #typebox { position: absolute; left: 5%; right: 5%; bottom: 4%; background: #241a52; border: 3px solid #f2c14e; border-radius: 18px; padding: 2.2vmin; font-family: Fredoka, 'Arial Rounded MT Bold', sans-serif; }
+  #typebox[hidden] { display: none; }
+  #typelabel { color: #ffd76a; font-size: 2.6vmin; margin-bottom: 1.2vmin; }
+  #typein { width: 100%; box-sizing: border-box; font: 600 3vmin Fredoka, sans-serif; padding: 1.4vmin; border-radius: 12px; border: 2px solid #7a66d0; background: #120a30; color: #fff; resize: none; -webkit-user-select: text; user-select: text; }
+  #typebox .row { display: flex; gap: 2vmin; justify-content: flex-end; margin-top: 1.4vmin; }
+  #typebox button { font: 700 2.8vmin Fredoka, sans-serif; padding: 1.2vmin 4vmin; border-radius: 999px; border: 2px solid #f2c14e; color: #fff; background: #4a3a8e; }
+  #typeok { background: #2f9a54 !important; }
 </style>
 </head>
 <body>
@@ -44,16 +51,19 @@
     <div id="bA" class="btn">A</div>
     <div id="bM" class="btn">☰</div>
   </div>
+  <div id="typebox" hidden><div id="typelabel"></div><textarea id="typein" maxlength="240" autocomplete="off" autocapitalize="sentences"></textarea><div class="row"><button id="typecancel">Skip</button><button id="typeok">Done</button></div></div>
 </div>
-<script src="js/engine.js?v=28"></script>
-<script src="js/snd.js?v=28"></script>
-<script src="js/art.js?v=28"></script>
-<script src="js/data.js?v=28"></script>
-<script src="js/learn.js?v=28"></script>
-<script src="js/world.js?v=28"></script>
-<script src="js/battle.js?v=28"></script>
-<script src="js/story.js?v=28"></script>
-<script src="js/game.js?v=28"></script>
+<script src="js/engine.js?v=29"></script>
+<script src="js/snd.js?v=29"></script>
+<script src="js/art.js?v=29"></script>
+<script src="js/data.js?v=29"></script>
+<script src="js/learn.js?v=29"></script>
+<script src="js/grader.js?v=29"></script>
+<script src="js/learn2.js?v=29"></script>
+<script src="js/world.js?v=29"></script>
+<script src="js/battle.js?v=29"></script>
+<script src="js/story.js?v=29"></script>
+<script src="js/game.js?v=29"></script>
 <script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </body>
 </html>
