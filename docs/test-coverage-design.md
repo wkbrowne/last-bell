@@ -224,3 +224,38 @@ Measured in the browser by counting drawing calls per frame in four scenes. Not 
   the voice is reading.
 
 Still the heaviest thing on screen: forests, at about 400 tree pictures per frame.
+
+## Quick check, review by days, Fact Dash, practise report, English hints (v1.16)
+
+**Design aims.** Spend his time on what he does not know yet; bring back what he does know just before he would forget
+it; make number facts automatic; tell a grown-up exactly what to practise; and make every hint about the choice he made.
+
+**Quick check (placement).** Twelve questions, one from each of twelve core skills (six math, six English), no hints,
+nothing recorded as a miss. Math answers are typed where possible so they cannot be guessed. A right answer gives that
+skill a *head start*: two more right answers master it, instead of about six. It does not mark the skill mastered,
+because one answer can be luck. Offered once at the start of a session (he can say no) and always available under
+Practice & Tests.
+
+**Review by days.** A mastered skill leaves the daily rounds and comes back after 1 day, then 3, 7, 14, 30 and 60 days.
+A right answer on its due day moves it to the next gap; a miss sends it back to 1 day (two misses still un-master it).
+When nothing is left to learn and nothing is due, the reviews due soonest are brought forward so there is always
+something to play.
+
+**Fact Dash.** One minute of number facts on a big number pad, no OK button: sums and differences within 20 in Grade 2,
+times tables from Grade 3, division too from Grade 4. Each fact's speed and misses are remembered, and slow or missed
+facts come up more often. A wrong answer shows the right one for a moment. It counts a little toward the daily goal.
+
+**Practise report.** The grown-up Report Card has a second page: an example (with its answer) of each kind of question
+that has been missed and not yet fixed, the last and best Fact Dash, the slow facts, how many skills are due for review,
+and whether the quick check has been done.
+
+**English hints from the choice made.** Sound-alikes: what the chosen word actually means. Verb agreement: which
+subjects the chosen word goes with. Punctuation: what differs between the chosen sentence and a correct one (first
+letter, end mark, a name without a capital, apostrophe, quotation marks, commas) without giving the answer. Parts of
+speech: a test to apply to the chosen word. Synonyms: "that one is the opposite". Plurals and past tense: "that follows
+the rule, but this word is a rule-breaker". Any fill-the-gap item: the sentence read back with his choice in it.
+Spelling, phonics, word parts and reading still get a general hint.
+
+**Also.** The guide is now one small arrow beside Dex plus a small marker over the goal when it is close. Sound on/off
+is remembered between sessions, silences the reading voice too, is on the title menu, and can be forced with `?mute`
+at the end of the web address.

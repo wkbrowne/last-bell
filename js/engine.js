@@ -404,7 +404,7 @@ function drawStorm(now, groundY, gapMin, gapMax, bolt) {
 // The tablet app speaks through Android's own voice (LBSpeech bridge); a browser uses its built-in voices.
 const Speak = {
   id: 0, on: false, bad: false, done: null, tm: 0, VKEY: 'lastbell_voice', RKEY: 'lastbell_rate',
-  can() { try { return !this.bad && (window.LBSpeech ? !!window.LBSpeech.ok() : !!(window.speechSynthesis && window.SpeechSynthesisUtterance)); } catch (e) { return false; } },
+  can() { try { return !Snd.muted && !this.bad && (window.LBSpeech ? !!window.LBSpeech.ok() : !!(window.speechSynthesis && window.SpeechSynthesisUtterance)); } catch (e) { return false; } },
   duck(d) { try { if (Snd.master && !Snd.muted) Snd.master.gain.setTargetAtTime(d ? .1 : .7, Snd.ac.currentTime, .06); } catch (e) {} },
   get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },

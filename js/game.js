@@ -287,15 +287,17 @@ const Guide = {
   draw(camX, camY, now) {
     this.solve(); const p = this.path, t = this.tgt; if (!t || !p.length) return;
     ctx.save(); ctx.translate(Math.round(-camX), Math.round(-camY)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (let i = Math.min(p.length - 1, 13); i >= 1; i--) {
-      const [x, y] = p[i], nx = p[i + 1] || [t.x, t.y]; if (nx[0] === x && nx[1] === y) continue;
-      const ph = (((now / 130 - i) % 6) + 6) % 6, al = .3 + .7 * Math.max(0, 1 - ph / 2.5);
-      ctx.save(); ctx.translate(x * 48 + 24, y * 48 + 24); ctx.rotate(Math.atan2(nx[1] - y, nx[0] - x)); ctx.scale(1.3, 1.3); ctx.globalAlpha = al;
-      for (const [lw, col] of [[11, '#2a1840'], [6, '#ffd24a']]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(-9, -11); ctx.lineTo(5, 0); ctx.lineTo(-9, 11); ctx.stroke(); }
+    if (p.length > 2) {
+      // ONE small arrow just ahead of Dex, pointing the way the route goes next
+      const a = p[1], b = p[Math.min(p.length - 1, 4)], ang = Math.atan2(b[1] - p[0][1], b[0] - p[0][0]), bob = Math.sin(now / 260) * 4;
+      ctx.save(); ctx.translate(PL.px * 3 + 24 + Math.cos(ang) * (58 + bob), PL.py * 3 + 22 + Math.sin(ang) * (58 + bob)); ctx.rotate(ang); ctx.globalAlpha = .82;
+      ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#2a1840'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-8, -11); ctx.lineTo(-3, 0); ctx.lineTo(-8, 11); ctx.closePath(); ctx.stroke(); ctx.fill();
       ctx.restore();
     }
-    const bx = t.x * 48 + 24, by = t.y * 48 - 26 + Math.sin(now / 160) * 7;
-    ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#2a1840'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(bx - 17, by - 20); ctx.lineTo(bx + 17, by - 20); ctx.lineTo(bx, by + 6); ctx.closePath(); ctx.stroke(); ctx.fill();
+    if (p.length <= 9) {   // close to the goal: a small marker over it
+      const bx = t.x * 48 + 24, by = t.y * 48 - 24 + Math.sin(now / 200) * 5;
+      ctx.globalAlpha = .9; ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#2a1840'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(bx - 12, by - 14); ctx.lineTo(bx + 12, by - 14); ctx.lineTo(bx, by + 4); ctx.closePath(); ctx.stroke(); ctx.fill();
+    }
     ctx.restore();
   }
 };
@@ -560,6 +562,7 @@ async function welcomeBack() {
   const st = Learn.standing();
   await say(Learn.teacher(), `Welcome back! ${G.dayStreak ? `Day streak: ${G.dayStreak}. ` : ''}Today's goal is ${G.goal} Brain Blasts.${st.weak[0] ? ` We will give "${st.weak[0].n}" some extra turns.` : ''}`);
   if (G.obj) await say('dex', 'Right. Where was I? ' + G.obj);
+  const L = G.learn; if (L.placed !== L.grade && !L.placeAsked && L.total < 80) { L.placeAsked = true; if (await ask(Learn.teacher(), 'Before we start: want a QUICK CHECK? Twelve questions, no hints, and nothing bad happens if you miss. It lets me go faster on the things you already know.', ['Yes, check me', 'Not now']) === 0) await Learn.placement(); }
 }
 async function pauseMenu() {
   while (true) {
@@ -900,7 +903,10 @@ async function titleFlow() {
   PL.titleWait = false; Snd.sfx('ok');
   while (true) {
     const has = hasSave();
-    const i = await menu(has ? ['Continue', 'New Game'] : ['New Game'], { x: 340, y: 300, w: 280, cancel: false });
+    const snd = `Sound: ${Snd.muted ? 'OFF' : 'on'}`, items = has ? ['Continue', 'New Game', snd] : ['New Game', snd];
+    const pickd = await menu(items, { x: 340, y: 300, w: 280, cancel: false });
+    if (pickd === items.length - 1) { Snd.toggleMute(); continue; }
+    const i = has ? pickd : 1;
     if (has && i === 0 && loadGame()) { await fadeOut(300); enterWorld(); await fadeIn(300); await welcomeBack(); return; }
     if (has && (await ask(null, 'Start over? Your saved game will be replaced the next time you save.', ['Yes, new game', 'Never mind'])) !== 0) continue;
     G = newState(); await fadeOut(300); Fx.fade = 0; await Story.intro(); return;

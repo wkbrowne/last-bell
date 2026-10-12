@@ -573,8 +573,10 @@ const PASSAGES = [
     ["Dex's question at the end is meant to…", 'persuade the crew by making them think', ['show that he is confused', 'ask for directions', 'change the subject'], 'A question like this is not asking for an answer. It makes the listener think.']] }
 ];
 
-const pluralQ = () => { const [w, a] = pick(PLURALS); const ws = [...new Set([w + 's', w + 'es', w.slice(0, -1) + 'ies', a + 's', w.slice(0, -1) + 'ves', w + 'en'])].filter(x => x !== a); return mc(`One ${w}, two ___.  Which word is the correct plural of "${w}"?`, a, ws, `The plural of "${w}" is "${a}." Some plurals do not just add -s. You have to learn them by heart!`); };
-const pastQ = () => { const [v, a] = pick(PAST); const ws = [...new Set([v + 'ed', a + 'ed', v + v.slice(-1) + 'ed', v + 't'].concat(v.endsWith('e') ? [v + 'd'] : []))].filter(x => x !== a); return mc(`Today I ${v}. Yesterday I ___.  Which is the past tense of "${v}"?`, a, ws, `"${v[0].toUpperCase() + v.slice(1)}" is an irregular verb. Its past tense is "${a}," not "${v}ed."`); };
+const pluralQ = () => { const [w, a] = pick(PLURALS); const ws = [...new Set([w + 's', w + 'es', w.slice(0, -1) + 'ies', a + 's', w.slice(0, -1) + 'ves', w + 'en'])].filter(x => x !== a); return mc(`One ${w}, two ___.  Which word is the correct plural of "${w}"?`, a, ws, `The plural of "${w}" is "${a}." Some plurals do not just add -s. You have to learn them by heart!`, w + 's' !== a ? { tips: { [w + 's']: `Most words just add -s. But "${w}" is one of the rule-breakers.` } } : undefined); };
+const pastQ = () => { const [v, a] = pick(PAST); const ws = [...new Set([v + 'ed', a + 'ed', v + v.slice(-1) + 'ed', v + 't'].concat(v.endsWith('e') ? [v + 'd'] : []))].filter(x => x !== a); return mc(`Today I ${v}. Yesterday I ___.  Which is the past tense of "${v}"?`, a, ws, `"${v[0].toUpperCase() + v.slice(1)}" is an irregular verb. Its past tense is "${a}," not "${v}ed."`, { tips: { [v + 'ed']: `Most action words add -ed. But "${v}" is a rule-breaker: it changes in its own way.` } }); };
+const HOMO_MEAN = { to: '"To" shows where someone goes: go TO school.', too: '"Too" means also, or more than enough.', two: '"Two" is the number 2.', their: '"Their" means it belongs to them.', there: '"There" names a place.', "they're": '"They\'re" is short for "they are."', your: '"Your" means it belongs to you.', "you're": '"You\'re" is short for "you are."', its: '"Its" means it belongs to it.', "it's": '"It\'s" is short for "it is."', here: '"Here" names a place.', hear: 'You "hear" with your ear.', see: 'You "see" with your eyes.', sea: 'The "sea" is the ocean.', sun: 'The "sun" is in the sky.', son: 'A "son" is a boy in a family.', ate: '"Ate" is what you did with food.', eight: '"Eight" is the number 8.', know: '"Know" is something your brain does.', no: '"No" is the opposite of yes.', now: '"Now" means at this moment.', knew: '"Knew" means you already knew it.', new: '"New" means not old.', write: 'You "write" with a pencil.', right: '"Right" is a direction, or it means correct.', blew: '"Blew" is what the wind did.', blue: '"Blue" is a color.', tale: 'A "tale" is a story.', tail: 'A "tail" is on an animal.', won: '"Won" means you did not lose.', one: '"One" is the number 1.', than: '"Than" compares two things.', then: '"Then" tells what happens next.', past: '"Past" tells where: you walk past something.', passed: '"Passed" is something you did.', whose: '"Whose" asks who owns something.', "who's": '"Who\'s" is short for "who is."', affect: '"Affect" is an action: to change something.', effect: 'An "effect" is a result, a thing.', accept: '"Accept" means to take or receive.', except: '"Except" means leaving out.', advice: '"Advice" is a thing you give.', advise: '"Advise" is an action.', breath: 'A "breath" is a thing: one puff of air.', breathe: '"Breathe" is an action.', principal: 'The "principal" runs the school.', principle: 'A "principle" is a rule or belief.' };
+const SVA_HELP = { is: '"Is" goes with just ONE (he, she, it).', are: '"Are" goes with more than one (we, you, they).', am: '"Am" only goes with "I."', be: '"Be" needs a helper in front, like "will be."', has: '"Has" goes with just one (he, she, it).', have: '"Have" goes with I, you, we and they.', do: '"Do" goes with I, you, we and they.', does: '"Does" goes with just one (he, she, it).', was: '"Was" goes with just one, and it already happened.', were: '"Were" goes with more than one, and it already happened.' };
 const itemQ = (bank, pre) => g => { const it = pick(band(bank, g)); return mc((pre ? pre + '\n' : '') + it.q, it.a, it.w, it.why); };
 const ELA = {
   plural: { n: 'Plural Nouns', std: 'L.2.1b · L.3.1b', g: [2, 4], gen: pluralQ },
@@ -585,7 +587,7 @@ const ELA = {
   spelling: { n: 'Spelling', std: 'L.2.2 – L.6.2', g: [2, 6], gen: g => { const it = pick(band(SPELL, g)); return mc('Which word is spelled correctly?', it.a, it.w, `The correct spelling is "${it.a}." Say it slowly and picture each letter.`); } },
   synant: { n: 'Synonyms & Antonyms', std: 'L.2.5 – L.6.5', g: [2, 6], gen: g => { const FAM = { big: 'size', tiny: 'size', small: 'size', enormous: 'size', brief: 'size', fast: 'speed', quick: 'speed', rapid: 'speed', happy: 'joy', glad: 'joy', brave: 'nerve', scared: 'nerve', timid: 'nerve', quiet: 'sound', shout: 'sound', cold: 'temp', frigid: 'temp', angry: 'calm', tranquil: 'calm', hostile: 'kind', benevolent: 'kind', obvious: 'hide', conceal: 'hide', vanish: 'hide' };
     const pool = band(SYN, g), it = pick(pool), others = shuffle(pool.filter(x => x !== it && !(FAM[x.w] && FAM[x.w] === FAM[it.w]))); const syn = coin();
-    return mc(`Which word means ${syn ? 'almost the SAME as' : 'the OPPOSITE of'} "${it.w}"?`, syn ? it.s : it.o, [syn ? it.o : it.s, others[0].s, others[1].o, others[2].s], `"${it.w[0].toUpperCase() + it.w.slice(1)}" means about the same as "${it.s}." Its opposite is "${it.o}."`); } },
+    return mc(`Which word means ${syn ? 'almost the SAME as' : 'the OPPOSITE of'} "${it.w}"?`, syn ? it.s : it.o, [syn ? it.o : it.s, others[0].s, others[1].o, others[2].s], `"${it.w[0].toUpperCase() + it.w.slice(1)}" means about the same as "${it.s}." Its opposite is "${it.o}."`, { tips: { [syn ? it.o : it.s]: syn ? 'That one means the OPPOSITE. You want the word that means almost the SAME.' : 'That one means almost the SAME. You want the OPPOSITE.' } }); } },
   affix: { n: 'Word Parts', std: 'L.2.4b – L.6.4b', g: [2, 6], gen: g => { const pool = band(AFFIX, g), it = pick(pool), ws = shuffle([...new Set(pool.map(x => x.m))].filter(x => x !== it.m)).concat(shuffle([...new Set(AFFIX.map(x => x.m))].filter(x => x !== it.m))).filter((x, i, arr) => arr.indexOf(x) === i).slice(0, 3);
     return mc(`In the word "${it.word}," what does the word part "${it.part}" mean?`, it.m, ws, `"${it.part}" means "${it.m}." Knowing word parts helps you figure out new words.`); } },
   context: { n: 'Context Clues', std: 'L.2.4a – L.6.4a', g: [2, 6], gen: g => { const it = pick(band(CONTEXT, g)); const w = it.q.match(/[A-Z]{3,}/)[0]; return mc(`${it.q}\nWhat does ${w} most likely mean?`, it.a, it.w, it.why); } },
@@ -721,9 +723,12 @@ const Learn = {
     q.skill = id; return q;
   },
   weak(k) { return k.w ? Object.keys(k.w) : []; },
+  // REVIEW BY DAYS: a mastered skill comes back after 1 day, then 3, 7, 14, 30 and 60 days. A miss starts that over.
+  GAPS: [1, 3, 7, 14, 30, 60],
+  day() { return Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5); },
   // how many different kinds of question a skill has at this grade (counted once by sampling), and how many must be answered right
   kinds(id) { const g = G.learn.grade, key = id + '@' + g, C = this._kinds || (this._kinds = {}); if (!C[key]) { const S = SKILLS[id], set = new Set(); for (let i = 0; i < 150; i++) { const c = (S.multi && i % 4 === 0 && S.multi(g)) || S.gen(g); set.add(this.sig(c, S.sub)); } C[key] = set.size; } return C[key]; },
-  breadth(id) { return Math.min(6, this.kinds(id)); },
+  breadth(id) { return Math.min(this.sk(id).head ? 3 : 6, this.kinds(id)); },
   // ADAPTIVE PRACTICE
   // Each skill sits in a box from 0 (shaky) to 4 (rock solid). A right answer moves it up a box, a miss sends it to box 0.
   //  - Weak skills: a miss comes back three questions later as the SAME KIND of question (at most one question in three is a retry),
@@ -752,8 +757,11 @@ const Learn = {
     }
     if (!L.deck || !L.deck.length || L.deckG !== L.grade) {
       L.deckG = L.grade; L.cycle = (L.cycle || 0) + 1;
-      const build = sub => { const out = []; for (const sk of this.forGrade(L.grade, sub)) { const k = this.sk(sk.id), b = this.box(k); if (k.m && L.cycle % [1, 1, 2, 3, 4][b]) continue; out.push(sk.id); if (k.n > 0 && b === 0) out.push(sk.id); } return shuffle(out); };
-      let a = build('math'), b = build('ela'); if (!a.length && !b.length) { a = shuffle(this.forGrade(L.grade, 'math').map(x => x.id)); b = shuffle(this.forGrade(L.grade, 'ela').map(x => x.id)); }
+      const today = this.day();
+      const build = sub => { const out = []; this.forGrade(L.grade, sub).forEach((sk, i) => { const k = this.sk(sk.id), b = this.box(k); if (k.m) { if (k.due == null) k.due = today + i % 4; if (k.due > today) return; } out.push(sk.id); if (k.n > 0 && b === 0) out.push(sk.id); }); return shuffle(out); };
+      let a = build('math'), b = build('ela');
+      // nothing left to learn and nothing due today: bring forward the reviews that are due soonest
+      if (!a.length && !b.length) { const soon = sub => shuffle(this.forGrade(L.grade, sub).slice().sort((x, y) => (this.sk(x.id).due || 0) - (this.sk(y.id).due || 0)).slice(0, 4).map(x => x.id)); a = soon('math'); b = soon('ela'); }
       L.deck = []; while (a.length || b.length) { if (a.length) L.deck.push(a.shift()); if (b.length) L.deck.push(b.shift()); }
       // open each round with something he is good at
       const si = L.deck.findIndex(id => this.box(this.sk(id)) >= 3); if (si > 0) L.deck.unshift(L.deck.splice(si, 1)[0]);
@@ -778,15 +786,19 @@ const Learn = {
     const h = q.sig;
     if (ok) {
       k.r++; L.right++; L.streak++; L.best = Math.max(L.best, L.streak); k.miss = Math.max(0, k.miss - 1); k.cs = (k.cs || 0) + 1; k.box = Math.min(4, this.box(k) + 1);
-      if (h && k.w && k.w[h] && --k.w[h] <= 0) delete k.w[h];
+      if (h && k.w && k.w[h] && --k.w[h] <= 0) { delete k.w[h]; if (k.wx) delete k.wx[h]; }
       if (h) { k.ok = k.ok || []; if (!k.ok.includes(h)) k.ok.push(h); if (k.ok.length > 12) k.ok.shift(); }
       if (k.m && k.cs >= 3) k.slip = 0;
-      if (!k.m && k.cs >= 4 && k.n >= 5 && !this.weak(k).length && (k.ok || []).length >= this.breadth(q.skill)) { k.m = true; k.slip = 0; (L.fresh = L.fresh || []).push(q.skill); }
+      if (k.m && (k.due == null || k.due <= this.day())) { k.rv = Math.min(5, (k.rv || 0) + 1); k.due = this.day() + this.GAPS[k.rv]; }
+      if (!k.m && k.cs >= 4 && k.n >= 5 && !this.weak(k).length && (k.ok || []).length >= this.breadth(q.skill)) { k.m = true; k.slip = 0; k.rv = 0; k.due = this.day() + 1; (L.fresh = L.fresh || []).push(q.skill); }
     } else {
       k.miss = Math.min(6, k.miss + 1); L.streak = 0; k.cs = 0; k.box = 0; L.retry = L.retry || [];
       const again = h && k.w && k.w[h];
       if (!this.building && (again || k.miss >= 3) && L.total - (L.lastBuild == null ? -99 : L.lastBuild) >= 12 && k.rest !== new Date().toDateString()) L.build = { id: q.skill, sig: h };
-      if (h) { k.w = k.w || {}; k.w[h] = 2; const ks = Object.keys(k.w); if (ks.length > 5) delete k.w[ks[0]]; }
+      if (h) { k.w = k.w || {}; k.w[h] = 2; const ks = Object.keys(k.w); if (ks.length > 5) { delete k.w[ks[0]]; if (k.wx) delete k.wx[ks[0]]; }
+        // keep one example of what was missed, for the grown-up report
+        if (q.q) { const right = q.type === 'multi' ? q.as.map(i => q.choices[i]).join(', ') : q.type === 'num' ? q.ans : q.choices[q.a]; (k.wx = k.wx || {})[h] = (q.q.includes('\n') && !q.pic ? q.q.split('\n').pop() : q.q).replace(/\s+/g, ' ').slice(0, 70) + '  →  ' + String(right).slice(0, 30); } }
+      if (k.m) { k.rv = 0; k.due = this.day() + 1; }
       if (!this.focus && k.miss < 4 && !L.retry.some(r => r.id === q.skill) && L.retry.length < 6) L.retry.push({ id: q.skill, at: L.total + 3, sig: h });
       if (k.m) { k.slip = (k.slip || 0) + 1; if (k.slip >= 2) { k.m = false; k.slip = 0; } }
     }
@@ -936,6 +948,27 @@ const Learn = {
       UI.push(m);
     });
   },
+  // QUICK CHECK: twelve questions, no hints, nothing recorded as a miss. A right answer gives that skill a head start
+  // (two more right answers finish it); it does not mark it mastered, because one answer can be a lucky guess.
+  async placement() {
+    const L = G.learn, g = L.grade, who = this.teacher(), all = this.forGrade(g);
+    const first = ['addsub', 'phonics', 'place', 'spelling', 'word', 'sva', 'time', 'reading', 'money', 'homophone', 'unknown', 'punct'];
+    const pool = first.map(id => all.find(x => x.id === id)).filter(Boolean).concat(shuffle(all.filter(x => !first.includes(x.id)))).filter(x => !this.sk(x.id).m && x.needs !== 'speech').slice(0, 12);
+    if (pool.length < 4) { await say(who, 'There is nothing left to check. You have already shown me nearly all of it.'); return; }
+    await say(who, `QUICK CHECK. ${pool.length} questions. No hints, and a miss does not count against you. If you do not know one, just take your best guess. It tells me what we can go faster on.`);
+    const known = []; this.hold = (this.hold || 0) + 1;
+    try {
+      for (let i = 0; i < pool.length; i++) {
+        const sk = pool[i], q = this.make(sk.id); if (sk.sub === 'math' && this.typable(q)) { q.type = 'num'; q.ans = q.choices[q.a]; }
+        if (await this.ask(q, `QUICK CHECK   ${i + 1} OF ${pool.length}`, true, { test: 1 })) {
+          const k = this.sk(sk.id); k.head = 1; k.n = Math.max(k.n, 3); k.r = Math.max(k.r, 3); k.cs = Math.max(k.cs || 0, 3); k.box = Math.max(3, this.box(k)); k.ok = k.ok || []; if (!k.ok.includes(q.sig)) k.ok.push(q.sig); known.push(sk.n);
+        }
+      }
+    } finally { this.hold--; }
+    L.placed = g; L.deck = null; Snd.sfx('badge');
+    await say(null, `QUICK CHECK DONE\nYou got ${known.length} of ${pool.length}.`, { col: '#ffd76a' });
+    await say(who, known.length ? `Nice. I will go faster on: ${known.slice(0, 6).join(', ')}${known.length > 6 ? ', and more' : ''}. Two more right answers on each and they are mastered.` : 'Good to know. We will take everything one step at a time.');
+  },
   // A hint for the first miss. Where the wrong answer shows WHAT went wrong, say so; otherwise give the skill's key idea.
   hintFor(q, picked) {
     picked = String(picked);
@@ -955,7 +988,24 @@ const Learn = {
     }
     if (q.passage) return 'Go back to the passage. Find the sentence that answers the question, then pick again.';
     const les = (G.learn.grade <= 2 && LESSON_G2[q.skill]) || LESSONS[q.skill];
-    if (SKILLS[q.skill].sub !== 'math') {   // English: a way of working first
+    if (SKILLS[q.skill].sub !== 'math') {
+      const id = q.skill, ans = String(q.choices[q.a]), low = picked.toLowerCase(), gapLine = q.q.split('\n').filter(l => /_{2,}/.test(l)).pop();
+      if (id === 'homophone') return HOMO_MEAN[low] ? HOMO_MEAN[low] + ' Is that what this sentence needs?' : `"${picked}" is not a real spelling. Look for the real words.`;
+      if (id === 'sva') { if (SVA_HELP[low]) return SVA_HELP[low] + ' Who is this sentence about?'; if (/ing$/.test(low)) return 'A word that ends in -ing needs a helper in front of it, like "is running."'; if (/yesterday|last |tomorrow/i.test(q.q)) return 'Find the time word in the sentence. Has it already happened, or is it still going to happen?'; }
+      if (id === 'punct' && !q.type && ans.length > 6) {
+        const end = t => /[.?!]"?$/.test(t) ? t.replace(/"$/, '').slice(-1) : '';
+        if (/^[a-z]/.test(picked) && /^[A-Z"]/.test(ans)) return 'Look at the very first letter. How does every sentence start?';
+        if (end(ans) && !end(picked)) return 'Look at the very end. Every sentence needs an end mark.';
+        if (end(ans) && end(picked) !== end(ans)) return end(ans) === '?' ? 'This one ASKS something. Which mark goes at the end of a question?' : 'Look at the mark at the very end. Is it the right one for this sentence?';
+        const aw = ans.split(' '), pw = picked.split(' '); if (aw.length === pw.length) for (let i = 1; i < aw.length; i++) if (aw[i] !== pw[i] && aw[i].toLowerCase() === pw[i].toLowerCase()) return /^[A-Z]/.test(aw[i]) ? `Look at "${pw[i].replace(/[.,!?]/g, '')}." It is a special name, and special names need a capital letter.` : `Look at "${pw[i].replace(/[.,!?]/g, '')}." It is not a name, so it does not need a capital letter.`;
+        const cnt = (t, c) => t.split(c).length; if (cnt(ans, "'") !== cnt(picked, "'") || ans.indexOf("'") !== picked.indexOf("'")) return 'Look closely at the apostrophe. Is it there, and is it in the right place?';
+        if (cnt(ans, '"') !== cnt(picked, '"')) return 'Look closely at the quotation marks. They go around the exact words someone says.';
+        if (cnt(ans, ',') !== cnt(picked, ',') || ans.indexOf(',') !== picked.indexOf(',')) return 'Look closely at the commas. Are they all there, and in the right places?';
+      }
+      if (id === 'pos') { const kind = (q.q.match(/Which word is an? ([A-Z]+)/) || [])[1], T = { NOUN: `A noun is a person, place, or thing. Is "${picked}" one of those?`, VERB: `A verb is something you can DO. Can you "${low}"?`, ADJECTIVE: `An adjective tells what something is like. Does "${picked}" describe something?`, ADVERB: `An adverb tells HOW something is done. Does "${picked}" tell how?`, PRONOUN: `A pronoun stands in for a name, like he, she, it or they. Does "${picked}" do that?`, PREPOSITION: `A preposition tells WHERE, like under, over or behind. Does "${picked}" tell where?` }; if (T[kind]) return T[kind]; }
+      if (id === 'context') return `Try putting "${picked}" where the capital word is. Do the other words in the sentence still fit with it?`;
+      if (gapLine) return `Read it out loud with your choice in the gap: "${gapLine.replace(/_{2,}/, picked).trim()}"  Does that sound right?`;
+      // English: otherwise a way of working
       if (/_{2,}/.test(q.q)) return 'Try each choice in the gap and read the whole sentence. Only one will make sense and sound right.';
       if (/spelled/.test(q.q)) return 'Say the word slowly and look at every letter. Which one looks the way you have seen it in books?';
       if (/sound|rhyme|syllable/i.test(q.q)) return 'Say each word out loud, slowly, and listen. Your ears will tell you.';
@@ -991,7 +1041,7 @@ const Learn = {
         await say(who, 'STEP 4: ON YOUR OWN. Get two in a row and this one is fixed.');
         let row = 0; for (let i = 0; i < 4 && row < 2; i++) row = (await this.ask(this.make(b.id, null, bank ? null : b.sig), `${T}   ·   ON YOUR OWN   ${row} OF 2`, false, { noHint: 1 })) ? row + 1 : 0;
         if (row >= 2) {
-          k.miss = 0; if (b.sig && k.w) delete k.w[b.sig]; G.scrap += 15; Snd.sfx('badge');
+          k.miss = 0; if (b.sig && k.w) delete k.w[b.sig]; if (b.sig && k.wx) delete k.wx[b.sig]; G.scrap += 15; Snd.sfx('badge');
           L.retry = (L.retry || []).filter(r => r.id !== b.id); L.retry.push({ id: b.id, at: L.total + 8, sig: b.sig });   // one more check a little later, so it sticks
           await say(null, `★ SKILL BUILT: ${s.n} ★   +15 scrap`, { col: '#ffd76a' });
           await say(who, 'See? You did that. I will sneak one more in later to make sure it stuck.'); return;
@@ -1090,7 +1140,7 @@ const Learn = {
       }
     }
     Snd.sfx('badge');
-    const first = !k.m; k.m = true; k.miss = 0; k.slip = 0; k.cs = 4; k.w = {}; k.box = Math.max(3, this.box(k));
+    const first = !k.m; k.m = true; k.miss = 0; k.slip = 0; k.cs = 4; k.w = {}; k.wx = {}; k.rv = 0; k.due = this.day() + 1; k.box = Math.max(3, this.box(k));
     await say(null, `★ SKILL MASTERED: ${s.n} ★`, { col: '#ffd76a' });
     if (first) { G.scrap += 40; give('soda', 1, true); await say(who, 'Told you that you could do it. Here: 40 scrap and a Zap Cola. You earned them.'); }
     else await say(who, 'Still got it! Practice keeps your brain sharp.');
@@ -1121,6 +1171,25 @@ const Learn = {
         { const lab = `${DOMAIN[s.id] || (s.sub === 'math' ? 'Math' : 'ELA')} · ${s.std}`; text(lab.length > 50 ? lab.slice(0, 49) + '…' : lab, x, y + 20, '#8f86a8'); }
       });
       setFont(20); { const w = L.writing, mz = L.maze && L.maze.length ? Math.max(...L.maze.map(x => x.s)) : null, o = L.orf && L.orf.length ? L.orf[L.orf.length - 1] : null; text(`Writing ${w ? w.r + '/' + w.n : '—'}   ·   Maze Dash best ${mz == null ? '—' : mz}   ·   Read-aloud ${o ? o.wcpm + ' words/min, ' + o.acc + '%' : '—'}   ·   ★ = mastered`, 44, H - 50, '#c8ffb8'); }
+    });
+    // page 2: the exact things being missed, fact speed, and what is due for review
+    const today = this.day(), rows = [];
+    for (const s2 of list) { const k = this.sk(s2.id); for (const h of Object.keys(k.wx || {})) rows.push([s2.n, k.wx[h]]); }
+    const ff = L.ff || {}, slow = Object.keys(ff).filter(f => ff[f][1] > 0 || ff[f][0] > 3500).sort((a, b) => (ff[b][1] - ff[a][1]) || (ff[b][0] - ff[a][0])).slice(0, 8);
+    const dash = L.dash && L.dash.length ? L.dash[L.dash.length - 1] : null, bestDash = L.dash && L.dash.length ? Math.max(...L.dash.map(d => d.n)) : 0;
+    const mastered = list.filter(s2 => this.sk(s2.id).m), dueNow = mastered.filter(s2 => (this.sk(s2.id).due || 0) <= today).length, head = list.filter(s2 => this.sk(s2.id).head && !this.sk(s2.id).m).length;
+    await page(() => {
+      ctx.fillStyle = 'rgba(6,4,14,.9)'; ctx.fillRect(0, 0, W, H); panel(20, 14, W - 40, H - 28);
+      setFont(18, true); text('WHAT TO PRACTISE', 44, 34, '#ffd76a'); let y = 74;
+      setFont(22); text(rows.length ? 'Kinds of question missed and not yet fixed (an example of each, with the answer):' : 'No missed kinds are waiting to be fixed. ', 44, y, '#c8ffb8'); y += 32;
+      setFont(21); rows.slice(0, 9).forEach(r => { text(r[0], 44, y, '#ffb07a'); wrap(r[1], W - 330).slice(0, 2).forEach((l, i) => text(l, 270, y + i * 23, '#f4eeff')); y += 50; });
+      y = Math.max(y + 6, 150); setFont(18, true); text('NUMBER FACTS', 44, y, '#ffd76a'); y += 34; setFont(22);
+      text(dash ? `Last Fact Dash: ${dash.n} right, ${dash.w} wrong in one minute.   Best: ${bestDash}.` : 'No Fact Dash yet. It is under Practice & Tests and takes one minute.', 44, y, '#f4eeff'); y += 28;
+      if (slow.length) { text('Slow or missed facts: ' + slow.join(',   '), 44, y, '#ffb07a'); y += 28; }
+      y += 8; setFont(18, true); text('REVIEW', 44, y, '#ffd76a'); y += 34; setFont(22);
+      text(`Skills mastered: ${mastered.length}.  Due for review today: ${dueNow}.  Reviews come back after 1, 3, 7, 14, 30 and 60 days.`, 44, y, '#f4eeff'); y += 28;
+      text(L.placed === L.grade ? `Quick check done. ${head} skills still have a head start from it.` : 'Quick check not done yet. It is under Practice & Tests.', 44, y, '#f4eeff');
+      setFont(20); text('Tap to close.', W - 60, H - 50, '#8f86a8', 'right');
     });
   }
 };

@@ -278,10 +278,49 @@ Learn.workshop = async function () {
   }
   await say(who, `Good effort. That one is tricky. Here is one way to do it: "${p.good[0]}"  Come back and try a different task any time.`);
 };
+// FACT DASH: one minute of number facts. Grade 2 is expected to know sums within 20 from memory, so speed is tracked.
+Learn.factDash = async function () {
+  const L = G.learn, g = L.grade, who = this.teacher(), ff = (L.ff = L.ff || {}), pool = [];
+  for (let a = 2; a <= 9; a++) for (let b = 2; b <= 9; b++) { if (g <= 2) { pool.push([`${a} + ${b}`, a + b]); pool.push([`${a + b} − ${b}`, a]); } else { pool.push([`${a} × ${b}`, a * b]); if (g >= 4) pool.push([`${a * b} ÷ ${b}`, a]); } }
+  await say(who, `FACT DASH. One minute of ${g <= 2 ? 'adding and taking away' : 'times tables'}. Tap the number keys. You do not need to press OK. Ready?`);
+  const wt = f => { const st = ff[f[0]]; return !st ? 2 : 1 + st[1] * 2 + (st[0] > 3000 ? 2 : 0); };
+  const next = last => { let tot = 0; for (const f of pool) if (f !== last) tot += wt(f); let r = Math.random() * tot; for (const f of pool) if (f !== last && (r -= wt(f)) <= 0) return f; return pool[0]; };
+  const KEYS = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '⌫', '0'];
+  const res = await new Promise(done => {
+    let left = 60000, cur = next(), inp = '', t0 = 0, right = 0, wrong = 0, show = 0, flash = 0, hits = [];
+    const key = k => {
+      if (show > 0) return; if (k === '⌫') { inp = inp.slice(0, -1); return; } inp += k; const A = String(cur[1]); if (inp.length < A.length) { Snd.sfx('move'); return; }
+      const st = ff[cur[0]] || (ff[cur[0]] = [t0, 0]); st[0] = Math.round(st[0] * .6 + t0 * .4);
+      if (inp === A) { right++; st[1] = Math.max(0, st[1] - 1); Snd.sfx('ok'); flash = 220; cur = next(cur); inp = ''; t0 = 0; } else { wrong++; st[1] = Math.min(3, st[1] + 1); Snd.sfx('no'); show = 1200; }
+    };
+    const m = {
+      update(dt, pr) { left -= dt; flash -= dt; if (show > 0) { show -= dt; if (show <= 0) { cur = next(cur); inp = ''; t0 = 0; } } else t0 += dt; if (left <= 0) { UI.pop(m); done({ right, wrong }); return; } for (const k of pr) { if (k.length === 2 && k[0] === 'd') key(k[1]); else if (k === 'bksp') key('⌫'); } },
+      tap(x, y) { const h = hits.find(r => inRect(x, y, r)); if (h) key(h.k); },
+      draw() {
+        ctx.fillStyle = 'rgba(12,6,30,.86)'; ctx.fillRect(0, 0, W, H); panel(24, 14, W - 48, H - 28);
+        setFont(18, true); text('FACT DASH', 48, 34, '#ffd76a'); setFont(26); const sec = Math.ceil(left / 1000); text(`0:${String(sec).padStart(2, '0')}`, W - 48, 36, left < 10000 ? '#ff8a7a' : '#fff', 'right'); bar(48, 78, W - 96, 8, left / 60000, left < 10000 ? '#ff5a48' : '#7fe0d8');
+        setFont(24); text(`Right: ${right}`, 48, 100, '#a8ffb8');
+        ctx.font = '96px ' + FONT_T; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = show > 0 ? '#ffb0bc' : flash > 0 ? '#a8ffb8' : '#ffffff'; ctx.fillText(`${cur[0]} =`, 60, 210);
+        rbox(60, 350, 300, 110, 18, '#1a1038', show > 0 ? '#ffb0bc' : '#ffd76a', 4); ctx.fillStyle = show > 0 ? '#ffb0bc' : '#fff'; ctx.fillText(show > 0 ? String(cur[1]) : inp, 84, 356);
+        if (show > 0) { setFont(24); text(`${cur[0]} = ${cur[1]}`, 60, 480, '#ffb07a'); }
+        hits = []; KEYS.forEach((k, i) => { const r = { x: 470 + (i % 3) * 150, y: 150 + Math.floor(i / 3) * 128, w: 138, h: 116, k }; rbox(r.x, r.y + 4, r.w, r.h, 18, 'rgba(8,4,20,.4)'); rbox(r.x, r.y, r.w, r.h, 18, '#4a3a8e', '#7a66d0', 3); setFont(50); text(k, r.x + r.w / 2, r.y + 30, '#fff', 'center'); hits.push(r); });
+      }
+    };
+    UI.push(m);
+  });
+  (L.dash = L.dash || []).push({ d: this.day(), n: res.right, w: res.wrong }); if (L.dash.length > 30) L.dash.shift();
+  const best = Math.max(...L.dash.map(d => d.n)), isBest = res.right >= best && L.dash.length > 1, prize = res.right * 2; G.scrap += prize;
+  { const D = dayState(); D.q += Math.min(5, Math.floor(res.right / 4)); }
+  const slow = Object.keys(ff).filter(f => ff[f][1] > 0 || ff[f][0] > 3500).sort((a, b) => (ff[b][1] - ff[a][1]) || (ff[b][0] - ff[a][0])).slice(0, 3);
+  Snd.sfx(res.right >= 15 ? 'badge' : 'ok');
+  await say(null, `FACT DASH RESULTS\n${res.right} right and ${res.wrong} wrong in one minute.${isBest ? '   NEW BEST!' : `   Best so far: ${best}.`}   +${prize} scrap`, { col: '#ffd76a' });
+  await say(who, (res.right >= 20 ? 'That is FAST. Those facts are in your head for good.' : res.right >= 12 ? 'Good speed. A little every day and they will come without thinking.' : 'Good start. Speed comes with practice, so try one dash a day.') + (slow.length ? ` The ones to work on: ${slow.join(', ')}. I will give you those more often.` : ''));
+  await checkFeats();
+};
 Learn.practiceMenu = async function () {
   while (true) {
-    const i = await menu(['Practice Test  (10 questions)', 'Maze Dash  (3-minute reading)', 'Read-Aloud Check  (with a grown-up)', 'Writing Workshop', 'Back'], { x: 240, y: 190, w: 480, title: 'PRACTICE & TESTS' });
-    if (i === 0) await this.testDay(); else if (i === 1) await this.mazeDash(); else if (i === 2) await this.readAloud(); else if (i === 3) await this.workshop(); else return;
+    const i = await menu(['Fact Dash  (1 minute of number facts)', 'Practice Test  (10 questions)', 'Maze Dash  (3-minute reading)', 'Read-Aloud Check  (with a grown-up)', 'Writing Workshop', 'Quick Check  (12 questions, sets a head start)', 'Back'], { x: 200, y: 160, w: 560, title: 'PRACTICE & TESTS' });
+    if (i === 0) await this.factDash(); else if (i === 1) await this.testDay(); else if (i === 2) await this.mazeDash(); else if (i === 3) await this.readAloud(); else if (i === 4) await this.workshop(); else if (i === 5) await this.placement(); else return;
   }
 };
 

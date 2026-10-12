@@ -135,7 +135,7 @@ function buildSong(s) {
 }
 
 const Snd = {
-  ac: null, muted: false, curName: null, pending: null, bus: null, built: {}, state: null,
+  ac: null, muted: (() => { try { return /[?&]mute\b/.test(location.search) || localStorage.getItem('lastbell_mute') === '1'; } catch (e) { return false; } })(), curName: null, pending: null, bus: null, built: {}, state: null,
   unlock() {
     if (!this.ac) {
       try {
@@ -163,7 +163,7 @@ const Snd = {
   },
   // Silence everything while the app or tab is in the background.
   hide(h) { this.hidden = h; if (!this.ac) return; if (h) this.ac.suspend(); else this.ac.resume(); },
-  toggleMute() { this.muted = !this.muted; if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : .7, this.ac.currentTime, .03); return this.muted; },
+  toggleMute() { this.muted = !this.muted; try { localStorage.setItem('lastbell_mute', this.muted ? '1' : '0'); } catch (e) {} if (this.muted && typeof Speak !== 'undefined') Speak.stop(); if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : .7, this.ac.currentTime, .03); return this.muted; },
   play(name) {
     if (this.curName === name) return;
     this.curName = name;
