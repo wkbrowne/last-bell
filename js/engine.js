@@ -394,20 +394,60 @@ function drawStorm(now, groundY, gapMin, gapMax, bolt) {
 // ---------------------------------------------------------------- read-aloud
 // The tablet app speaks through Android's own voice (LBSpeech bridge); a browser uses its built-in voices.
 const Speak = {
-  id: 0, on: false, bad: false, done: null, tm: 0,
+  id: 0, on: false, bad: false, done: null, tm: 0, VKEY: 'lastbell_voice', RKEY: 'lastbell_rate',
   can() { try { return !this.bad && (window.LBSpeech ? !!window.LBSpeech.ok() : !!(window.speechSynthesis && window.SpeechSynthesisUtterance)); } catch (e) { return false; } },
-  duck(d) { try { if (Snd.master && !Snd.muted) Snd.master.gain.value = d ? .12 : .7; } catch (e) {} },
+  duck(d) { try { if (Snd.master && !Snd.muted) Snd.master.gain.value = d ? .1 : .7; } catch (e) {} },
+  get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  rate() { return parseFloat(this.get(this.RKEY, '0.95')); },
+  // English voices on this device, best first. Natural-sounding ones are ranked above the robotic defaults.
+  voices() {
+    let list = [];
+    try {
+      if (window.LBSpeech) list = JSON.parse(window.LBSpeech.voices() || '[]');
+      else list = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)).map(v => ({ name: v.name, lang: v.lang, q: v.localService ? 300 : 320 }));
+    } catch (e) {}
+    const score = v => { const n = v.name.toLowerCase(); let s = v.q || 300;
+      if (/natural|neural|wavenet/.test(n)) s += 200; if (/enhanced|premium|siri/.test(n)) s += 150;
+      if (/samantha|ava|allison|zoe|aria|jenny|michelle|salli|joanna|kendra|ivy|google us english/.test(n)) s += 90;
+      if (/female|#female|-f-|sfg|tpf|iob|iog/.test(n)) s += 20;
+      if (/en[-_]us/i.test(v.lang || n)) s += 60; else if (/en[-_](gb|au)/i.test(v.lang || n)) s += 10;
+      if (/compact|espeak|pico|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|jester|organ|trinoids|whisper|wobble|zarvox|fred|ralph|junior|kathy|princess|superstar|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/.test(n)) s -= 400;
+      return s; };
+    return list.map(v => Object.assign(v, { score: score(v) })).sort((a, b) => b.score - a.score);
+  },
+  voiceName() { const want = this.get(this.VKEY, ''), vs = this.voices(); return (vs.find(v => v.name === want) || vs[0] || {}).name || ''; },
+  pretty(n) { return String(n || 'Device voice').replace(/^(Microsoft|Google)\s+/i, '').replace(/\s*-\s*English.*$/i, '').replace(/\(.*?\)/g, '').replace(/en[-_]us[-_]x[-_]/i, 'Voice ').replace(/[-_#]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 26); },
+  // make text sound right when spoken: math signs become words, shouted words are not spelled out, gaps become "blank"
+  clean(t) {
+    return String(t)
+      .replace(/[★☆▸▶◀♥♡·•]/g, ' ').replace(/kzzt/gi, ' ').replace(/_{2,}/g, ' blank ')
+      .replace(/(\d)\s*\/\s*(\d)/g, '$1 over $2').replace(/\?\s*([+×÷−=])/g, 'what number $1').replace(/=\s*\?/g, 'equals what')
+      .replace(/×/g, ' times ').replace(/÷/g, ' divided by ').replace(/−/g, ' minus ').replace(/(\d)\s*-\s*(\d)/g, '$1 minus $2').replace(/\+/g, ' plus ').replace(/=/g, ' equals ')
+      .replace(/(\d)¢/g, '$1 cents').replace(/(\d)°/g, '$1 degrees').replace(/</g, ' is less than ').replace(/>/g, ' is greater than ').replace(/\bR(\d)/g, 'remainder $1')
+      .replace(/\b([A-Z]{2,})\b/g, w => /^(OK|TV|ABC|II|III|IV)$/.test(w) ? w : w.toLowerCase())
+      .replace(/\.\.\./g, ', ').replace(/\s+/g, ' ').trim();
+  },
   stop() { this.id++; clearTimeout(this.tm); if (!this.on) return; this.on = false; this.duck(false); try { if (window.LBSpeech) window.LBSpeech.stop(); else speechSynthesis.cancel(); } catch (e) {} },
+  // spoken a sentence at a time, so there is a natural breath between sentences and long passages are never cut off
   say(text) {
     this.stop(); if (!this.can()) return Promise.resolve(false);
+    const parts = (this.clean(text).match(/[^.!?]+[.!?]+["')]*|[^.!?]+$/g) || []).map(x => x.trim()).filter(x => /[a-z0-9]/i.test(x));
+    if (!parts.length) return Promise.resolve(false);
     return new Promise(res => {
-      const id = ++this.id, fin = ok => { if (id !== this.id) return; this.id++; clearTimeout(this.tm); this.on = false; this.duck(false); res(ok); };
-      this.on = true; this.duck(true); this.done = fin;
-      this.tm = setTimeout(() => fin(true), 4000 + text.length * 110);
-      try {
-        if (window.LBSpeech) window.LBSpeech.speak(text);
-        else { const u = new SpeechSynthesisUtterance(text); u.rate = .9; u.lang = 'en-US'; u.onend = () => fin(true); u.onerror = () => fin(false); this.keep = u; speechSynthesis.speak(u); }
-      } catch (e) { this.bad = true; fin(false); }
+      const id = ++this.id, end = ok => { if (id !== this.id) return; this.id++; clearTimeout(this.tm); this.on = false; this.duck(false); res(ok); };
+      this.on = true; this.duck(true);
+      const name = this.voiceName(), rate = this.rate(); let i = 0;
+      const next = ok => {
+        if (id !== this.id) return; clearTimeout(this.tm);
+        if (ok === false || i >= parts.length) { end(ok !== false); return; }
+        const t = parts[i++]; this.done = next; this.tm = setTimeout(() => next(true), 3500 + t.length * 120);
+        try {
+          if (window.LBSpeech) { window.LBSpeech.setup(name, rate, 1.06); window.LBSpeech.speak(t); }
+          else { const u = new SpeechSynthesisUtterance(t), v = speechSynthesis.getVoices().find(x => x.name === name); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-US'; u.rate = rate; u.pitch = 1.06; u.onend = () => next(true); u.onerror = () => next(false); this.keep = u; speechSynthesis.speak(u); }
+        } catch (e) { this.bad = true; end(false); }
+      };
+      next(true);
     });
   }
 };

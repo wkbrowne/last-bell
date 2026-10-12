@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.speech.tts.Voice;
 import android.webkit.JavascriptInterface;
 import java.util.Locale;
 import android.view.View;
@@ -65,6 +66,27 @@ public class MainActivity extends Activity {
             if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lb") != TextToSpeech.SUCCESS) speechDone(false);
         }
         @JavascriptInterface public void stop() { if (ttsReady) tts.stop(); }
+        /** English voices that work offline, as JSON: name, language tag and the engine's own quality score. */
+        @JavascriptInterface public String voices() {
+            StringBuilder sb = new StringBuilder("[");
+            try {
+                if (ttsReady && tts.getVoices() != null) for (Voice v : tts.getVoices()) {
+                    if (v == null || v.getLocale() == null || !"en".equals(v.getLocale().getLanguage())) continue;
+                    if (v.isNetworkConnectionRequired()) continue;
+                    if (v.getFeatures() != null && v.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)) continue;
+                    if (sb.length() > 1) sb.append(',');
+                    sb.append("{\"name\":\"").append(v.getName().replace("\"", "")).append("\",\"lang\":\"").append(v.getLocale().toLanguageTag()).append("\",\"q\":").append(v.getQuality()).append('}');
+                }
+            } catch (Exception e) { }
+            return sb.append(']').toString();
+        }
+        @JavascriptInterface public void setup(String name, float rate, float pitch) {
+            if (!ttsReady) return;
+            try {
+                tts.setSpeechRate(rate); tts.setPitch(pitch);
+                if (name != null && name.length() > 0 && tts.getVoices() != null) for (Voice v : tts.getVoices()) if (v != null && name.equals(v.getName())) { tts.setVoice(v); break; }
+            } catch (Exception e) { }
+        }
     }
 
     private void immersive() {

@@ -415,6 +415,12 @@ async function optionsMenu() {
     const opts = [
       [`Grade level: ${G.learn.grade}`, async () => { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }],
       [`Read the story aloud: ${G.readAloud ? 'ON' : 'off'}`, async () => { G.readAloud = !G.readAloud; if (!Speak.can()) await say(null, 'This device does not have a reading voice available, so nothing will be read aloud.'); }],
+      [`Reading voice: ${Speak.can() ? Speak.pretty(Speak.voiceName()) : 'none on this device'}`, async () => {
+        if (!Speak.can()) { await say(null, 'This device has no reading voice turned on. On a Fire tablet: Settings, then Accessibility or Keyboard & Language, then Text-to-Speech.'); return; }
+        const vs = Speak.voices().filter(v => v.score > 0).slice(0, 9); if (!vs.length) { await say(null, 'Only the basic device voice is available.'); return; }
+        while (true) { const cur = Speak.voiceName(), k = await menu(vs.map(v => ({ label: (v.name === cur ? '● ' : '○ ') + Speak.pretty(v.name) })).concat([{ label: 'Done' }]), { x: 250, y: 120, w: 460, rows: 10, title: 'Pick a voice (tap to hear it)' });
+          if (k < 0 || k >= vs.length) break; Speak.set(Speak.VKEY, vs[k].name); Speak.say('Hi! I can read the story and the questions to you.'); } Speak.stop(); }],
+      [`Reading speed: ${Speak.rate() < .9 ? 'slow' : Speak.rate() > 1 ? 'fast' : 'normal'}`, async () => { const k = await menu(['Slow', 'Normal', 'Fast'], { x: 330, y: 250, w: 300, title: 'Reading speed' }); if (k >= 0) { Speak.set(Speak.RKEY, ['0.8', '0.95', '1.1'][k]); Speak.say('This is how fast I will read.'); } }],
       [`Sound: ${Snd.muted ? 'off' : 'ON'}`, async () => { Snd.toggleMute(); }],
       [`Daily goal: ${G.goal} questions`, async () => { const k = await menu(['10 questions', '20 questions', '30 questions'], { x: 330, y: 250, w: 300, sel: [10, 20, 30].indexOf(G.goal), title: 'Daily goal' }); if (k >= 0) G.goal = [10, 20, 30][k]; }],
       [`Play-time limit: ${G.limitMin ? G.limitMin + ' minutes' : 'off'}  (grown-ups)`, async () => { if (!(await grownUp())) return; const k = await menu(['Off', '15 minutes', '20 minutes', '30 minutes', '45 minutes'], { x: 330, y: 230, w: 300, title: 'Stop for the day after' }); if (k >= 0) G.limitMin = [0, 15, 20, 30, 45][k]; }],
@@ -425,7 +431,7 @@ async function optionsMenu() {
         const k = await typeAnswer(Grader.key() ? 'A key is saved. Paste a new one, or type "none" to remove it.' : 'Paste an Anthropic API key (it starts with sk-ant-).', { rows: 2, cancel: 'Cancel', placeholder: 'sk-ant-...' });
         if (k === null) return; if (/^none$/i.test(k)) { Grader.setKey(''); toast('Claude marking off'); } else { Grader.setKey(k); toast('Claude marking on'); } }],
       ['Back', null]];
-    const i = await menu(opts.map(o => o[0]), { x: 230, y: 150, w: 520, title: 'OPTIONS' });
+    const i = await menu(opts.map(o => o[0]), { x: 210, y: 110, w: 560, rows: 11, title: 'OPTIONS' });
     if (i < 0 || !opts[i][1]) return;
     await opts[i][1]();
   }
