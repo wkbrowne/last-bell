@@ -784,6 +784,8 @@ const Learn = {
       if (!k.m && k.cs >= 4 && k.n >= 5 && !this.weak(k).length && (k.ok || []).length >= this.breadth(q.skill)) { k.m = true; k.slip = 0; (L.fresh = L.fresh || []).push(q.skill); }
     } else {
       k.miss = Math.min(6, k.miss + 1); L.streak = 0; k.cs = 0; k.box = 0; L.retry = L.retry || [];
+      const again = h && k.w && k.w[h];
+      if (!this.building && (again || k.miss >= 3) && L.total - (L.lastBuild == null ? -99 : L.lastBuild) >= 12 && k.rest !== new Date().toDateString()) L.build = { id: q.skill, sig: h };
       if (h) { k.w = k.w || {}; k.w[h] = 2; const ks = Object.keys(k.w); if (ks.length > 5) delete k.w[ks[0]]; }
       if (!this.focus && k.miss < 4 && !L.retry.some(r => r.id === q.skill) && L.retry.length < 6) L.retry.push({ id: q.skill, at: L.total + 3, sig: h });
       if (k.m) { k.slip = (k.slip || 0) + 1; if (k.slip >= 2) { k.m = false; k.slip = 0; } }
@@ -801,6 +803,7 @@ const Learn = {
       ok = ok && ok2;
     }
     if (!noRecord && !q.noRec) this.record(q, ok);
+    if (!noRecord && !q.noRec && !(mode && mode.test) && !this.hold && !this.building && G.learn.build) await this.builder();
     return ok;
   },
   card(q, title, mode) {
@@ -816,6 +819,7 @@ const Learn = {
       if (sayText) Timers.add(350, speakNow);
       const cut = type === 'mc' && n === 4 && !mode.test && G.gear && G.gear.charms.hint ? pick([0, 1, 2, 3].filter(i => i !== q.a)) : -1;
       const marks = new Set();
+      if (mode.demo) { ok = true; picked = q.a; if (type === 'multi') q.as.forEach(i => marks.add(i)); }
       const finish = () => { Speak.stop(); UI.pop(m); res(ok); };
       const settle = good => {
         if (ok !== null) return; ok = good; t = 0;
@@ -880,7 +884,7 @@ const Learn = {
           if (done) {
             const right = type === 'multi' ? q.as.map(i => q.choices[i]).join('   ·   ') : type === 'num' ? q.ans : q.choices[q.a];
             const all = ok && mode.both !== false;
-            head = all ? word : ok ? 'PART B IS RIGHT — BUT CHECK PART A:' : "NOT QUITE — HERE'S THE TRICK:";
+            head = mode.demo ? 'WATCH: HERE IS HOW IT WORKS' : all ? word : ok ? 'PART B IS RIGHT — BUT CHECK PART A:' : "NOT QUITE — HERE'S THE TRICK:";
             setFont(24); why = wrap((mode.both === false ? 'Part A answer: ' + mode.aText + '.  ' : '') + (ok ? '' : 'Answer: ' + right + '.  ') + q.why, W - 120);
           }
           if (type === 'num') {
@@ -926,6 +930,43 @@ const Learn = {
       };
       UI.push(m);
     });
+  },
+  // SKILL BUILDER: what happens when the same kind of question (or the same skill) keeps going wrong.
+  // Watch a solved one -> try one with two choices -> try one with all the choices -> two on your own.
+  // In the supported steps a miss is explained and the same question is asked again until it is right.
+  two(q) { if (q.type === 'multi') return q; const w = pick(q.choices.map((_, i) => i).filter(i => i !== q.a)), ch = shuffle([q.choices[q.a], q.choices[w]]); return Object.assign({}, q, { choices: ch, a: ch.indexOf(q.choices[q.a]) }); },
+  async builder() {
+    const L = G.learn, b = L.build; L.build = null; if (!b || !SKILLS[b.id] || this.building) return;
+    const k = this.sk(b.id), s = SKILLS[b.id], who = this.teacher(), T = 'SKILL BUILDER';
+    const les = (L.grade <= 2 && LESSON_G2[b.id]) || LESSONS[b.id] || [];
+    // Math: every step is the same KIND with new numbers. English: the missed item is shown and then answered,
+    // but the practice in between and at the end uses OTHER items, so he learns the idea and not just one answer.
+    const bank = s.sub !== 'math';
+    const fresh = other => { const q = this.make(b.id, null, bank && other ? null : b.sig); if (q.type === 'num') delete q.type; return q; };
+    const until = async (q, title) => { for (let i = 0; i < 3; i++) if (await this.card(q, title)) return; };
+    this.building = true; L.lastBuild = L.total;
+    try {
+      await say(who, `Time out! "${s.n}" has tripped us up a few times. That is fine. It just means we build it up together, one small step at a time.`);
+      for (let round = 0; round < 2; round++) {
+        await say(who, round ? 'STEP 1 again: WATCH. Here is another one, already solved.' : 'STEP 1: WATCH. I will do one. Just look at how it works.');
+        await this.card(fresh(), T + '   ·   WATCH', { demo: 1 });
+        await say(who, 'STEP 2: TOGETHER. Your turn, with only two choices. If you miss, we look at why, and then you get it again.');
+        await until(this.two(fresh(true)), T + '   ·   TOGETHER');
+        await say(who, 'STEP 3: Now with all the choices. Take your time.');
+        await until(fresh(), T + '   ·   ALMOST THERE');
+        await say(who, 'STEP 4: ON YOUR OWN. Get two in a row and this one is fixed.');
+        let row = 0; for (let i = 0; i < 4 && row < 2; i++) row = (await this.ask(this.make(b.id, null, bank ? null : b.sig), `${T}   ·   ON YOUR OWN   ${row} OF 2`)) ? row + 1 : 0;
+        if (row >= 2) {
+          k.miss = 0; if (b.sig && k.w) delete k.w[b.sig]; G.scrap += 15; Snd.sfx('badge');
+          L.retry = (L.retry || []).filter(r => r.id !== b.id); L.retry.push({ id: b.id, at: L.total + 8, sig: b.sig });   // one more check a little later, so it sticks
+          await say(null, `★ SKILL BUILT: ${s.n} ★   +15 scrap`, { col: '#ffd76a' });
+          await say(who, 'See? You did that. I will sneak one more in later to make sure it stuck.'); return;
+        }
+        if (round === 0) { await say(who, 'Not there yet, and that is OK. Let me explain it another way, and then we go again.'); for (const p of les) await say(who, p); if (typeof LPIC !== 'undefined' && LPIC[b.id]) await Pic.show(s.n, LPIC[b.id]); }
+      }
+      k.rest = new Date().toDateString();
+      await say(who, 'We worked hard on that one. Brains keep growing while they rest, so we will leave it for today and come back to it another day.');
+    } finally { this.building = false; L.build = null; }
   },
   // Night Market challenge. Higher tiers mean more questions, typed answers, word problems, and finally next-grade math.
   trialInfo(tier) { const g = G.learn.grade, up = tier >= 4 && g < 6; return { n: [2, 3, 3, 4, 5][tier - 1], typed: tier >= 3, up, allow: tier <= 2 ? 1 : 0, g: up ? g + 1 : g }; },
@@ -1049,3 +1090,5 @@ const Learn = {
     });
   }
 };
+// The Skill Builder never interrupts a trial, a lesson or a practice test. It waits for the next ordinary question.
+for (const f of ['trial', 'eggTrial', 'lesson', 'testDay']) { const o = Learn[f]; Learn[f] = async function (...a) { this.hold = (this.hold || 0) + 1; try { return await o.apply(this, a); } finally { this.hold--; } }; }

@@ -165,3 +165,22 @@ spelling each gained items, so none has fewer than nine.
 **Simulated learners (Grade 2, 33 skills).** Always right: everything mastered after about 230 questions. Right 80% of
 the time: 28 of 33 mastered after 400. Three weak skills at 35%: they get about a fifth of the questions and every other
 skill still appears at least six times in 300.
+
+## Skill Builder (v1.13)
+
+When the same kind of question is missed twice, or a skill is missed three times running, the game stops and runs a
+short guided loop instead of simply asking again. It follows the usual teaching sequence of *I do, we do, you do*:
+
+1. **Watch.** A question of that kind is shown already solved, with the explanation.
+2. **Together.** A new one with only two choices. A miss is explained and the same question is asked again until it is right.
+3. **Almost there.** A new one with all the choices, again repeated until it is right.
+4. **On your own.** Two in a row with no help. These count toward mastery.
+
+Success clears the missed kind, pays 15 scrap and schedules one more check eight questions later. If step 4 fails, the
+lesson and its picture are shown and the loop runs once more; if that fails too, the skill is rested until the next day.
+For math every step is the same kind with new numbers. For English the missed item is shown and later answered, and the
+practice around it uses other items from the same skill. The loop never interrupts a shop trial, an egg trial, a lesson
+or a practice test, and it runs at most once every twelve questions.
+
+Not built: feedback that names the specific mistake behind each wrong choice, and hints or a second try before the
+answer is shown in ordinary play.
