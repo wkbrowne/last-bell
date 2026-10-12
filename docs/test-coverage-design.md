@@ -200,3 +200,27 @@ Tests, shop and egg trials, lesson proofs and the Skill Builder's solo step give
 **Guide arrows.** A trail of gold arrows on the ground follows the walkable route to the next story step, with a
 bouncing marker over the goal. Inside a building it leads to the goal or to the exit. The route prefers roads and
 paths over tall grass. Blocked story gates now say to follow the arrows. It can be switched off under Options.
+
+## Performance on a Fire tablet (v1.15)
+
+Measured in the browser by counting drawing calls per frame in four scenes. Not measured on a tablet.
+
+| per frame | before | after (best) | after (balanced) |
+|---|---|---|---|
+| images drawn, town | 466 | 253 | 253 |
+| images drawn, forest | 616 | 443 | 413 |
+| images drawn, indoors | 358 | 137 | 115 |
+| gradients built | 45–101 | 1–5 | 0 |
+
+- **Ground cache.** The floor is painted once into 6×6-tile pieces and reused (about 20 draws instead of about 330).
+- **Glow sprites.** Lights, fireflies, eyes in the trees and the screen-edge shadow are pre-made pictures, not fresh
+  gradients every frame.
+- **Quality levels.** Best, balanced, fastest. Fire tablets and other small devices start on balanced. The game steps
+  down sooner than before (below about 47 frames a second, then below about 37). Fastest draws every other frame, drops
+  fireflies and rain ripples, and uses the screen's plain resolution. A grown-up can pin a level under Options → Graphics.
+- **Cheaper scaling.** Image smoothing is medium or low instead of high. Trees and grass sway only on best.
+- **Sound.** A larger sound buffer, notes scheduled half a second ahead, every sound effect fades in over 4 ms instead
+  of starting at full volume, volume changes glide, and the typewriter tick is softer, less frequent and silent while
+  the voice is reading.
+
+Still the heaviest thing on screen: forests, at about 400 tree pictures per frame.

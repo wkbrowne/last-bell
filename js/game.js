@@ -210,8 +210,52 @@ function prepMap(name) {
   }));
 }
 const LIGHT = document.createElement('canvas'); LIGHT.width = 480; LIGHT.height = 360;
+const GLOW = {};
+function glowSpr(rgb, mid) {   // a soft round blob of light, 64px, made once per color
+  const k = rgb + (mid || ''); if (GLOW[k]) return GLOW[k];
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), q = g.createRadialGradient(32, 32, mid ? 0 : 2, 32, 32, 32);
+  q.addColorStop(0, `rgba(${rgb},1)`); if (mid) q.addColorStop(.35, `rgba(${mid},.7)`); q.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = q; g.fillRect(0, 0, 64, 64); return (GLOW[k] = c);
+}
+const VIG = {};
+function vignette(a) { const k = Math.round(a * 20); if (!VIG[k]) { const c = VIG[k] = document.createElement('canvas'); c.width = 240; c.height = 180; const g = c.getContext('2d'), q = g.createRadialGradient(120, 90, 75, 120, 90, 160); q.addColorStop(0, 'rgba(10,4,30,0)'); q.addColorStop(1, `rgba(8,2,24,${k / 20})`); g.fillStyle = q; g.fillRect(0, 0, 240, 180); } return VIG[k]; }
 const AMB = Array.from({ length: 46 }, (_, i) => ({ x: Math.random() * W, y: Math.random() * H, p: Math.random() * 6.3, s: .4 + Math.random() }));
 let ambT = 0;
+// ---- GROUND CACHE: the floor is painted once into 6x6-tile pieces and reused, instead of ~330 tile draws every frame.
+const Ground = {
+  N: 6, max: 30, cache: new Map(),
+  // paints tiles tx0..tx1, ty0..ty1 of the current map into c (which is already moved to world coordinates)
+  tiles(c, mp, m, tx0, ty0, tx1, ty1, f, world) {
+  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+    if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) continue;
+    const t = mp.gt[ty][tx], ch = m.t[ty][tx], v = (tx * 7 + ty * 13) & 3;
+    if (t === 'wall') c.drawImage(Art.wall(mp.mk[ty][tx], v & 1), tx * 48, ty * 48, 48.6, 48.6);
+    else c.drawImage(Art.ground(t, mp.mk[ty][tx], v, f, mp.baseT, ch === '*' || ch === 'J'), tx * 48, ty * 48, 48.6, 48.6);
+    if (t === 'wall') { if (mp.mk[ty][tx] && (tx * 29 + ty * 17) % 19 === 0) c.drawImage(Art.blood(10 + (tx % 3)), tx * 48, ty * 48 + 8, 48, 44); }
+    else if (t !== 'water' && t !== 'plank' && (tx * 73 + ty * 151) % (world ? (t === 'grass' ? 211 : 31) : (G.map === 'hospital' ? 11 : 23)) === 0) c.drawImage(Art.blood((tx * 3 + ty) % 10), tx * 48, ty * 48, 48, 48);
+    if (t === 'wall' && !mp.mk[ty][tx] && ty + 1 >= m.h) continue;
+    if (ch === 'E') c.drawImage(Art.sprite('exitmat'), tx * 48 - 6, ty * 48 - 10, 60, 60);
+  }
+  // soft shadow that walls cast onto the floor below them
+  if (!world) { for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (ty > 0 && ty < m.h && tx >= 0 && tx < m.w && mp.gt[ty][tx] !== 'wall' && mp.gt[ty - 1][tx] === 'wall') { const sg = c.createLinearGradient(0, ty * 48, 0, ty * 48 + 18); sg.addColorStop(0, 'rgba(10,4,30,.4)'); sg.addColorStop(1, 'rgba(10,4,30,0)'); c.fillStyle = sg; c.fillRect(tx * 48, ty * 48, 48, 18); } }
+  },
+  hasWater(mp, m, cx, cy) { for (let ty = cy * this.N - 1; ty <= cy * this.N + this.N; ty++) for (let tx = cx * this.N - 1; tx <= cx * this.N + this.N; tx++) if (ty >= 0 && tx >= 0 && ty < m.h && tx < m.w && mp.gt[ty][tx] === 'water') return true; return false; },
+  draw(mp, m, camX, camY, f, world) {
+    const N = this.N, px = N * 48, sc = Math.min(KPX, 1.5); let built = 0;
+    for (let cy = Math.floor(camY / px); cy * px < camY + H; cy++) for (let cx = Math.floor(camX / px); cx * px < camX + W; cx++) {
+      const wk = G.map + '|' + cx + '|' + cy; let wet = this.wet && this.wet[wk]; if (wet == null) { (this.wet = this.wet || {})[wk] = wet = this.hasWater(mp, m, cx, cy); }
+      const key = wk + '|' + (wet ? f : 0) + '|' + sc; let cvs = this.cache.get(key);
+      if (cvs) { this.cache.delete(key); this.cache.set(key, cvs); }
+      else if (built < 2) {
+        built++; if (this.cache.size >= this.max) { const old = this.cache.keys().next().value, oc = this.cache.get(old); this.cache.delete(old); cvs = oc; } else { cvs = document.createElement('canvas'); }
+        cvs.width = cvs.height = Math.ceil(px * sc); const c = cvs.getContext('2d'); c.setTransform(sc, 0, 0, sc, -cx * px * sc, -cy * px * sc); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'medium';
+        c.fillStyle = '#1a1230'; c.fillRect(cx * px, cy * px, px, px);
+        this.tiles(c, mp, m, cx * N - 1, cy * N - 1, cx * N + N, cy * N + N, f, world); this.cache.set(key, cvs);
+      }
+      if (cvs) ctx.drawImage(cvs, cx * px, cy * px, px + .5, px + .5);
+      else this.tiles(ctx, mp, m, cx * N, cy * N, cx * N + N - 1, cy * N + N - 1, f, world);   // not painted yet: draw it the slow way this once
+    }
+  }
+};
 // ---- GUIDE: a trail of gold arrows along the walkable path to the next story step, and a marker over the goal.
 const Guide = {
   key: null, path: [], tgt: null,
@@ -264,19 +308,8 @@ function worldDraw() {
   const x0 = Math.floor(camX / 48), y0 = Math.floor(camY / 48);
   ctx.fillStyle = '#1a1230'; ctx.fillRect(0, 0, W, H);
   ctx.save(); ctx.translate(Math.round(-camX + sx), Math.round(-camY + sy));
-  // ---- ground
-  for (let ty = y0; ty <= y0 + VH; ty++) for (let tx = x0; tx <= x0 + VW; tx++) {
-    if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) continue;
-    const t = mp.gt[ty][tx], ch = m.t[ty][tx], v = (tx * 7 + ty * 13) & 3;
-    if (t === 'wall') ctx.drawImage(Art.wall(mp.mk[ty][tx], v & 1), tx * 48, ty * 48, 48.6, 48.6);
-    else ctx.drawImage(Art.ground(t, mp.mk[ty][tx], v, f, mp.baseT, ch === '*' || ch === 'J'), tx * 48, ty * 48, 48.6, 48.6);
-    if (t === 'wall') { if (mp.mk[ty][tx] && (tx * 29 + ty * 17) % 19 === 0) ctx.drawImage(Art.blood(10 + (tx % 3)), tx * 48, ty * 48 + 8, 48, 44); }
-    else if (t !== 'water' && t !== 'plank' && (tx * 73 + ty * 151) % (world ? (t === 'grass' ? 211 : 31) : (G.map === 'hospital' ? 11 : 23)) === 0) ctx.drawImage(Art.blood((tx * 3 + ty) % 10), tx * 48, ty * 48, 48, 48);
-    if (t === 'wall' && !mp.mk[ty][tx] && ty + 1 >= m.h) continue;
-    if (ch === 'E') ctx.drawImage(Art.sprite('exitmat'), tx * 48 - 6, ty * 48 - 10, 60, 60);
-  }
-  // soft shadow that walls cast onto the floor below them
-  if (!world) { for (let ty = y0; ty <= y0 + VH; ty++) for (let tx = x0; tx <= x0 + VW; tx++) if (ty > 0 && ty < m.h && tx >= 0 && tx < m.w && mp.gt[ty][tx] !== 'wall' && mp.gt[ty - 1][tx] === 'wall') { const sg = ctx.createLinearGradient(0, ty * 48, 0, ty * 48 + 18); sg.addColorStop(0, 'rgba(10,4,30,.4)'); sg.addColorStop(1, 'rgba(10,4,30,0)'); ctx.fillStyle = sg; ctx.fillRect(tx * 48, ty * 48, 48, 18); } }
+  // ---- ground (cached in pieces)
+  Ground.draw(mp, m, camX, camY, f, world);
   // ---- things that stand up, sorted back-to-front
   const list = [], lights = [], peepers = [];
   for (let ty = y0 - 1; ty <= y0 + VH + 3; ty++) for (let tx = x0 - 2; tx <= x0 + VW + 2; tx++) {
@@ -307,17 +340,17 @@ function worldDraw() {
       const im = e.human ? Art.human(e.spr, 'down', 0) : Art.sprite(e.spr);
       const fl = FLOATY[e.spr] ? Math.sin(now / 350 + e.x) * 4 - 6 : 0, br = (CR[e.spr] || HUM[e.spr]) ? 1 + Math.sin(now / 430 + e.x * 2) * .025 : 1;
       if (e.spr !== 'ferry' && e.spr !== 'fire') oval(cx, by - 1, S * .26, S * .08);
-      if (FLOATY[e.spr]) { const gl = ctx.createRadialGradient(cx, by - 26, 2, cx, by - 26, 44); gl.addColorStop(0, 'rgba(255,240,150,.5)'); gl.addColorStop(1, 'rgba(255,240,150,0)'); ctx.fillStyle = gl; ctx.fillRect(cx - 44, by - 70, 88, 88); }
+      if (FLOATY[e.spr]) { ctx.globalAlpha = .5; ctx.drawImage(glowSpr('255,240,150'), cx - 44, by - 70, 88, 88); ctx.globalAlpha = 1; }
       if (e.spr === 'fire') { const k = 1 + Math.sin(now / 90) * .05; ctx.save(); ctx.translate(cx, by); ctx.scale(f ? -k : k, 2 - k); ctx.drawImage(im, -S / 2, -S * .945, S, S); ctx.restore(); }
       else ctx.drawImage(im, cx - S / 2, by - S * .945 * br + fl, S, S * br);
     } else if (o.k === 'tree') {
       const h = (o.tx * 31 + o.ty * 17) % 7, p = Art.prop('tree' + (h % 3)), s = .92 + h * .035;
-      ctx.save(); ctx.translate(o.tx * 48 + 24, o.ty * 48 + 47); ctx.rotate(Math.sin(now / 1100 + o.tx * 1.7 + o.ty * .9) * .02);
-      ctx.drawImage(p.c, -p.w * s / 2, -p.h * s + 6, p.w * s, p.h * s); ctx.restore();
+      if (PERF.lvl) ctx.drawImage(p.c, o.tx * 48 + 24 - p.w * s / 2, o.ty * 48 + 47 - p.h * s + 6, p.w * s, p.h * s);
+      else { ctx.save(); ctx.translate(o.tx * 48 + 24, o.ty * 48 + 47); ctx.rotate(Math.sin(now / 1100 + o.tx * 1.7 + o.ty * .9) * .02); ctx.drawImage(p.c, -p.w * s / 2, -p.h * s + 6, p.w * s, p.h * s); ctx.restore(); }
     } else if (o.k === 'tuft') {
       const p = Art.prop('tuft'), near = Math.abs(o.tx * 48 - pxX) < 30 && Math.abs(o.ty * 48 - pxY) < 30 && PL.moving;
-      ctx.save(); ctx.translate(o.tx * 48 + 24, o.ty * 48 + 48); ctx.transform(1, 0, Math.sin(now / (near ? 90 : 620) + o.tx + o.ty * 2) * (near ? .3 : .13), 1, 0, 0);
-      ctx.drawImage(p.c, -p.w * .58, -p.h * 1.1, p.w * 1.16, p.h * 1.1); ctx.restore();
+      if (PERF.lvl && !near) ctx.drawImage(p.c, o.tx * 48 + 24 - p.w * .58, o.ty * 48 + 48 - p.h * 1.1, p.w * 1.16, p.h * 1.1);
+      else { ctx.save(); ctx.translate(o.tx * 48 + 24, o.ty * 48 + 48); ctx.transform(1, 0, Math.sin(now / (near ? 90 : 620) + o.tx + o.ty * 2) * (near ? .3 : .13), 1, 0, 0); ctx.drawImage(p.c, -p.w * .58, -p.h * 1.1, p.w * 1.16, p.h * 1.1); ctx.restore(); }
     } else {
       const p = Art.prop(o.k, o.k === 'car' ? (o.tx + o.ty) & 3 : 0);
       ctx.drawImage(p.c, o.tx * 48 + 24 - p.w / 2, o.ty * 48 + 48 - p.h + (o.k === 'fence' || o.k === 'ifence' ? -2 : 0), p.w, p.h);
@@ -331,10 +364,10 @@ function worldDraw() {
     lg.fillStyle = `rgba(14,10,44,${Math.min(.88, zd * (world ? 1.55 : 1.2))})`; lg.fillRect(0, 0, 480, 360);
     lg.globalCompositeOperation = 'destination-out';
     lights.push([pxX + 24, pxY + 10, 210, .9]);
-    for (const [lx, ly, r, a] of lights) { const x = (lx - camX) / 2, y = (ly - camY) / 2, q = lg.createRadialGradient(x, y, r * .08, x, y, r / 2 * (1 + Math.sin(now / 130 + lx) * .03)); q.addColorStop(0, `rgba(0,0,0,${a})`); q.addColorStop(1, 'rgba(0,0,0,0)'); lg.fillStyle = q; lg.fillRect(x - r, y - r, r * 2, r * 2); }
+    for (const [lx, ly, r, a] of lights) { const x = (lx - camX) / 2, y = (ly - camY) / 2, rr = r / 2 * (1 + Math.sin(now / 130 + lx) * .03); lg.globalAlpha = a; lg.drawImage(glowSpr('0,0,0'), x - rr, y - rr, rr * 2, rr * 2); } lg.globalAlpha = 1;
     ctx.drawImage(LIGHT, 0, 0, W, H);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (const [lx, ly, r] of lights.slice(0, -1)) { const x = lx - camX, y = ly - camY, q = ctx.createRadialGradient(x, y, 4, x, y, r * .8); q.addColorStop(0, 'rgba(255,170,70,.28)'); q.addColorStop(1, 'rgba(255,170,70,0)'); ctx.fillStyle = q; ctx.fillRect(x - r, y - r, r * 2, r * 2); }
+    ctx.globalAlpha = .28; for (let i = 0; i < lights.length - 1; i++) { const [lx, ly, r] = lights[i], x = lx - camX, y = ly - camY; ctx.drawImage(glowSpr('255,170,70'), x - r * .8, y - r * .8, r * 1.6, r * 1.6); }
     ctx.restore();
   }
   // ---- drifting ambience: pollen by day, fireflies and fog at night, dust indoors
@@ -344,22 +377,22 @@ function worldDraw() {
   if (world) for (const [ex, ey, h] of peepers) {
     const d = Math.hypot(ex - pxX - 24, ey - pxY), blink = Math.sin(now / 1700 + h * 2.3) > -.82, a = clamp((d - 150) / 160, 0, 1) * (blink ? 1 : 0);
     if (!a) continue; const x = ex - camX, y = ey - camY, red = h % 3 === 0;
-    for (const s2 of [-6, 6]) { const q = ctx.createRadialGradient(x + s2, y, 0, x + s2, y, 9); q.addColorStop(0, red ? `rgba(255,90,70,${a})` : `rgba(240,255,110,${a})`); q.addColorStop(.35, red ? `rgba(255,60,40,${a * .7})` : `rgba(220,255,90,${a * .7})`); q.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = q; ctx.fillRect(x + s2 - 9, y - 9, 18, 18); }
+    ctx.globalAlpha = a; const eye = red ? glowSpr('255,90,70', '255,60,40') : glowSpr('240,255,110', '220,255,90'); ctx.drawImage(eye, x - 15, y - 9, 18, 18); ctx.drawImage(eye, x - 3, y - 9, 18, 18); ctx.globalAlpha = 1;
   }
   // the storm: sheets of rain and forked lightning outside, flashes through the windows inside
   if (world) { ctx.fillStyle = 'rgba(16,24,52,.14)'; ctx.fillRect(0, 0, W, H); drawRain(now, 170, .3 + z.dark * .2); drawStorm(now, 300 + (Storm.seed % 260), z.dark > .4 ? 4000 : 6000, z.dark > .4 ? 9000 : 14000); }
   else drawStorm(now, H, 9000, 17000, false);
   if (z.dark > .15 && world) { ctx.save(); ctx.globalAlpha = .06 + z.dark * .12; ctx.fillStyle = '#d0dcff'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(((now / (40 + i * 9)) + i * 300) % (W + 600) - 300, 140 + i * 150, 330, 34, 0, 0, 6.3); ctx.fill(); } ctx.restore(); }
   ctx.save();
-  for (const a of (PERF.lvl > 1 ? [] : AMB)) {
+  for (let ai = 0, an = [46, 24, 0][PERF.lvl]; ai < an; ai++) { const a = AMB[ai];
     a.p += dt * .0016 * a.s; a.x += (Math.cos(a.p) * .25 + (indoor ? 0 : .22)) * dt * .06 * a.s; a.y += Math.sin(a.p * 1.3) * dt * .02 - (spooky ? 0 : dt * .004);
     if (a.x > W + 10) a.x = -10; if (a.y < -10) a.y = H + 10; if (a.y > H + 10) a.y = -10;
     const tw = .5 + .5 * Math.sin(a.p * 3);
-    if (spooky) { const q = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 12); q.addColorStop(0, `rgba(190,255,140,${.75 * tw})`); q.addColorStop(1, 'rgba(190,255,140,0)'); ctx.fillStyle = q; ctx.fillRect(a.x - 12, a.y - 12, 24, 24); }
+    if (spooky) { ctx.globalAlpha = .75 * tw; ctx.drawImage(glowSpr('190,255,140'), a.x - 12, a.y - 12, 24, 24); }
     else { ctx.globalAlpha = (indoor ? .25 : .5) * tw; ctx.fillStyle = indoor ? '#fff6d8' : '#ffffff'; ctx.beginPath(); ctx.arc(a.x, a.y, 1.6 + a.s, 0, 6.3); ctx.fill(); }
   }
   ctx.restore();
-  const vg = ctx.createRadialGradient(W / 2, H / 2, 300, W / 2, H / 2, 640); vg.addColorStop(0, 'rgba(10,4,30,0)'); vg.addColorStop(1, `rgba(8,2,24,${.42 + z.dark * .3})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(vignette(.42 + z.dark * .3), 0, 0, W, H);
   // ---- HUD
   if (!Battle.on) {
     Guide.draw(camX, camY, now);
@@ -458,6 +491,7 @@ async function optionsMenu() {
   while (true) {
     const opts = [
       [`Grade level: ${G.learn.grade}`, async () => { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }],
+      [`Graphics: ${['best', 'balanced', 'fastest'][PERF.lvl]}${PERF.lock ? '' : ' (auto)'}`, async () => { const k = await menu(['Auto (the game decides)', 'Best looking', 'Balanced', 'Fastest'], { x: 300, y: 230, w: 360, title: 'Graphics' }); if (k < 0) return; try { localStorage.setItem('lastbell_gfx', k ? String(k - 1) : ''); } catch (e) {} PERF.lock = k > 0; PERF.lvl = k ? k - 1 : PERF.base; fitCanvas(true); Ground.cache.clear(); }],
       [`Guide arrows: ${G.guide === false ? 'off' : 'ON'}`, async () => { G.guide = G.guide === false; }],
       [`Read the story aloud: ${G.readAloud ? 'ON' : 'off'}`, async () => { G.readAloud = !G.readAloud; if (!Speak.can()) await say(null, 'This device does not have a reading voice available, so nothing will be read aloud.'); }],
       [`Reading voice: ${Speak.label()}`, async () => {
@@ -476,7 +510,7 @@ async function optionsMenu() {
         const k = await typeAnswer(Grader.key() ? 'A key is saved. Paste a new one, or type "none" to remove it.' : 'Paste an Anthropic API key (it starts with sk-ant-).', { rows: 2, cancel: 'Cancel', placeholder: 'sk-ant-...' });
         if (k === null) return; if (/^none$/i.test(k)) { Grader.setKey(''); toast('Claude marking off'); } else { Grader.setKey(k); toast('Claude marking on'); } }],
       ['Back', null]];
-    const i = await menu(opts.map(o => o[0]), { x: 210, y: 110, w: 560, rows: 12, title: 'OPTIONS' });
+    const i = await menu(opts.map(o => o[0]), { x: 210, y: 110, w: 560, rows: 13, title: 'OPTIONS' });
     if (i < 0 || !opts[i][1]) return;
     await opts[i][1]();
   }
@@ -880,11 +914,14 @@ async function titleFlow() {
 let lastT = 0;
 function frame(ts) {
   const raw = ts - lastT || 16, dt = Math.min(50, raw); lastT = ts;
-  if (raw < 250) { PERF.acc += raw; if (++PERF.n >= 90) { if (PERF.acc / PERF.n > 30 && PERF.lvl < 2) PERF.lvl++; PERF.acc = 0; PERF.n = 0; } }
-  step(dt); requestAnimationFrame(frame);
+  if (raw < 250) { PERF.acc += raw; if (++PERF.n >= 90) { if (!PERF.lock && PERF.acc / PERF.n > (PERF.lvl ? 27 : 21) && PERF.lvl < 2) { PERF.lvl++; fitCanvas(true); } PERF.acc = 0; PERF.n = 0; } }
+  requestAnimationFrame(frame);
+  // lowest setting: draw every other frame, which leaves the tablet time for sound and input
+  if (PERF.lvl >= 2 && (PERF.skip = !PERF.skip)) { PERF.carry = dt; return; }
+  step(Math.min(66, dt + (PERF.carry || 0))); PERF.carry = 0;
 }
 function step(dt) {
-  fitCanvas(); ctx.setTransform(KPX, 0, 0, KPX, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  fitCanvas(); ctx.setTransform(KPX, 0, 0, KPX, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = PERF.lvl ? 'low' : 'medium';
   Timers.update(dt); updateTweens(dt);
   const pr = Input.presses.splice(0);
   for (const t of Input.taps.splice(0)) {

@@ -140,7 +140,7 @@ const Snd = {
     if (!this.ac) {
       try {
         const AC = window.AudioContext || window.webkitAudioContext;
-        const ac = this.ac = new AC();
+        let ac; try { ac = new AC({ latencyHint: 'playback' }); } catch (e) { ac = new AC(); } this.ac = ac;   // a bigger sound buffer: no crackle when a frame runs long
         this.master = ac.createGain(); this.master.gain.value = this.muted ? 0 : .7; this.master.connect(ac.destination);
         const pw = d => { const n = 24, re = new Float32Array(n), im = new Float32Array(n); for (let i = 1; i < n; i++) re[i] = 2 / (i * Math.PI) * Math.sin(i * Math.PI * d); return ac.createPeriodicWave(re, im); };
         this.waves = { pulse: pw(.25) };
@@ -163,7 +163,7 @@ const Snd = {
   },
   // Silence everything while the app or tab is in the background.
   hide(h) { this.hidden = h; if (!this.ac) return; if (h) this.ac.suspend(); else this.ac.resume(); },
-  toggleMute() { this.muted = !this.muted; if (this.master) this.master.gain.value = this.muted ? 0 : .7; return this.muted; },
+  toggleMute() { this.muted = !this.muted; if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : .7, this.ac.currentTime, .03); return this.muted; },
   play(name) {
     if (this.curName === name) return;
     this.curName = name;
@@ -183,7 +183,7 @@ const Snd = {
   },
   tick() {
     const st = this.state, ac = this.ac; if (!st || !ac) return;
-    const horizon = ac.currentTime + .25, song = st.song;
+    const horizon = ac.currentTime + .5, song = st.song;
     let allDone = true;
     song.ch.forEach((c, ci) => {
       const p = st.ptr[ci];
@@ -216,7 +216,7 @@ const Snd = {
     const o = ac.createOscillator();
     if (c.w === 'tri') o.type = 'triangle'; else if (c.w === 'sq') o.type = 'square'; else o.setPeriodicWave(this.waves[c.w]);
     o.frequency.value = 440 * Math.pow(2, (m - 69) / 12);
-    if (c.vib && dur > .25) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 6; lg.gain.value = o.frequency.value * .008; l.connect(lg); lg.connect(o.frequency); l.start(t + .12); l.stop(t + dur); }
+    if (c.vib && dur > .25 && !PERF.lvl) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 6; lg.gain.value = o.frequency.value * .008; l.connect(lg); lg.connect(o.frequency); l.start(t + .12); l.stop(t + dur); }
     const g = ac.createGain(), v = c.v, organ = c.w === 'organ';
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .008);
     g.gain.setValueAtTime(organ ? v : v * .75, t + Math.min(.08, dur * .5));
@@ -229,8 +229,8 @@ const Snd = {
     t = t || ac.currentTime;
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
-    o.connect(g); g.connect(out || this.master); o.start(t); o.stop(t + dur + .02);
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(vol, t + .004); g.gain.exponentialRampToValueAtTime(.001, t + Math.max(.012, dur));
+    o.connect(g); g.connect(out || this.master); o.start(t); o.stop(t + Math.max(.012, dur) + .02);
   },
   noiseHit(dur, vol, t) {
     const ac = this.ac; if (!ac) return; t = t || ac.currentTime;
@@ -243,7 +243,7 @@ const Snd = {
     if (!this.ac) return;
     const t = this.ac.currentTime;
     switch (n) {
-      case 'blip': this.tone('square', 520, 520, .02, .03); break;
+      case 'blip': this.tone('triangle', 620, 620, .03, .035); break;
       case 'move': this.tone('square', 660, 660, .03, .06); break;
       case 'ok': this.tone('square', 880, 1320, .07, .08); break;
       case 'no': this.tone('square', 180, 120, .14, .09); break;

@@ -5,13 +5,22 @@ const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 let KPX = 1;
 // Drops resolution and effects automatically on slower tablets.
-const PERF = { lvl: 0, acc: 0, n: 0 };
-function fitCanvas() {
-  const r = cv.getBoundingClientRect(), k = clamp((window.devicePixelRatio || 1) * (r.width || W) / W, 1, [2.5, 1.5, 1][PERF.lvl]);
+// Fire tablets and other small devices start on the balanced setting. A grown-up can pin a setting under Options.
+const PERF = { lvl: 0, acc: 0, n: 0, lock: false, base: 0 };
+try {
+  const nv = navigator, small = /\bKF[A-Z0-9]{3,}\b|Silk\//.test(nv.userAgent) || (nv.deviceMemory && nv.deviceMemory <= 2) || (nv.hardwareConcurrency && nv.hardwareConcurrency <= 4);
+  PERF.base = PERF.lvl = small ? 1 : 0;
+  const pin = localStorage.getItem('lastbell_gfx'); if (pin === '0' || pin === '1' || pin === '2') { PERF.lvl = +pin; PERF.lock = true; }
+} catch (e) {}
+let fitKey = '';
+function fitCanvas(force) {
+  // measuring the page is slow, so only do it when the window or the quality setting changes
+  const key = innerWidth + 'x' + innerHeight + 'x' + (window.devicePixelRatio || 1) + 'x' + PERF.lvl; if (!force && key === fitKey) return; fitKey = key;
+  const r = cv.getBoundingClientRect(), k = clamp((window.devicePixelRatio || 1) * (r.width || W) / W, 1, [2, 1.5, 1][PERF.lvl]);
   KPX = Math.round(k * 4) / 4;
   if (cv.width !== W * KPX) { cv.width = W * KPX; cv.height = H * KPX; }
 }
-addEventListener('resize', () => fitCanvas());
+addEventListener('resize', () => fitCanvas(true));
 
 const FONT_B = '"Fredoka","Arial Rounded MT Bold","Trebuchet MS",sans-serif';
 const FONT_T = '"Lilita One","Fredoka","Arial Rounded MT Bold",sans-serif';
@@ -159,7 +168,7 @@ function say(who, str, opts) {
       update(dt, pr) {
         const before = Math.floor(chars);
         chars = Math.min(total(), chars + dt * 0.075);
-        if (Math.floor(chars) > before && (blip++ % 3 === 0) && !opts.auto) Snd.sfx('blip');
+        if (Math.floor(chars) > before && (blip++ % 4 === 0) && !opts.auto && !Speak.on) Snd.sfx('blip');
         const full = chars >= total(), last = pg === pages.length - 1;
         if (opts.auto && full && last) { done += dt; if (done > opts.auto) { UI.pop(m); res(); return; } }
         for (const k of pr) {
@@ -365,7 +374,7 @@ function drawRain(now, n, a, top) {
   }
   ctx.stroke();
   ctx.strokeStyle = `rgba(200,225,255,${a * 1.2})`; ctx.lineWidth = 1.4;
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < [16, 8, 0][PERF.lvl]; i++) {
     const ph = (now / 520 + i * .37) % 1, k = Math.floor(now / 520 + i * .37) * 7.3 + i * 91.7;
     const x = (Math.sin(k) * .5 + .5) * W, y = (top || 0) + (Math.sin(k * 1.7) * .5 + .5) * (H - (top || 0));
     ctx.globalAlpha = 1 - ph; ctx.beginPath(); ctx.ellipse(x, y, 4 + ph * 12, 1.5 + ph * 4, 0, 0, 6.3); ctx.stroke();
@@ -396,7 +405,7 @@ function drawStorm(now, groundY, gapMin, gapMax, bolt) {
 const Speak = {
   id: 0, on: false, bad: false, done: null, tm: 0, VKEY: 'lastbell_voice', RKEY: 'lastbell_rate',
   can() { try { return !this.bad && (window.LBSpeech ? !!window.LBSpeech.ok() : !!(window.speechSynthesis && window.SpeechSynthesisUtterance)); } catch (e) { return false; } },
-  duck(d) { try { if (Snd.master && !Snd.muted) Snd.master.gain.value = d ? .1 : .7; } catch (e) {} },
+  duck(d) { try { if (Snd.master && !Snd.muted) Snd.master.gain.setTargetAtTime(d ? .1 : .7, Snd.ac.currentTime, .06); } catch (e) {} },
   get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   rate() { return parseFloat(this.get(this.RKEY, '0.95')); },
