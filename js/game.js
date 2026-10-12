@@ -901,15 +901,15 @@ function titleDraw() {
   ['scrapup', 'sporkle', 'zaprat'].forEach((s, i) => put(Art.sprite(s), 90 + i * 0 + [0, 80, 690][i], 690 - (i === 2 ? 10 : 0), 110, Math.abs(Math.sin(t * 3 + i * 1.4)) * -12));
   const ty = 60 + Math.sin(t * 1.4) * 5;
   ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.lineJoin = 'round';
-  ctx.font = '132px ' + FONT_T;
-  ctx.strokeStyle = '#1a0a2e'; ctx.lineWidth = 22; ctx.strokeText('LAST BELL', W / 2, ty + 8);
-  ctx.strokeStyle = '#3a0410'; ctx.lineWidth = 12; ctx.strokeText('LAST BELL', W / 2, ty);
+  ctx.font = '112px ' + FONT_T;
+  ctx.strokeStyle = '#1a0a2e'; ctx.lineWidth = 22; ctx.strokeText('ZOMBIE ZONE', W / 2, ty + 8);
+  ctx.strokeStyle = '#3a0410'; ctx.lineWidth = 12; ctx.strokeText('ZOMBIE ZONE', W / 2, ty);
   const tg = ctx.createLinearGradient(0, ty, 0, ty + 130); tg.addColorStop(0, '#ff7a5a'); tg.addColorStop(.5, '#d81e30'); tg.addColorStop(1, '#6a0814');
-  ctx.fillStyle = tg; ctx.fillText('LAST BELL', W / 2, ty);
+  ctx.fillStyle = tg; ctx.fillText('ZOMBIE ZONE', W / 2, ty);
   for (let i = 0; i < 11; i += 2) {
-    const x = W / 2 - 288 + i * 56 + (i * 37 % 19), len = (18 + (i * 53 % 46)) * (.65 + .35 * Math.sin(t * .6 + i * 1.7));
-    rbox(x, ty + 104, 9, len, 4.5, '#b01020'); ctx.beginPath(); ctx.arc(x + 4.5, ty + 104 + len, 6, 0, 6.3); ctx.fill();
-    const fall = (t * 120 + i * 97) % 420; if (i % 3 === 0 && fall < 300) { ctx.globalAlpha = 1 - fall / 300; ctx.beginPath(); ctx.ellipse(x + 4.5, ty + 110 + len + fall, 4, 6.5, 0, 0, 6.3); ctx.fill(); ctx.globalAlpha = 1; }
+    const x = W / 2 - 330 + i * 64 + (i * 37 % 19), len = (18 + (i * 53 % 46)) * (.65 + .35 * Math.sin(t * .6 + i * 1.7));
+    rbox(x, ty + 90, 9, len, 4.5, '#b01020'); ctx.beginPath(); ctx.arc(x + 4.5, ty + 90 + len, 6, 0, 6.3); ctx.fill();
+    const fall = (t * 120 + i * 97) % 420; if (i % 3 === 0 && fall < 300) { ctx.globalAlpha = 1 - fall / 300; ctx.beginPath(); ctx.ellipse(x + 4.5, ty + 96 + len + fall, 4, 6.5, 0, 0, 6.3); ctx.fill(); ctx.globalAlpha = 1; }
   }
   setFont(20, true); text('A ZOMBIE QUEST FOR BIG BRAINS', W / 2, ty + 142, '#c8ffb8', 'center');
   if (PL.titleWait) { rbox(W / 2 - 170, 676, 340, 38, 19, 'rgba(26,14,58,.8)', '#f2c14e', 2.5); ctx.globalAlpha = .6 + .4 * Math.sin(t * 5); setFont(17, true); text('TAP  OR  PRESS  Z', W / 2, 683, '#ffffff', 'center'); ctx.globalAlpha = 1; }

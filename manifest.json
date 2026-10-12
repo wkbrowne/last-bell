@@ -1,6 +1,6 @@
 {
-  "name": "Last Bell: A Zombie Quest",
-  "short_name": "Last Bell",
+  "name": "Zombie Zone: A Zombie Quest",
+  "short_name": "Zombie Zone",
   "description": "A zombie quest powered by math and reading.",
   "start_url": "./index.html",
   "scope": "./",

@@ -361,7 +361,7 @@ const Story = {
     await say(null, 'Turns out I just had not looked hard enough.');
     await say(null, "The bell is broken, but its echo still wakes a few sleepers after dark. And every night, the beacon finds another kid. So every night, we go.");
     await say(null, `THE END\n\nBrain Blasts landed: ${L.right} of ${L.total}   ·   Best streak: ${L.best}\nBrain rank: ${brainRank(L.right)}   ·   Skills mastered: ${Object.values(L.sk).filter(k => k.m).length}\nMerit badges: ${G.badges.length} of ${Object.keys(BADGES).length}   ·   Critter friends: ${Object.keys(G.dex).length}`, { col: '#ffd76a' });
-    await say(null, 'Thanks for playing LAST BELL. Your save is still here: keep exploring, master every skill in Study Hall, and find all the comics!');
+    await say(null, 'Thanks for playing ZOMBIE ZONE. Your save is still here: keep exploring, master every skill in Study Hall, and find all the comics!');
     setFlag('cleared'); setObj('Answer a signal from the Nest or any campfire each night. Rescue every kid and master every skill.'); saveGame();
     await fadeOut(400); enterWorld(); await fadeIn(400);
   }
