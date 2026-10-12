@@ -53,7 +53,7 @@ function saveGame() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(G, (k, v) => (k === 'st' || k === 'stun' || k === 'dhp') ? undefined : v)); toast('Game saved'); } catch (e) { toast('Could not save'); }
 }
 function loadGame() {
-  try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; const d = JSON.parse(s), n = newState(); G = Object.assign(n, d); G.learn = Object.assign(n.learn, d.learn); return true; } catch (e) { return false; }
+  try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; const d = JSON.parse(s), n = newState(); G = Object.assign(n, d); G.learn = Object.assign(n.learn, d.learn); Learn.migrate(); return true; } catch (e) { return false; }
 }
 const hasSave = () => { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } };
 
@@ -511,7 +511,7 @@ async function grownUp() { const a = rint(13, 19), b = rint(6, 9), t = await typ
 async function optionsMenu() {
   while (true) {
     const opts = [
-      [`Grade level: ${G.learn.grade}`, async () => { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }],
+      [`Grade level: ${G.learn.grade}`, async () => { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0 && G.learn.grade !== 2 + g) { G.learn.grade = 2 + g; ENG.reset(); } }],
       [`Graphics: ${['best', 'balanced', 'fastest'][PERF.lvl]}${PERF.lock ? '' : ' (auto)'}`, async () => { const k = await menu(['Auto (the game decides)', 'Best looking', 'Balanced', 'Fastest'], { x: 300, y: 230, w: 360, title: 'Graphics' }); if (k < 0) return; try { localStorage.setItem('lastbell_gfx', k ? String(k - 1) : ''); } catch (e) {} PERF.lock = k > 0; PERF.lvl = k ? k - 1 : PERF.base; fitCanvas(true); Ground.cache.clear(); }],
       [`Guide arrows: ${G.guide === false ? 'off' : 'ON'}`, async () => { G.guide = G.guide === false; }],
       [`Read the story aloud: ${G.readAloud ? 'ON' : 'off'}`, async () => { G.readAloud = !G.readAloud; if (!Speak.can()) await say(null, 'This device does not have a reading voice available, so nothing will be read aloud.'); }],
@@ -981,6 +981,18 @@ const DBG = {
       for (const e of ENT.filter(e => e.map === map && e.solid)) if (!Object.values(DV).some(([dx, dy]) => seen.has((e.x + dx) + ',' + (e.y + dy)))) out.push(`${map} ${e.spr} @${e.x},${e.y} unreachable`);
       for (const k in WARPS) if (k.startsWith(map + ':')) { const [x, y] = k.split(':')[1].split(',').map(Number); if (!Object.values(DV).some(([dx, dy]) => seen.has((x + dx) + ',' + (y + dy)))) out.push('warp unreachable ' + k); }
     }
+    return out;
+  },
+  // The shared engine's own rule checks, then a pretend learner on this game's real skills at every grade. Empty means all good.
+  engine() {
+    const out = [], c = LearnCore.checks(), keep = G, realDay = Learn.day; for (const k in c) if (!c[k]) out.push('rule: ' + k);
+    try {
+      for (let gr = 2; gr <= 6; gr++) for (const sub of ['math', 'ela']) {
+        G = newState(); G.learn.grade = gr; let day = realDay.call(Learn); Learn.day = () => day;
+        const r = LearnCore.simulate({ host: { skills: grp => Learn.forGrade(GRP.grade(grp), GRP.sub(grp)).map(s => s.id), today: () => day }, engine: ENG, group: sub + gr, nextDay: () => day++ });
+        r.broke.forEach(b => out.push(sub + gr + ': ' + b)); if (r.missing.length) out.push(sub + gr + ' never asked: ' + r.missing.join(', '));
+      }
+    } finally { G = keep; Learn.day = realDay; }
     return out;
   },
   questions(n) {

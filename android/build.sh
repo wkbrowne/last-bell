@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 S=${ANDROID_SDK_ROOT:-/opt/homebrew/share/android-commandlinetools}; BT=$S/build-tools/34.0.0; AJ=$S/platforms/android-34/android.jar
 [ -x "$JAVA_HOME/bin/javac" ] || export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 export PATH="$JAVA_HOME/bin:$PATH"
+# The shared engine must match its source, when that is checked out next to this repo.
+[ ! -f ../learn-core/learn-core.js ] || cmp -s ../learn-core/learn-core.js js/learn-core.js || { echo "js/learn-core.js is out of date: run ./sync-core.sh"; exit 1; }
 B=android/build; rm -rf $B; mkdir -p $B/gen $B/obj $B/assets dist
 cp -R index.html manifest.json icon-192.png icon-512.png js $B/assets/
 # Bundled files are loaded straight from the app, so drop the cache-busting suffixes.

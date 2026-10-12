@@ -685,9 +685,33 @@ const LESSON_G2 = {
 };
 
 // ============================================================ ENGINE
+// Which skill comes next and what an answer means are decided by js/learn-core.js, the engine Last Bell shares with
+// Population Pup. This is Last Bell's side of it. A group is one subject at one grade ("math2"), and each record keeps
+// the "skill@grade" key it has always had. Every skill for the grade is in play from the start.
+const GRP = { sub: g => g.replace(/\d+$/, ''), grade: g => +g.replace(/\D+/g, '') };
+const ENG = LearnCore.create({
+  state: () => G.learn,
+  key: (group, id) => id + '@' + GRP.grade(group),
+  skills: group => Learn.forGrade(GRP.grade(group), GRP.sub(group)).map(s => s.id),
+  lane: group => GRP.sub(group),
+  today: () => Learn.day(),
+  kinds: (group, id) => Learn.kinds(id, GRP.grade(group)),
+  prereq: (group, id) => ({ group: GRP.sub(group) + (GRP.grade(group) - 1), id }),      // the same skill a grade earlier, where there is one
+  harder: (group, id) => ({ group: GRP.sub(group) + (GRP.grade(group) + 1), id }),      // and a grade later, for stretch questions
+  answered: (group, id, ok) => { if (typeof dayTick === 'function') dayTick(id, ok); },
+  config: { newStart: 99, newPerDay: 99, stretch: .35 }
+});
 const Learn = {
   st() { return G.learn; },
-  sk(id) { const s = G.learn.sk, k = id + '@' + G.learn.grade; return s[k] || (s[k] = { n: 0, r: 0, miss: 0, m: false, cs: 0 }); },
+  grp(id, g) { return SKILLS[id].sub + (g || G.learn.grade); },
+  sk(id, g) { return ENG.rec(this.grp(id, g), id); },
+  // Saves from before the shared engine keep every record: one field is renamed and the old round is put away.
+  migrate() {
+    const L = G.learn; if (!L || !L.sk) return;
+    for (const key in L.sk) { const k = L.sk[key]; if (Array.isArray(k.ok)) { k.kd = k.ok; delete k.ok; } if (typeof k.rest === 'string') delete k.rest; }
+    if (L.retry) { const c = ENG.core(); L.retry.forEach(r => { if (r && SKILLS[r.id] && c.retry.length < 6) c.retry.push({ g: this.grp(r.id), s: r.id, at: c.n, sig: r.sig }); }); }
+    ['retry', 'deck', 'deckG', 'cycle', 'gap'].forEach(f => delete L[f]);
+  },
   forGrade(g, sub) { return Object.values(SKILLS).filter(s => g >= s.g[0] && g <= s.g[1] && (!sub || s.sub === sub) && (s.needs !== 'speech' || Speak.can())); },
   teacher() { return flag('priya') ? 'priya' : 'guide'; },
   // A question may be asked as "type the answer" only when it makes sense without seeing the choices.
@@ -707,7 +731,7 @@ const Learn = {
   // want = a kind to ask again (a retry of something missed). Otherwise prefer kinds this child has not had yet,
   // so that a skill is not "mastered" on its easy kinds alone and English items do not repeat until the bank runs out.
   make(id, gOver, want) {
-    const L = G.learn, g = gOver || L.grade, S = SKILLS[id], k = gOver ? null : this.sk(id);
+    const L = G.learn, g = gOver || L.grade, S = SKILLS[id], k = g > L.grade ? null : this.sk(id, g);
     const one = () => { let c = (S.multi && Math.random() < .25 && S.multi(g)) || null; if (!c || c.choices.length < 5) c = S.gen(g); c.sig = this.sig(c, S.sub); return c; };
     const key = c => c.q + (c.passage ? c.ptitle : '');
     let q = null;
@@ -720,56 +744,36 @@ const Learn = {
     if (k) { k.seen = k.seen || []; if (!k.seen.includes(q.sig)) k.seen.push(q.sig); if (k.seen.length > 40) k.seen.shift(); }
     if (S.sub === 'math' && Math.random() < .3 && this.typable(q)) { q.type = 'num'; q.ans = q.choices[q.a]; }
     L.recent.push(key(q)); if (L.recent.length > 24) L.recent.shift();
-    q.skill = id; return q;
+    q.skill = id; q.grp = this.grp(id, g); return q;
   },
-  weak(k) { return k.w ? Object.keys(k.w) : []; },
-  // REVIEW BY DAYS: a mastered skill comes back after 1 day, then 3, 7, 14, 30 and 60 days. A miss starts that over.
-  GAPS: [1, 3, 7, 14, 30, 60],
+  weak(k) { return LearnCore.openKinds(k); },
   day() { return Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5); },
   // how many different kinds of question a skill has at this grade (counted once by sampling), and how many must be answered right
-  kinds(id) { const g = G.learn.grade, key = id + '@' + g, C = this._kinds || (this._kinds = {}); if (!C[key]) { const S = SKILLS[id], set = new Set(); for (let i = 0; i < 150; i++) { const c = (S.multi && i % 4 === 0 && S.multi(g)) || S.gen(g); set.add(this.sig(c, S.sub)); } C[key] = set.size; } return C[key]; },
-  breadth(id) { return Math.min(this.sk(id).head ? 3 : 6, this.kinds(id)); },
-  // ADAPTIVE PRACTICE
+  kinds(id, gr) { const g = gr || G.learn.grade, key = id + '@' + g, C = this._kinds || (this._kinds = {}); if (!C[key]) { const S = SKILLS[id], set = new Set(); for (let i = 0; i < 150; i++) { const c = (S.multi && i % 4 === 0 && S.multi(g)) || S.gen(g); set.add(this.sig(c, S.sub)); } C[key] = set.size; } return C[key]; },
+  breadth(id) { return ENG.breadth(this.grp(id), id); },
+  // ADAPTIVE PRACTICE (the rules themselves are in learn-core.js)
   // Each skill sits in a box from 0 (shaky) to 4 (rock solid). A right answer moves it up a box, a miss sends it to box 0.
-  //  - Weak skills: a miss comes back three questions later as the SAME KIND of question (at most one question in three is a retry),
-  //    and box-0 skills are dealt twice per round. A missed kind has to be answered right twice, on different days of the deck, before it is cleared.
-  //  - Skills still being learned come up every round. Once MASTERED they come back as REVIEW, less often the higher the box
-  //    (every round, then every 2nd, 3rd, 4th).
-  //  - A kind that keeps being missed is not hammered: after four misses in a row the quick retries stop, it stays in the
-  //    normal rounds, and a lesson is offered instead.
-  //  - Mastered skills sometimes come back one grade harder as a STRETCH; a badly missed skill gets an easier WARM-UP first.
-  // Stretch and warm-up questions never count for or against mastery.
+  //  - A miss comes back three questions later as the SAME KIND of question (at most one question in three is a retry).
+  //    A missed kind has to be answered right twice before it is cleared.
+  //  - A miss the very first time a skill is met does not count against it.
+  //  - Skills still being learned come up every round. Once MASTERED they come back as REVIEW by days: after 1 day,
+  //    then 3, 7, 14, 30 and 60. A missed review starts that over.
+  //  - Two of the last three missed opens the SKILL BUILDER. If the same skill a grade earlier is not solid, that is
+  //    checked first, and built up as a WARM-UP in the rounds if it needs it.
+  //  - Mastered skills sometimes come back one grade harder as a STRETCH, which never counts for or against mastery.
   // MASTERED = four right in a row, at least five tries, right answers on up to six different kinds of question,
   // and no missed kind still waiting to be cleared.
-  box(k) { return k.box == null ? (k.m ? 3 : 1) : k.box; },
+  box(k) { return LearnCore.box(k); },
   next() {
-    const L = G.learn; L.retry = L.retry || [];
+    const L = G.learn;
     if (this.focus && SKILLS[this.focus]) return this.make(this.focus);
-    const live = id => { const s = SKILLS[id]; return !!s && L.grade >= s.g[0] && L.grade <= s.g[1] && (s.needs !== 'speech' || Speak.can()); };
-    // at most one question in three is a retry, so weak spots get extra turns without crowding out everything else
-    const ri = (L.gap || 0) >= 2 ? L.retry.findIndex(r => r.at <= L.total && live(r.id)) : -1;
-    if (ri < 0) L.gap = (L.gap || 0) + 1;
-    if (ri >= 0) {
-      L.gap = 0;
-      const r = L.retry.splice(ri, 1)[0], k = this.sk(r.id), s = SKILLS[r.id];
-      if (k.miss >= 3 && s.g[0] < L.grade && !r.warmed) { L.retry.unshift({ id: r.id, at: L.total, warmed: 1 }); const q = this.make(r.id, L.grade - 1); q.noRec = 1; q.tag = 'WARM-UP'; return q; }
-      const q = this.make(r.id, null, r.sig); q.tag = 'ONE MORE TRY'; return q;
-    }
-    if (!L.deck || !L.deck.length || L.deckG !== L.grade) {
-      L.deckG = L.grade; L.cycle = (L.cycle || 0) + 1;
-      const today = this.day();
-      const build = sub => { const out = []; this.forGrade(L.grade, sub).forEach((sk, i) => { const k = this.sk(sk.id), b = this.box(k); if (k.m) { if (k.due == null) k.due = today + i % 4; if (k.due > today) return; } out.push(sk.id); if (k.n > 0 && b === 0) out.push(sk.id); }); return shuffle(out); };
-      let a = build('math'), b = build('ela');
-      // nothing left to learn and nothing due today: bring forward the reviews that are due soonest
-      if (!a.length && !b.length) { const soon = sub => shuffle(this.forGrade(L.grade, sub).slice().sort((x, y) => (this.sk(x.id).due || 0) - (this.sk(y.id).due || 0)).slice(0, 4).map(x => x.id)); a = soon('math'); b = soon('ela'); }
-      L.deck = []; while (a.length || b.length) { if (a.length) L.deck.push(a.shift()); if (b.length) L.deck.push(b.shift()); }
-      // open each round with something he is good at
-      const si = L.deck.findIndex(id => this.box(this.sk(id)) >= 3); if (si > 0) L.deck.unshift(L.deck.splice(si, 1)[0]);
-    }
-    const id = L.deck.shift(); if (!live(id)) return this.make(pick(this.forGrade(L.grade)).id);
-    const k = this.sk(id), s = SKILLS[id];
-    if (k.m && this.box(k) >= 3 && s.g[1] > L.grade && Math.random() < .35) { const q = this.make(id, L.grade + 1); q.noRec = 1; q.tag = `STRETCH: GRADE ${L.grade + 1}`; return q; }
-    const wk = this.weak(k)[0], q = this.make(id, null, wk && Math.random() < .7 ? wk : null); if (k.m || this.box(k) >= 3) q.tag = 'REVIEW'; return q;
+    // math and English take turns
+    const subs = ['math', 'ela'].filter(s => this.forGrade(L.grade, s).length); L.flip = !L.flip;
+    const p = ENG.pick((subs.length > 1 && L.flip ? subs[1] : subs[0]) + L.grade), g = GRP.grade(p.group);
+    const q = this.make(p.id, g === L.grade ? null : g, p.want);
+    if (p.noRecord) q.noRec = 1;
+    if (p.tag) q.tag = p.tag === 'Stretch' ? `STRETCH: GRADE ${g}` : p.tag.toUpperCase();
+    return q;
   },
   standing() { const all = this.forGrade(G.learn.grade); return { weak: all.filter(s => { const k = this.sk(s.id); return k.n > 0 && (this.box(k) === 0 || k.miss >= 2); }), strong: all.filter(s => { const k = this.sk(s.id); return k.m || (k.n > 0 && this.box(k) >= 3); }) }; },
   pickFocus() {
@@ -779,29 +783,17 @@ const Learn = {
   },
   progress() { const all = this.forGrade(G.learn.grade); return [all.filter(s => this.sk(s.id).m).length, all.length]; },
   record(q, ok) {
-    const L = G.learn, k = this.sk(q.skill);
-    k.n++; L.total++;
-    if (typeof dayTick === 'function') dayTick(q.skill, ok);
+    const L = G.learn, grp = q.grp || this.grp(q.skill), k = ENG.rec(grp, q.skill), was = k.m;
+    L.total++;
     { const eg = G.eggs && G.eggs.find(x => !x.hatched); if (ok && eg && SKILLS[q.skill]) { if (SKILLS[q.skill].sub === 'math') eg.wm = Math.min(20, eg.wm + 1); else eg.we = Math.min(20, eg.we + 1); } }
-    const h = q.sig;
-    if (ok) {
-      k.r++; L.right++; L.streak++; L.best = Math.max(L.best, L.streak); k.miss = Math.max(0, k.miss - 1); k.cs = (k.cs || 0) + 1; k.box = Math.min(4, this.box(k) + 1);
-      if (h && k.w && k.w[h] && --k.w[h] <= 0) { delete k.w[h]; if (k.wx) delete k.wx[h]; }
-      if (h) { k.ok = k.ok || []; if (!k.ok.includes(h)) k.ok.push(h); if (k.ok.length > 12) k.ok.shift(); }
-      if (k.m && k.cs >= 3) k.slip = 0;
-      if (k.m && (k.due == null || k.due <= this.day())) { k.rv = Math.min(5, (k.rv || 0) + 1); k.due = this.day() + this.GAPS[k.rv]; }
-      if (!k.m && k.cs >= 4 && k.n >= 5 && !this.weak(k).length && (k.ok || []).length >= this.breadth(q.skill)) { k.m = true; k.slip = 0; k.rv = 0; k.due = this.day() + 1; (L.fresh = L.fresh || []).push(q.skill); }
-    } else {
-      k.miss = Math.min(6, k.miss + 1); L.streak = 0; k.cs = 0; k.box = 0; L.retry = L.retry || [];
-      const again = h && k.w && k.w[h];
-      if (!this.building && (again || k.miss >= 3) && L.total - (L.lastBuild == null ? -99 : L.lastBuild) >= 12 && k.rest !== new Date().toDateString()) L.build = { id: q.skill, sig: h };
-      if (h) { k.w = k.w || {}; k.w[h] = 2; const ks = Object.keys(k.w); if (ks.length > 5) { delete k.w[ks[0]]; if (k.wx) delete k.wx[ks[0]]; }
-        // keep one example of what was missed, for the grown-up report
-        if (q.q) { const right = q.type === 'multi' ? q.as.map(i => q.choices[i]).join(', ') : q.type === 'num' ? q.ans : q.choices[q.a]; (k.wx = k.wx || {})[h] = (q.q.includes('\n') && !q.pic ? q.q.split('\n').pop() : q.q).replace(/\s+/g, ' ').slice(0, 70) + '  →  ' + String(right).slice(0, 30); } }
-      if (k.m) { k.rv = 0; k.due = this.day() + 1; }
-      if (!this.focus && k.miss < 4 && !L.retry.some(r => r.id === q.skill) && L.retry.length < 6) L.retry.push({ id: q.skill, at: L.total + 3, sig: h });
-      if (k.m) { k.slip = (k.slip || 0) + 1; if (k.slip >= 2) { k.m = false; k.slip = 0; } }
-    }
+    if (ok) { L.right++; L.streak++; L.best = Math.max(L.best, L.streak); } else L.streak = 0;
+    // one example of what was missed is kept for the grown-up report
+    const right = q.type === 'multi' ? q.as.map(i => q.choices[i]).join(', ') : q.type === 'num' ? q.ans : q.choices[q.a];
+    const ex = ok || !q.q ? null : (q.q.includes('\n') && !q.pic ? q.q.split('\n').pop() : q.q).replace(/\s+/g, ' ').slice(0, 70) + '  →  ' + String(right).slice(0, 30);
+    const v = ENG.record(grp, q.skill, ok, { sig: q.sig, ex });
+    if (!was && k.m && grp === this.grp(q.skill)) (L.fresh = L.fresh || []).push(q.skill);
+    // the engine says when teaching is called for; the Skill Builder then opens, but not twice within twelve questions
+    if ((v === 'teach' || v === 'refresh') && !this.building && L.total - (L.lastBuild == null ? -99 : L.lastBuild) >= 12) L.build = { id: q.skill, sig: q.sig, g: GRP.grade(grp) };
   },
   async quiz(title, id) { return this.ask(id ? this.make(id) : this.next(), title); },
   // Presents one item the way the real tests do. Formats: single choice, 'multi' (select all that apply),
@@ -963,11 +955,11 @@ const Learn = {
       for (let i = 0; i < pool.length; i++) {
         const sk = pool[i], q = this.make(sk.id); if (sk.sub === 'math' && this.typable(q)) { q.type = 'num'; q.ans = q.choices[q.a]; }
         if (await this.ask(q, `QUICK CHECK   ${i + 1} OF ${pool.length}`, true, { test: 1 })) {
-          const k = this.sk(sk.id); k.head = 1; k.n = Math.max(k.n, 3); k.r = Math.max(k.r, 3); k.cs = Math.max(k.cs || 0, 3); k.box = Math.max(3, this.box(k)); k.ok = k.ok || []; if (!k.ok.includes(q.sig)) k.ok.push(q.sig); known.push(sk.n);
+          ENG.headStart(this.grp(sk.id), sk.id, q.sig); known.push(sk.n);
         }
       }
     } finally { this.hold--; }
-    L.placed = g; L.deck = null; Snd.sfx('badge');
+    L.placed = g; ENG.reset(); Snd.sfx('badge');
     await say(null, `QUICK CHECK DONE\nYou got ${known.length} of ${pool.length}.`, { col: '#ffd76a' });
     await say(who, known.length ? `Nice. I will go faster on: ${known.slice(0, 6).join(', ')}${known.length > 6 ? ', and more' : ''}. Two more right answers on each and they are mastered.` : 'Good to know. We will take everything one step at a time.');
   },
@@ -1023,16 +1015,25 @@ const Learn = {
   two(q) { if (q.type === 'multi') return q; const w = pick(q.choices.map((_, i) => i).filter(i => i !== q.a)), ch = shuffle([q.choices[q.a], q.choices[w]]); return Object.assign({}, q, { choices: ch, a: ch.indexOf(q.choices[q.a]) }); },
   async builder() {
     const L = G.learn, b = L.build; L.build = null; if (!b || !SKILLS[b.id] || this.building) return;
-    const k = this.sk(b.id), s = SKILLS[b.id], who = this.teacher(), T = 'SKILL BUILDER';
+    const og = b.g && b.g !== L.grade ? b.g : null, grp = this.grp(b.id, og), s = SKILLS[b.id], who = this.teacher(), T = 'SKILL BUILDER';
     const les = (L.grade <= 2 && LESSON_G2[b.id]) || LESSONS[b.id] || [];
     // Math: every step is the same KIND with new numbers. English: the missed item is shown and then answered,
     // but the practice in between and at the end uses OTHER items, so he learns the idea and not just one answer.
     const bank = s.sub !== 'math';
-    const fresh = other => { const q = this.make(b.id, null, bank && other ? null : b.sig); if (q.type === 'num') delete q.type; return q; };
+    const fresh = other => { const q = this.make(b.id, og, bank && other ? null : b.sig); if (q.type === 'num') delete q.type; return q; };
     const until = async (q, title) => { for (let i = 0; i < 3; i++) if (await this.card(q, title)) return; };
     this.building = true; L.lastBuild = L.total;
     try {
       await say(who, `Time out! "${s.n}" has tripped us up a few times. That is fine. It just means we build it up together, one small step at a time.`);
+      // STEPPING BACK: if the same skill a grade earlier is not solid, three of those come first. With two right the
+      // trouble is in the new part; otherwise the earlier one is built up in the rounds and this one rests for today.
+      const pre = ENG.warmupFor(grp, b.id);
+      if (pre) {
+        await say(who, 'First, three warm-ups from a step earlier. They show me where to start.');
+        let got = 0; for (let i = 0; i < 3; i++) if (await this.ask(this.make(pre.id, GRP.grade(pre.group)), `WARM-UP   ${i + 1} OF 3`, false, { noHint: 1 })) got++;
+        if (ENG.warmupDone(grp, b.id, pre, got) === 'back') { await say(who, 'Good to know. We will build up the earlier step first. A few WARM-UP questions will pop up as we go, and then this one will feel much easier.'); return; }
+        await say(who, 'Those are solid. So it is the new part we need to work on.');
+      }
       for (let round = 0; round < 2; round++) {
         await say(who, round ? 'STEP 1 again: WATCH. Here is another one, already solved.' : 'STEP 1: WATCH. I will do one. Just look at how it works.');
         await this.card(fresh(), T + '   ·   WATCH', { demo: 1 });
@@ -1041,16 +1042,15 @@ const Learn = {
         await say(who, 'STEP 3: Now with all the choices. Take your time.');
         await until(fresh(), T + '   ·   ALMOST THERE');
         await say(who, 'STEP 4: ON YOUR OWN. Get two in a row and this one is fixed.');
-        let row = 0; for (let i = 0; i < 4 && row < 2; i++) row = (await this.ask(this.make(b.id, null, bank ? null : b.sig), `${T}   ·   ON YOUR OWN   ${row} OF 2`, false, { noHint: 1 })) ? row + 1 : 0;
+        let row = 0; for (let i = 0; i < 4 && row < 2; i++) row = (await this.ask(this.make(b.id, og, bank ? null : b.sig), `${T}   ·   ON YOUR OWN   ${row} OF 2`, false, { noHint: 1 })) ? row + 1 : 0;
         if (row >= 2) {
-          k.miss = 0; if (b.sig && k.w) delete k.w[b.sig]; if (b.sig && k.wx) delete k.wx[b.sig]; G.scrap += 15; Snd.sfx('badge');
-          L.retry = (L.retry || []).filter(r => r.id !== b.id); L.retry.push({ id: b.id, at: L.total + 8, sig: b.sig });   // one more check a little later, so it sticks
+          ENG.taught(grp, b.id, 'teach', b.sig); G.scrap += 15; Snd.sfx('badge');      // back into practice, with one more check a little later so it sticks
           await say(null, `★ SKILL BUILT: ${s.n} ★   +15 scrap`, { col: '#ffd76a' });
           await say(who, 'See? You did that. I will sneak one more in later to make sure it stuck.'); return;
         }
         if (round === 0) { await say(who, 'Not there yet, and that is OK. Let me explain it another way, and then we go again.'); for (const p of les) await say(who, p); if (typeof LPIC !== 'undefined' && LPIC[b.id]) await Pic.show(s.n, LPIC[b.id]); }
       }
-      k.rest = new Date().toDateString();
+      ENG.rest(grp, b.id);
       await say(who, 'We worked hard on that one. Brains keep growing while they rest, so we will leave it for today and come back to it another day.');
     } finally { this.building = false; L.build = null; }
   },
@@ -1106,7 +1106,7 @@ const Learn = {
     const [m, n] = this.progress();
     if (m >= n && !flag('grad' + L.grade)) {
       setFlag('grad' + L.grade); await badge('grad'); const who = this.teacher();
-      if (L.grade < 6) { const c = await ask(who, `You have mastered ALL ${n} skills for Grade ${L.grade}. Every. Single. One. Ready to level up to Grade ${L.grade + 1} questions?`, ['Level me up!', 'Not yet']); if (c === 0) { L.grade++; L.deck = null; await say(who, `Grade ${L.grade} it is. New skills, new tricks. I will be right here.`); } else await say(who, 'No rush. You can switch any time under Options.'); }
+      if (L.grade < 6) { const c = await ask(who, `You have mastered ALL ${n} skills for Grade ${L.grade}. Every. Single. One. Ready to level up to Grade ${L.grade + 1} questions?`, ['Level me up!', 'Not yet']); if (c === 0) { L.grade++; ENG.reset(); await say(who, `Grade ${L.grade} it is. New skills, new tricks. I will be right here.`); } else await say(who, 'No rush. You can switch any time under Options.'); }
       else await say(who, 'That is every skill I know. You are officially smarter than the Bellringer. Keep sharp: I will keep mixing in review.');
     }
   },
