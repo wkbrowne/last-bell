@@ -1203,14 +1203,14 @@ const Learn = {
     });
     // page 3: the last sittings, newest first, and where she stopped most often this week
     const when = ms => { const d = new Date(ms); return d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
-    const L = Sess.lines(when, 7);
+    const SL = Sess.lines(when, 7);
     await page(() => {
       ctx.fillStyle = 'rgba(6,4,14,.9)'; ctx.fillRect(0, 0, W, H); panel(20, 14, W - 40, H - 28);
       setFont(18, true); text('WHEN SHE STOPS', 44, 34, '#ffd76a'); let y = 74;
-      setFont(22); text(L.summary || (L.rows.length ? 'Each sitting below ends where she put the game down.' : 'No sittings recorded yet. Play a little and come back.'), 44, y, '#c8ffb8'); y += 36;
+      setFont(22); text(SL.summary || (SL.rows.length ? 'Each sitting below ends where she put the game down.' : 'No sittings recorded yet. Play a little and come back.'), 44, y, '#c8ffb8'); y += 36;
       // rows are long; take the biggest size at which the widest one still fits the panel
-      let px = 21; for (; px > 14; px--) { setFont(px); if (L.rows.slice(0, 10).every(r => ctx.measureText(r).width <= W - 88)) break; }
-      L.rows.slice(0, 10).forEach(r => { text(r, 44, y, '#f4eeff'); y += 28; });
+      let px = 21; for (; px > 14; px--) { setFont(px); if (SL.rows.slice(0, 10).every(r => ctx.measureText(r).width <= W - 88)) break; }
+      SL.rows.slice(0, 10).forEach(r => { text(r, 44, y, '#f4eeff'); y += 28; });
       setFont(20); text('Tap to close.', W - 60, H - 50, '#8f86a8', 'right');
     });
   }
