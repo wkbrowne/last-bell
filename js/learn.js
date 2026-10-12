@@ -823,7 +823,7 @@ const Learn = {
     return new Promise(res => {
       const s = SKILLS[q.skill], type = q.type || 'mc', quiet = mode.test || mode.hold, n = q.choices.length;
       const PAD = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', '.', '⌫', 'OK'], word = pick(['BRAIN BLAST!', 'NAILED IT!', 'BIG BRAIN!']);
-      let sel = 0, ok = null, picked = -1, t = 0, hits = [], inp = '', sayHit = null, tries = 0, hint = null, late = false; const struck = new Set();
+      let sel = -1, ok = null, picked = -1, t = 0, hits = [], inp = '', sayHit = null, tries = 0, hint = null, late = false; const struck = new Set();
       // In ordinary play the first miss gets a hint and one more try. (It still counts as a miss.) Not in tests, trials or the solo step.
       const canHint = !quiet && !mode.demo && !mode.noHint && !Learn.hold && (type === 'num' || (type === 'mc' && n === 4));
       // read-aloud: listening items speak on their own; young readers also get a "read to me" button
@@ -868,6 +868,7 @@ const Learn = {
               else if (k === 'left') sel = (sel + 12) % 13; else if (k === 'right') sel = (sel + 1) % 13; else if (k === 'a') key(PAD[sel]);
             } else {
               const rows = type === 'multi' ? n + 1 : n;
+              if (sel < 0) { if (k === 'up' || k === 'down') { sel = [...Array(n).keys()].find(j => j !== cut && !struck.has(j)) || 0; Snd.sfx('move'); } continue; }
               const dead = j => j === cut || struck.has(j); if (k === 'up') { do sel = (sel + rows - 1) % rows; while (dead(sel)); Snd.sfx('move'); } if (k === 'down') { do sel = (sel + 1) % rows; while (dead(sel)); Snd.sfx('move'); } if (k === 'a') choose(sel);
             }
           }
@@ -877,7 +878,7 @@ const Learn = {
           if (ok !== null) { if (!quiet && t > 500) finish(); return; }
           if (sayHit && inRect(x, y, sayHit)) { speakNow(); return; }
           const h = hits.find(r => inRect(x, y, r)); if (!h) return;
-          if (type === 'num') { sel = PAD.indexOf(h.k); key(h.k); } else { sel = h.i; choose(h.i); }
+          if (type === 'num') { sel = PAD.indexOf(h.k); key(h.k); } else { choose(h.i); sel = -1; }
         },
         draw() {
           ctx.fillStyle = 'rgba(12,6,30,.72)'; ctx.fillRect(0, 0, W, H);
