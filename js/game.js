@@ -938,7 +938,7 @@ async function titleFlow() {
 })();
 let lastT = 0;
 function frame(ts) {
-  const raw = ts - lastT || 16, dt = Math.min(50, raw); lastT = ts;
+  const raw = ts - lastT || 16, dt = clamp(raw, 0, 50); lastT = ts;   // never negative: a backwards clock would freeze Dex mid-step
   if (raw < 250) { PERF.acc += raw; if (++PERF.n >= 90) { if (!PERF.lock && PERF.acc / PERF.n > (PERF.lvl ? 27 : 21) && PERF.lvl < 2) { PERF.lvl++; fitCanvas(true); } PERF.acc = 0; PERF.n = 0; } }
   requestAnimationFrame(frame);
   // lowest setting: draw every other frame, which leaves the tablet time for sound and input

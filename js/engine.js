@@ -251,12 +251,13 @@ function menu(items, o) {
     items = items.map(i => typeof i === 'string' ? { label: i } : i);
     let sel = clamp(o.sel || 0, 0, items.length - 1), top = 0;
     // on a touch screen the rows are taller, so small fingers can hit them
-    const rh = Touch.enabled ? 50 : 38, rows = Math.min(items.length, o.rows || 9, Math.floor((H - 46 - (o.title ? 38 : 0)) / rh)), pad = (rh - 38) / 2;
+    const rh = Touch.enabled ? (o.rh || 50) : 38, rows = Math.min(items.length, o.rows || 9, Math.floor((H - 46 - (o.title ? 38 : 0)) / rh)), pad = (rh - 38) / 2;
     setFont(28);
     const w = o.w || Math.max(...items.map(i => ctx.measureText(i.label + (i.right ? '    ' + i.right : '')).width)) + 84;
     const h = rows * rh + 28 + (o.title ? 38 : 0);
     const x = o.x != null ? o.x : W - w - 14;
     const y = Math.max(6, Math.min(o.by != null ? o.by - h : (o.y != null ? o.y : H - h - 14), H - h - 6));
+    const closeX = Math.min(x + w - 2, W - 28), closeY = Math.max(y + 2, 28);
     const m = {
       update(dt, pr) {
         for (const k of pr) {
@@ -271,8 +272,10 @@ function menu(items, o) {
         if (sel < top) top = sel;
         if (sel >= top + rows) top = sel - rows + 1;
       },
+      get close() { return o.cancel !== false ? { x: closeX, y: closeY } : null; },
       get hits() { const y0 = y + 14 + (o.title ? 38 : 0); return items.slice(top, top + rows).map((it, j) => it.disabled ? null : { x, y: y0 + j * rh, w, h: rh, i: top + j }).filter(Boolean); },
       tap(tx, ty) {
+        if (o.cancel !== false && Math.hypot(tx - closeX, ty - closeY) < 30) { Snd.sfx('move'); UI.pop(m); res(-1); return; }
         if (!inRect(tx, ty, { x, y, w, h })) { if (o.cancel !== false) { UI.pop(m); res(-1); } return; }
         const y0 = y + 14 + (o.title ? 38 : 0);
         if (ty < y0 && top > 0) { top--; sel = top; return; }
@@ -297,7 +300,8 @@ function menu(items, o) {
           if (it.right) text(it.right, x + w - 22, yy + pad, it.rcol || col, 'right');
           yy += rh;
         }
-        if (top > 0) text('▲', x + w - 30, y + 6, '#c9a24a');
+        if (o.cancel !== false) { ctx.fillStyle = '#b03a4c'; ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(closeX, closeY, 21, 0, 6.3); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(closeX - 8, closeY - 8); ctx.lineTo(closeX + 8, closeY + 8); ctx.moveTo(closeX + 8, closeY - 8); ctx.lineTo(closeX - 8, closeY + 8); ctx.stroke(); }
+        if (top > 0) text('▲', x + w - 60, y + 6, '#c9a24a');
         if (top + rows < items.length) text('▼', x + w - 30, y + h - 30, '#c9a24a');
       }
     };

@@ -86,7 +86,7 @@ const Battle = {
     while (true) {
       const me = G.party[st.pi], foe = st.foes[st.fi];
       st.msg = `What will ${cname(me)} do?`;
-      const i = await menu(['FIGHT', 'CREW', 'BAG', 'SWAP', 'RUN'].map((l, k) => ({ label: l, disabled: k === 1 && !G.crew.length && !G.gear.sword })), { x: 664, by: H - 12, w: 284, cancel: false, sel: 0 });
+      const i = await menu(['FIGHT', 'CREW', 'BAG', 'SWAP', 'RUN'].map((l, k) => ({ label: l, disabled: (k === 1 && !G.crew.length && !G.gear.sword) || (k === 3 && !G.party.some((c, j) => j !== st.pi && c.hp > 0)) })), { x: 664, by: H - 12, w: 284, cancel: false, sel: 0, rh: 42 });   // five rows must not cover the HP panel above
       if (i === 0) {
         st.msg = '';
         const mi = await menu(me.moves.map(id => { const m = MOVES[id]; return { label: m.n, right: m.t + (m.p ? '  ' + m.p : '   —'), rcol: TYPES[m.t].col }; }), {

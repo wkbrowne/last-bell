@@ -788,7 +788,8 @@ const Learn = {
     { const eg = G.eggs && G.eggs.find(x => !x.hatched); if (ok && eg && SKILLS[q.skill]) { if (SKILLS[q.skill].sub === 'math') eg.wm = Math.min(20, eg.wm + 1); else eg.we = Math.min(20, eg.we + 1); } }
     if (ok) { L.right++; L.streak++; L.best = Math.max(L.best, L.streak); } else L.streak = 0;
     // one example of what was missed is kept for the grown-up report
-    const right = q.type === 'multi' ? q.as.map(i => q.choices[i]).join(', ') : q.type === 'num' ? q.ans : q.choices[q.a];
+    // (Maze Dash records a whole round against a skill, with no question attached)
+    const right = !q.choices ? '' : q.type === 'multi' ? q.as.map(i => q.choices[i]).join(', ') : q.type === 'num' ? q.ans : q.choices[q.a];
     const ex = ok || !q.q ? null : (q.q.includes('\n') && !q.pic ? q.q.split('\n').pop() : q.q).replace(/\s+/g, ' ').slice(0, 70) + '  →  ' + String(right).slice(0, 30);
     const v = ENG.record(grp, q.skill, ok, { sig: q.sig, ex });
     if (!was && k.m && grp === this.grp(q.skill)) (L.fresh = L.fresh || []).push(q.skill);

@@ -259,3 +259,22 @@ Spelling, phonics, word parts and reading still get a general hint.
 **Also.** The guide is now one small arrow beside Dex plus a small marker over the goal when it is close. Sound on/off
 is remembered between sessions, silences the reading voice too, is on the title menu, and can be forced with `?mute`
 at the end of the web address.
+
+## Bug hunt (v1.25)
+
+`tests/hunt.js` drives the real game by taps and reports what breaks. It is not part of the game or the app. Load it
+from the browser console (see the top of the file) and run `await HUNT.all()`, or one probe at a time.
+
+| Probe | What it does |
+|---|---|
+| `layout` | Draws about 1,200 question cards in every state (fresh, hint showing, answer showing) and checks nothing runs off the screen. |
+| `engine` | 5,000 answers across Grades 2–6 and 40 simulated days, saving and reloading every day. |
+| `saves` | Loads current, old-format and broken save files and keeps playing. |
+| `screens` | Opens every menu, shop, lesson, test and mini-game and closes it by taps. |
+| `battles` | Plays real battles by taps: fight, bag, swap, run, win and lose. |
+| `story` | Plays the whole story from the intro to the ferry by taps, with battles skipped. |
+
+Found and fixed in this pass: Maze Dash crashed at the end of every round (the results never showed); menus with no
+Back row could only be closed by tapping the thin margin outside them (they now have a close button); the battle menu
+offered SWAP with nobody to swap to; the taller touch rows made the battle menu cover the HP panel; and a clock that
+jumped backwards could freeze Dex mid-step.
