@@ -253,8 +253,9 @@ var LearnCore = (function () {
     return host;
   }
   // Each rule is run on a made-up answer history. Every line should come back true.
-  function checks() {
-    var out = {}, H = fakeHost(), E = create(H), n = 0;
+  // `mk` is the engine to test (default: this file's create), so check.sh can run today's rules against yesterday's engine.
+  function checks(mk) {
+    mk = mk || create; var out = {}, H = fakeHost(), E = mk(H), n = 0;
     var run = function (seq, sigFn, id) { H.fresh(); id = id || 'm0'; var vs = seq.map(function (a, q) { return E.record('m4', id, a[0] === 'R', { fast: a === 'Mf', unsure: a === 'U', sig: sigFn ? sigFn(q) : 'kind' + (n++) }); }); return { vs: vs, st: E.rec('m4', id) }; };
     var R = function (c) { var a = []; while (c--) a.push('R'); return a; }, r;
     r = run(['M']); out['a first-time miss is taught with no penalty'] = r.vs[0] === 'intro' && !r.st.miss && r.st.box === 1;
@@ -302,16 +303,16 @@ var LearnCore = (function () {
     out["yesterday's slump does not lift today"] = liftsIn('m4', 3).lifts === 0;
     H.fresh(); for (var q16 = 0; q16 < 8; q16++) E.record('m4', 'm0', true, { sig: 'k' + q16 }); for (var q17 = 1; q17 < 9; q17++) E.record('m4', 'm' + q17, false, { sig: 'k' });
     out['first-time misses are taught, not counted as a slump'] = !E.pick('m4').lift;
-    var dueFirst = true; for (var sd = 1; sd <= 8; sd++) { var HD = fakeHost({ seed: sd * 53 }), ED = create(HD); for (var q18 = 0; q18 < 8; q18++) ED.record('m4', 'm0', true, { sig: 'k' + q18 }); HD.nextDay(); ED.record('m4', 'm0', true, { sig: 'r' }); for (var q19 = 0; q19 < 8; q19++) ED.record('m4', 'm1', true, { sig: 'k' + q19 }); HD.nextDay();
+    var dueFirst = true; for (var sd = 1; sd <= 8; sd++) { var HD = fakeHost({ seed: sd * 53 }), ED = mk(HD); for (var q18 = 0; q18 < 8; q18++) ED.record('m4', 'm0', true, { sig: 'k' + q18 }); HD.nextDay(); ED.record('m4', 'm0', true, { sig: 'r' }); for (var q19 = 0; q19 < 8; q19++) ED.record('m4', 'm1', true, { sig: 'k' + q19 }); HD.nextDay();
       for (var q19b = 0; q19b < 10; q19b++) ED.record('m4', 'm2', false, { sig: 'k' }); var pl3 = ED.pick('m4'); if (!(pl3.lift === true && pl3.id === 'm1')) dueFirst = false; }
     out['a lift prefers a mastered skill that is due over one that is not'] = dueFirst;
     H.fresh(); for (var q20 = 0; q20 < 8; q20++) E.record('m4', 'm0', true, { sig: 'k' + q20 }); H.nextDay(); E.record('m4', 'm0', true, { sig: 'r' }); var stE = E.rec('m4', 'm0'), rv0 = stE.rv, due0 = stE.due; slump('m4', 'm1', 10);
     var pe = E.pick('m4'), wasEarly = pe.lift === true && pe.id === 'm0' && due0 > H.today(); E.record('m4', 'm0', false, { sig: 'z' });
     out['a miss on a review asked early costs no slip and keeps the review step'] = wasEarly && !stE.slip && stE.rv === rv0 && stE.due === H.today() + 1 && stE.m === true;
-    var H12 = fakeHost({ skills: 12 }), E12 = create(H12); H12.skills('m4').forEach(function (id) { for (var i = 0; i < 8; i++) E12.record('m4', id, true, { sig: 'k' + i }); }); H12.nextDay();
+    var H12 = fakeHost({ skills: 12 }), E12 = mk(H12); H12.skills('m4').forEach(function (id) { for (var i = 0; i < 8; i++) E12.record('m4', id, true, { sig: 'k' + i }); }); H12.nextDay();
     var seen12 = {}; for (var q21 = 0; q21 < 24; q21++) { var p21 = E12.pick('m4'); seen12[p21.id] = (seen12[p21.id] || 0) + 1; E12.record('m4', p21.id, true, { sig: 'r' + q21 }); }
     out['with everything mastered, a day cycles through every skill before repeating'] = size(seen12) === 12 && Object.keys(seen12).every(function (k) { return seen12[k] === 2; });
-    var badStretch = 0, stretches = 0; [0, 1].forEach(function (way) { var HS = fakeHost({ config: { stretch: 1 } }), ES = create(HS); HS.harder = function (g, id) { return g === 'm4' && id === 'm0' ? { group: 'e4', id: 'e0' } : null; };
+    var badStretch = 0, stretches = 0; [0, 1].forEach(function (way) { var HS = fakeHost({ config: { stretch: 1 } }), ES = mk(HS); HS.harder = function (g, id) { return g === 'm4' && id === 'm0' ? { group: 'e4', id: 'e0' } : null; };
       if (way === 0) HS.live = function (g, id) { return !(g === 'e4' && id === 'e0'); }; for (var q22 = 0; q22 < 8; q22++) ES.record('m4', 'm0', true, { sig: 'k' + q22 }); HS.nextDay(); if (way === 1) ES.rest('e4', 'e0');
       for (var q23 = 0; q23 < 20; q23++) { var pS = ES.pick('m4'); if (pS.tag === 'Stretch') badStretch++; if (pS.id === 'm0') stretches++; if (!pS.noRecord) ES.record(pS.group, pS.id, true, { sig: 'q' + q23 }); } });
     out['a stretch never lands on a harder skill that is kept out or rested'] = badStretch === 0 && stretches >= 2;
@@ -325,7 +326,7 @@ var LearnCore = (function () {
     out['a second slip on the "one more try" the same day still gives a refresher'] = vR === 'miss' && vT === 'refresh';
     H.fresh(); for (var q30 = 0; q30 < 8; q30++) E.record('m4', 'm0', true, { sig: 'k' + q30 }); H.nextDay(); E.record('m4', 'm0', true, { sig: 'r' }); slump('m4', 'm1', 10); var pAhead = E.pick('m4'); H.nextDay(); E.record('m4', 'm0', false, { sig: 'z' });
     out['an early ask noted yesterday does not waive a slip today'] = pAhead.lift === true && pAhead.id === 'm0' && E.rec('m4', 'm0').slip === 1;
-    var H2 = fakeHost({ skills: 2 }), E2 = create(H2); E2.rest('m4', 'm1'); var askedRested = 0; for (var q31 = 0; q31 < 15; q31++) { var p31 = E2.pick('m4'); if (p31.id === 'm1') askedRested++; E2.record(p31.group, p31.id, true, { sig: 'q' + q31 }); }
+    var H2 = fakeHost({ skills: 2 }), E2 = mk(H2); E2.rest('m4', 'm1'); var askedRested = 0; for (var q31 = 0; q31 < 15; q31++) { var p31 = E2.pick('m4'); if (p31.id === 'm1') askedRested++; E2.record(p31.group, p31.id, true, { sig: 'q' + q31 }); }
     out['a rested skill is not asked even when it is the only other skill'] = askedRested === 0;
     H.fresh(); for (var q32 = 0; q32 < 6; q32++) E.record('m4', 'm0', false, { sig: 'k' }); for (var q33 = 0; q33 < 3; q33++) E.record('m4', 'm0', true, { sig: 'k' }); var sO = E.standing('m4');
     out['a skill never stands as both weak and strong'] = !(inL(sO.weak) && inL(sO.strong));
