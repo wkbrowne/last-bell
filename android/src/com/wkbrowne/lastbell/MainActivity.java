@@ -30,21 +30,7 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(true);
-        // The reading voice's files are served from the app's own assets under a made-up address,
-        // because a page opened from a file cannot fetch other files directly.
-        web.setWebViewClient(new WebViewClient() {
-            @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, android.webkit.WebResourceRequest rq) {
-                android.net.Uri u = rq.getUrl();
-                if (u == null || !"lastbell.local".equals(u.getHost())) return null;
-                String path = u.getPath() == null ? "" : u.getPath().replaceFirst("^/+", "");
-                java.util.Map<String, String> h = new java.util.HashMap<String, String>();
-                h.put("Access-Control-Allow-Origin", "*");
-                if (path.contains("..") || !path.startsWith("tts/")) return new android.webkit.WebResourceResponse("text/plain", "utf-8", 404, "Not Found", h, new java.io.ByteArrayInputStream(new byte[0]));
-                String mime = path.endsWith(".js") ? "text/javascript" : path.endsWith(".wasm") ? "application/wasm" : path.endsWith(".json") ? "application/json" : "application/octet-stream";
-                try { return new android.webkit.WebResourceResponse(mime, null, 200, "OK", h, getAssets().open(path)); }
-                catch (Exception e) { return new android.webkit.WebResourceResponse("text/plain", "utf-8", 404, "Not Found", h, new java.io.ByteArrayInputStream(new byte[0])); }
-            }
-        });
+        web.setWebViewClient(new WebViewClient());
         // listening questions and "read to me" use the tablet's own voice
         web.addJavascriptInterface(new Speech(), "LBSpeech");
         tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {

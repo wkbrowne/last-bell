@@ -415,12 +415,10 @@ async function optionsMenu() {
     const opts = [
       [`Grade level: ${G.learn.grade}`, async () => { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }],
       [`Read the story aloud: ${G.readAloud ? 'ON' : 'off'}`, async () => { G.readAloud = !G.readAloud; if (!Speak.can()) await say(null, 'This device does not have a reading voice available, so nothing will be read aloud.'); }],
-      [`Reading voice: ${Speak.label()}${Voice.state === 'loading' ? ' (story voice loading)' : ''}`, async () => {
-        if (!Speak.can() && Voice.state !== 'loading') { await say(null, 'This device has no reading voice available.'); return; }
-        const dv = Speak.dev() ? Speak.voices().filter(v => v.score > 0).slice(0, 6) : [];
-        const opts = [{ label: 'Best for this device', v: '' }]; if (Voice.ready()) opts.push({ label: 'Story voice' + (Voice.good() ? '' : ' (slow on this device)'), v: '*game' });
-        dv.forEach(v => opts.push({ label: Speak.pretty(v.name), v: v.name }));
-        while (true) { const cur = Speak.get(Speak.VKEY, ''), k = await menu(opts.map(o => ({ label: (o.v === cur ? '● ' : '○ ') + o.label })).concat([{ label: 'Done' }]), { x: 250, y: 120, w: 460, rows: 10, title: 'Pick a voice (tap to hear it)' });
+      [`Reading voice: ${Speak.label()}`, async () => {
+        if (!Speak.can()) { await say(null, 'This device has no reading voice turned on. On a Fire tablet: Settings, then Accessibility or Keyboard & Language, then Text-to-Speech.'); return; }
+        const opts = (window.LBSpeech ? [{ label: 'Tablet voice', v: '' }] : []).concat(Speak.voices().filter(v => v.score > 0).slice(0, 8).map(v => ({ label: Speak.pretty(v.name), v: v.name })));
+        while (true) { const cur = window.LBSpeech ? Speak.get(Speak.VKEY, '') : Speak.voiceName(), k = await menu(opts.map(o => ({ label: (o.v === cur ? '● ' : '○ ') + o.label })).concat([{ label: 'Done' }]), { x: 250, y: 120, w: 460, rows: 10, title: 'Pick a voice (tap to hear it)' });
           if (k < 0 || k >= opts.length) break; Speak.set(Speak.VKEY, opts[k].v); Speak.say('Hi! I can read the story and the questions to you.'); } Speak.stop(); }],
       [`Reading speed: ${Speak.rate() < .9 ? 'slow' : Speak.rate() > 1 ? 'fast' : 'normal'}`, async () => { const k = await menu(['Slow', 'Normal', 'Fast'], { x: 330, y: 250, w: 300, title: 'Reading speed' }); if (k >= 0) { Speak.set(Speak.RKEY, ['0.8', '0.95', '1.1'][k]); Speak.say('This is how fast I will read.'); } }],
       [`Sound: ${Snd.muted ? 'off' : 'ON'}`, async () => { Snd.toggleMute(); }],
