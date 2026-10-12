@@ -1,6 +1,6 @@
 // Offline support: the game is saved on the device after the first visit.
-const CACHE = 'last-bell-v56';
-const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './js/engine.js?v=56', './js/snd.js?v=56', './js/art.js?v=56', './js/data.js?v=56', './js/learn.js?v=56', './js/grader.js?v=56', './js/learn2.js?v=56', './js/world.js?v=56', './js/battle.js?v=56', './js/story.js?v=56', './js/game.js?v=56'];
+const CACHE = 'last-bell-v57';
+const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './js/engine.js?v=57', './js/snd.js?v=57', './js/art.js?v=57', './js/data.js?v=57', './js/learn.js?v=57', './js/grader.js?v=57', './js/learn2.js?v=57', './js/world.js?v=57', './js/battle.js?v=57', './js/story.js?v=57', './js/game.js?v=57'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

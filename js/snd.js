@@ -163,7 +163,8 @@ const Snd = {
   },
   // Silence everything while the app or tab is in the background.
   hide(h) { this.hidden = h; if (!this.ac) return; if (h) this.ac.suspend(); else this.ac.resume(); },
-  toggleMute() { this.muted = !this.muted; try { localStorage.setItem('lastbell_mute', this.muted ? '1' : '0'); } catch (e) {} if (this.muted && typeof Speak !== 'undefined') Speak.stop(); if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : .7, this.ac.currentTime, .03); return this.muted; },
+  showMute() { const el = document.getElementById('snd'); if (el) { el.textContent = this.muted ? '🔇' : '🔊'; el.classList.toggle('off', this.muted); } },
+  toggleMute() { this.muted = !this.muted; this.showMute(); try { localStorage.setItem('lastbell_mute', this.muted ? '1' : '0'); } catch (e) {} if (this.muted && typeof Speak !== 'undefined') Speak.stop(); if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : .7, this.ac.currentTime, .03); return this.muted; },
   play(name) {
     if (this.curName === name) return;
     this.curName = name;
@@ -267,3 +268,8 @@ const Snd = {
 document.addEventListener('visibilitychange', () => Snd.hide(document.hidden));
 addEventListener('pagehide', () => Snd.hide(true));
 addEventListener('pageshow', () => Snd.hide(document.hidden));
+// the always-visible sound button
+(() => { const el = document.getElementById('snd'); if (!el) return; Snd.showMute();
+  const go = e => { e.preventDefault(); e.stopPropagation(); Snd.unlock(); Snd.toggleMute(); };
+  el.addEventListener('pointerdown', go); for (const ev of ['mousedown', 'touchstart', 'click']) el.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
+})();
