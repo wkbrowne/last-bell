@@ -182,5 +182,21 @@ For math every step is the same kind with new numbers. For English the missed it
 practice around it uses other items from the same skill. The loop never interrupts a shop trial, an egg trial, a lesson
 or a practice test, and it runs at most once every twelve questions.
 
-Not built: feedback that names the specific mistake behind each wrong choice, and hints or a second try before the
-answer is shown in ordinary play.
+
+## Hints, second tries and guide arrows (v1.14)
+
+**One more try.** In ordinary play the first miss no longer shows the answer. The wrong choice is crossed out, a hint
+appears, and he picks again. It still counts as a miss for mastery, so a second-try answer cannot inflate progress.
+Tests, shop and egg trials, lesson proofs and the Skill Builder's solo step give no hints.
+
+**Hints that name the mistake.** Where the wrong answer shows what went wrong, the hint says so:
+- written for the common Grade 2 traps: adding when the story takes away (and the reverse), "how many more" answered
+  with the total, counting coins instead of their value, swapping the clock hands, reading the next hour, giving the
+  digit instead of its value, adding rows and columns instead of repeating;
+- worked out for any sum: wrong operation, off by 1, off by 10, off by 100, otherwise too big or too small;
+- everything else (most English items) gets the line of the skill's lesson that best matches the question. Those hints
+  are about the skill, not the particular wrong choice.
+
+**Guide arrows.** A trail of gold arrows on the ground follows the walkable route to the next story step, with a
+bouncing marker over the goal. Inside a building it leads to the goal or to the exit. The route prefers roads and
+paths over tall grass. Blocked story gates now say to follow the arrows. It can be switched off under Options.

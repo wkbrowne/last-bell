@@ -80,7 +80,7 @@ const MATH = {
     if (g <= 2) {
       const [h, t, o] = ds, n = h * 100 + t * 10 + o, k = rint(0, 3);
       if (k === 3) { const ON = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'], TN = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'], t2 = t < 2 ? t + 2 : t, n2 = h * 100 + t2 * 10 + o; return mc(`Which number is "${ON[h]} hundred ${TN[t2]}-${ON[o]}"?`, n2, [h * 100 + o * 10 + t2, h * 1000 + t2 * 10 + o, h * 100 + t2 + o, t2 * 100 + h * 10 + o], `${ON[h]} hundred is ${h * 100}, ${TN[t2]} is ${t2 * 10}, and ${ON[o]} is ${o}. Put them together: ${n2}.`); }
-      if (k === 0) { const i = rint(0, 2), dg = [h, t, o][i], v = dg * [100, 10, 1][i]; return mc(`What is the value of the digit ${dg} in ${n}?`, v, [dg, dg * 10, dg * 100].filter(x => x !== v).concat([dg + 10]), `The ${dg} is in the ${['hundreds', 'tens', 'ones'][i]} place, so it is worth ${v}.`); }
+      if (k === 0) { const i = rint(0, 2), dg = [h, t, o][i], v = dg * [100, 10, 1][i]; return mc(`What is the value of the digit ${dg} in ${n}?`, v, [dg, dg * 10, dg * 100].filter(x => x !== v).concat([dg + 10]), `The ${dg} is in the ${['hundreds', 'tens', 'ones'][i]} place, so it is worth ${v}.`, i < 2 ? { tips: { [dg]: 'That is the digit itself. Which PLACE is it in, and what is it worth there?' } } : undefined); }
       if (k === 1) return mc(`Which one shows the number ${n}?`, `${h * 100} + ${t * 10} + ${o}`, [`${h * 10} + ${t * 10} + ${o}`, `${h * 100} + ${t} + ${o}`, `${h} + ${t} + ${o}`, `${h * 100} + ${o * 10} + ${t}`], `${n} has ${h} hundreds, ${t} tens, and ${o} ones. That is ${h * 100} + ${t * 10} + ${o}.`);
       return mc(`Which number has ${h} hundred${h > 1 ? 's' : ''}, ${t} ten${t > 1 ? 's' : ''}, and ${o} one${o > 1 ? 's' : ''}?`, n, [h * 100 + o * 10 + t, t * 100 + h * 10 + o, o * 100 + t * 10 + h, h + t + o], `Hundreds come first, then tens, then ones: ${h}, ${t}, ${o} makes ${n}.`);
     }
@@ -134,11 +134,11 @@ const MATH = {
     const t = rint(0, 2);
     if (g <= 2) {
       const k = rint(0, 4), a = rint(24, 60), b = rint(6, 19), c = rint(3, 9);
-      if (k === 0) return mc(`Dex has ${a} gummy worms. He gives ${b} to his critters. How many gummy worms does he have left?`, a - b, [a + b, a - b + 10, a - b - 1, a - b + 1], `"Gives away" means subtract: ${a} − ${b} = ${a - b}.`);
-      if (k === 1) return mc(`Priya finds ${a} bolts in the morning and ${b} more after lunch. How many bolts does she find in all?`, a + b, [a - b, a + b + 10, a + b - 1, a + b + 1], `"In all" means add: ${a} + ${b} = ${a + b}.`);
+      if (k === 0) return mc(`Dex has ${a} gummy worms. He gives ${b} to his critters. How many gummy worms does he have left?`, a - b, [a + b, a - b + 10, a - b - 1, a - b + 1], `"Gives away" means subtract: ${a} − ${b} = ${a - b}.`, { tips: { [a + b]: 'That is what you get if you ADD. But he gives some away, so he ends up with fewer.' } });
+      if (k === 1) return mc(`Priya finds ${a} bolts in the morning and ${b} more after lunch. How many bolts does she find in all?`, a + b, [a - b, a + b + 10, a + b - 1, a + b + 1], `"In all" means add: ${a} + ${b} = ${a + b}.`, { tips: { [a - b]: 'That is what you get if you TAKE AWAY. "In all" means put the two amounts together.' } });
       if (k === 2) return mc(`There are ${a} zombies on Elm Street. ${b} more shuffle in. Then ${c} fall asleep. How many zombies are still awake?`, a + b - c, [a + b + c, a + b, a - b - c, a + b - c + 1].filter(x => x > 0), `First add the new ones: ${a} + ${b} = ${a + b}. Then subtract the sleepers: ${a + b} − ${c} = ${a + b - c}.`);
-      if (k === 3) return mc(`Bash has ${a} ferns. Wren has ${b} ferns. How many MORE ferns does Bash have than Wren?`, a - b, [a + b, a, a - b + 1, a - b - 10].filter(x => x > 0), `"How many more" means find the difference: ${a} − ${b} = ${a - b}.`);
-      return mc(`A rope is ${a} feet long. Dex cuts off ${b} feet. How long is the rope now?`, `${a - b} feet`, [a + b, a - b + 10, b, a - b - 2].filter(x => x > 0).map(x => x + ' feet'), `Cutting off a piece makes it shorter, so subtract: ${a} − ${b} = ${a - b} feet.`);
+      if (k === 3) return mc(`Bash has ${a} ferns. Wren has ${b} ferns. How many MORE ferns does Bash have than Wren?`, a - b, [a + b, a, a - b + 1, a - b - 10].filter(x => x > 0), `"How many more" means find the difference: ${a} − ${b} = ${a - b}.`, { tips: { [a + b]: 'That is how many they have TOGETHER. "How many more" asks how far apart the two numbers are.', [a]: 'That is just how many Bash has. How many MORE does he have than Wren?' } });
+      return mc(`A rope is ${a} feet long. Dex cuts off ${b} feet. How long is the rope now?`, `${a - b} feet`, [a + b, a - b + 10, b, a - b - 2].filter(x => x > 0).map(x => x + ' feet'), `Cutting off a piece makes it shorter, so subtract: ${a} − ${b} = ${a - b} feet.`, { tips: { [`${a + b} feet`]: 'Cutting a piece off makes the rope SHORTER, not longer.', [`${b} feet`]: 'That is the piece he cut off. How long is the rope that is LEFT?' } });
     }
     if (g <= 3) {
       if (t === 0) { const p = rint(3, 9), n = rint(3, 8), paid = Math.ceil((p * n + 1) / 10) * 10 + pick([0, 10]); return mc(`Munch sells Critter Snacks for ${p} scrap each. Dex buys ${n} snacks and pays with ${paid} scrap. How much change does he get?`, paid - p * n, [p * n, paid - p - n, paid + p * n, paid - p * n + 10, paid - p * n - 1].filter(x => x >= 0), `First find the cost: ${n} × ${p} = ${p * n}. Then subtract from what he paid: ${paid} − ${p * n} = ${paid - p * n}.`); }
@@ -213,7 +213,7 @@ const MATH = {
     const t = rint(0, 2);
     if (t === 0) { const even = coin(), base = shuffle([...Array(9)].map((_, i) => i + 1)); const A = base[0] * 2 + (even ? 0 : 1), ws = base.slice(1, 4).map(x => x * 2 + (even ? 1 : 0)); return mc(`Which number is ${even ? 'EVEN' : 'ODD'}?`, A, ws, `Even numbers can be split into two equal groups. They end in 0, 2, 4, 6, or 8. Odd numbers end in 1, 3, 5, 7, or 9.`); }
     const r = rint(2, 5), c = rint(2, 5);
-    if (t === 1) return mc(`Critters line up in ${r} rows. There are ${c} critters in each row. How many critters are there in all?`, r * c, [r + c, r * c + c, r * c - 1, r * c + 1], `Add ${c} once for each row: ${Array(r).fill(c).join(' + ')} = ${r * c}.`);
+    if (t === 1) return mc(`Critters line up in ${r} rows. There are ${c} critters in each row. How many critters are there in all?`, r * c, [r + c, r * c + c, r * c - 1, r * c + 1], `Add ${c} once for each row: ${Array(r).fill(c).join(' + ')} = ${r * c}.`, r + c !== r * c ? { tips: { [r + c]: `You added the two numbers. But there are ${r} rows, so add ${c} once for EVERY row.` } } : undefined);
     const A = Array(r).fill(c).join(' + '); return mc(`There are ${r} rows of snacks with ${c} snacks in each row. Which addition shows how many snacks?`, A, [`${r} + ${c}`, Array(r + 1).fill(c).join(' + '), Array(r).fill(c + 1).join(' + '), Array(Math.max(1, r - 1)).fill(c).join(' + ') + ` + ${r}`].filter(x => x !== A), `Each row has ${c}, and there are ${r} rows. So add ${c} a total of ${r} times.`);
   } },
   money: { n: 'Counting Money', std: '2.MD.8', g: [2, 2], gen() {
@@ -221,7 +221,7 @@ const MATH = {
     if (coin()) { const cost = rint(4, 17) * 5, paid = pick([50, 75, 100].filter(x => x > cost)); return mc(`A Critter Snack costs ${cost}¢. Dex pays with ${paid === 100 ? 'a dollar (100¢)' : paid + '¢'}. How much change does he get back?`, `${paid - cost}¢`, [paid - cost + 10, paid - cost - 5, paid + cost, paid - cost + 5].filter(x => x > 0).map(x => x + '¢'), `Change is what is left over: ${paid} − ${cost} = ${paid - cost}¢.`); }
     let q, d, n, p, v; do { q = rint(0, 2); d = rint(0, 3); n = rint(0, 3); p = rint(0, 4); v = q * 25 + d * 10 + n * 5 + p; } while (v >= 100 || [q, d, n, p].filter(x => x).length < 2);
     const parts = [[q, 'quarter'], [d, 'dime'], [n, 'nickel'], [p, 'penny']].filter(x => x[0]).map(([k, w]) => `${k} ${k > 1 ? (w === 'penny' ? 'pennies' : w + 's') : w}`);
-    return mc(`Dex finds ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}. How much money is that?`, `${v}¢`, [q + d + n + p, v + 5, v - 5, v + 10, v + 1].filter(x => x > 0 && x !== v).map(x => x + '¢'), `Quarters are 25¢, dimes 10¢, nickels 5¢, pennies 1¢. Start with the biggest coins and count up: ${[q && q * 25, d && d * 10, n && n * 5, p && p].filter(x => x).join(' + ')} = ${v}¢.`);
+    return mc(`Dex finds ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}. How much money is that?`, `${v}¢`, [q + d + n + p, v + 5, v - 5, v + 10, v + 1].filter(x => x > 0 && x !== v).map(x => x + '¢'), `Quarters are 25¢, dimes 10¢, nickels 5¢, pennies 1¢. Start with the biggest coins and count up: ${[q && q * 25, d && d * 10, n && n * 5, p && p].filter(x => x).join(' + ')} = ${v}¢.`, { tips: { [`${q + d + n + p}¢`]: 'That is how many COINS there are. The question asks what they are WORTH.' } });
   } },
   shapes: { n: 'Shapes & Equal Parts', std: '2.G.1 · 2.G.2 · 2.G.3', g: [2, 2], gen() {
     if (Math.random() < .25) { const r = rint(2, 5), c = rint(2, 5); return mc(`A rectangle is split into ${r} rows and ${c} columns of same-size squares. How many squares are there?`, r * c, [r + c, r * c + r, r * c - 1, 2 * (r + c)].filter(x => x !== r * c), `Count ${c} squares in each row, ${r} times: ${Array(r).fill(c).join(' + ')} = ${r * c}.`); }
@@ -256,7 +256,7 @@ const MATH = {
       : mc(`Priya measured 8 pencils. Their lengths in inches were:\n${v.join(',  ')}\nHow much longer is the longest pencil than the shortest?`, Math.max(...v) - Math.min(...v) + ' inches', [Math.max(...v), Math.min(...v), Math.max(...v) + Math.min(...v), Math.max(...v) - Math.min(...v) + 1].map(y => y + ' inches').filter(y => y !== Math.max(...v) - Math.min(...v) + ' inches'), `Longest is ${Math.max(...v)}, shortest is ${Math.min(...v)}. ${Math.max(...v)} − ${Math.min(...v)} = ${Math.max(...v) - Math.min(...v)}.`); }
     const names = shuffle(['Gloops', 'Boltbugs', 'Gnawbies', 'Zaprats', 'Murdles']).slice(0, 3), v = shuffle([...Array(g <= 2 ? 9 : 14)].map((_, i) => i + 2)).slice(0, 3);
     const chart = `Dex made a chart of the critters he saw.\n${names[0]}: ${v[0]}      ${names[1]}: ${v[1]}      ${names[2]}: ${v[2]}\n`, t = rint(0, 3), hi = v.indexOf(Math.max(...v)), lo = v.indexOf(Math.min(...v));
-    if (t === 0) return mc(chart + `How many MORE ${names[hi]} than ${names[lo]} did he see?`, v[hi] - v[lo], [v[hi] + v[lo], v[hi], v[lo], v[hi] - v[lo] + 1], `Subtract to compare: ${v[hi]} − ${v[lo]} = ${v[hi] - v[lo]}.`);
+    if (t === 0) return mc(chart + `How many MORE ${names[hi]} than ${names[lo]} did he see?`, v[hi] - v[lo], [v[hi] + v[lo], v[hi], v[lo], v[hi] - v[lo] + 1], `Subtract to compare: ${v[hi]} − ${v[lo]} = ${v[hi] - v[lo]}.`, { tips: { [v[hi] + v[lo]]: 'That is how many there are ALTOGETHER. "How many more" asks for the difference.' } });
     if (t === 1) return mc(chart + 'How many critters did he see in all?', v[0] + v[1] + v[2], [v[0] + v[1], v[0] + v[1] + v[2] + 1, v[0] + v[1] + v[2] - 2, Math.max(...v)], `Add all three: ${v[0]} + ${v[1]} + ${v[2]} = ${v[0] + v[1] + v[2]}.`);
     if (t === 2) return mc(chart + 'Which critter did he see the MOST?', names[hi], names.filter((_, i) => i !== hi).concat(['They are all the same']), `${v[hi]} is the biggest number on the chart, so the answer is ${names[hi]}.`);
     return mc(chart + `How many ${names[0]} and ${names[1]} did he see altogether?`, v[0] + v[1], [v[0] + v[1] + v[2], Math.abs(v[0] - v[1]) || 1, v[0] + v[1] + 1, v[1] + v[2]], `"Altogether" means add: ${v[0]} + ${v[1]} = ${v[0] + v[1]}.`);
@@ -811,7 +811,9 @@ const Learn = {
     return new Promise(res => {
       const s = SKILLS[q.skill], type = q.type || 'mc', quiet = mode.test || mode.hold, n = q.choices.length;
       const PAD = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', '.', '⌫', 'OK'], word = pick(['BRAIN BLAST!', 'NAILED IT!', 'BIG BRAIN!']);
-      let sel = 0, ok = null, picked = -1, t = 0, hits = [], inp = '', sayHit = null;
+      let sel = 0, ok = null, picked = -1, t = 0, hits = [], inp = '', sayHit = null, tries = 0, hint = null, late = false; const struck = new Set();
+      // In ordinary play the first miss gets a hint and one more try. (It still counts as a miss.) Not in tests, trials or the solo step.
+      const canHint = !quiet && !mode.demo && !mode.noHint && !Learn.hold && (type === 'num' || (type === 'mc' && n === 4));
       // read-aloud: listening items speak on their own; young readers also get a "read to me" button
       const sayText = q.say && Speak.can() ? q.say : null;
       const readText = !sayText && Speak.can() && G.learn.grade <= 3 ? (q.passage ? q.passage + ' ... ' : '') + q.q.replace(/_{2,}/g, 'blank') + (type === 'num' ? '' : ' ... ' + q.choices.map((c, i) => 'ABCDEF'[i] + ': ' + c).join(' ... ')) : null;
@@ -824,18 +826,21 @@ const Learn = {
       const settle = good => {
         if (ok !== null) return; ok = good; t = 0;
         if (quiet) { Snd.sfx('ok'); Timers.add(300, finish); return; }
-        const all = good && mode.both !== false; Snd.sfx(all ? 'right' : 'wrong'); if (all) { Fx.flash = .25; tween(Fx, 'flash', 0, 250); }
+        const all = good && mode.both !== false; Snd.sfx(all || late ? 'right' : 'wrong'); if (all) { Fx.flash = .25; tween(Fx, 'flash', 0, 250); }
       };
       const choose = i => {
         if (ok !== null) return;
         if (type === 'multi') { if (i === n) { if (!marks.size) { Snd.sfx('no'); return; } settle(marks.size === q.as.length && q.as.every(x => marks.has(x))); } else { marks.has(i) ? marks.delete(i) : marks.add(i); Snd.sfx('move'); } return; }
-        if (i === cut) { Snd.sfx('no'); return; }
-        picked = i; settle(i === q.a);
+        if (i === cut || struck.has(i)) { Snd.sfx('no'); return; }
+        if (i !== q.a && canHint && !tries) { tries = 1; struck.add(i); hint = Learn.hintFor(q, q.choices[i]); Snd.sfx('wrong'); return; }
+        picked = i; late = tries > 0 && i === q.a; settle(i === q.a && !tries);
       };
       const key = k => {
         if (ok !== null) return;
         if (k === '⌫') inp = inp.slice(0, -1);
-        else if (k === 'OK') { if (!inp || inp === '.') { Snd.sfx('no'); return; } settle(Math.abs(parseFloat(inp) - parseFloat(String(q.ans).replace(/,/g, ''))) < 1e-9); return; }
+        else if (k === 'OK') { if (!inp || inp === '.') { Snd.sfx('no'); return; } const good = Math.abs(parseFloat(inp) - parseFloat(String(q.ans).replace(/,/g, ''))) < 1e-9;
+          if (!good && canHint && !tries) { tries = 1; hint = Learn.hintFor(q, inp); inp = ''; Snd.sfx('wrong'); return; }
+          late = tries > 0 && good; settle(good && !tries); return; }
         else if (inp.length < 9 && !(k === '.' && inp.includes('.'))) inp += k;
         Snd.sfx('move');
       };
@@ -884,9 +889,9 @@ const Learn = {
           if (done) {
             const right = type === 'multi' ? q.as.map(i => q.choices[i]).join('   ·   ') : type === 'num' ? q.ans : q.choices[q.a];
             const all = ok && mode.both !== false;
-            head = mode.demo ? 'WATCH: HERE IS HOW IT WORKS' : all ? word : ok ? 'PART B IS RIGHT — BUT CHECK PART A:' : "NOT QUITE — HERE'S THE TRICK:";
-            setFont(24); why = wrap((mode.both === false ? 'Part A answer: ' + mode.aText + '.  ' : '') + (ok ? '' : 'Answer: ' + right + '.  ') + q.why, W - 120);
-          }
+            head = mode.demo ? 'WATCH: HERE IS HOW IT WORKS' : late ? 'YES! YOU GOT IT ON THE SECOND TRY.' : all ? word : ok ? 'PART B IS RIGHT — BUT CHECK PART A:' : "NOT QUITE — HERE'S THE TRICK:";
+            setFont(24); why = wrap((mode.both === false ? 'Part A answer: ' + mode.aText + '.  ' : '') + (ok || late ? '' : 'Answer: ' + right + '.  ') + q.why, W - 120);
+          } else if (hint) { head = 'NOT QUITE. HERE IS A HINT, THEN TRY ONCE MORE:'; setFont(24); why = wrap(hint, W - 120); }
           if (type === 'num') {
             setFont(22); text('Type your answer, then press OK.', 56, y, '#c9a24a'); y += 30;
             rbox(56, y, 380, 64, 14, '#1a1038', done ? (ok ? '#a8ffb8' : '#ffb0bc') : '#ffd76a', 3);
@@ -898,13 +903,13 @@ const Learn = {
               setFont(i === 12 ? 34 : 36); text(k, r.x + r.w / 2, r.y + r.h / 2 - 16, '#fff', 'center'); hits.push(Object.assign({ k }, r));
             });
             y += 78;
-            if (done) { setFont(18, true); text(head, 56, y + 6, ok ? '#7fe08a' : '#ffb07a'); setFont(24); wrap(why.join(' '), 400).forEach((l, i) => text(l, 56, y + 36 + i * 25, '#e8e0f4')); }
+            if (done || hint) { setFont(18, true); text(done ? head : 'HINT: TRY ONCE MORE', 56, y + 6, ok || late ? '#7fe08a' : '#ffb07a'); setFont(24); wrap(why.join(' '), 400).forEach((l, i) => text(l, 56, y + 36 + i * 25, '#e8e0f4')); }
           } else {
             const cs = q.small || n > 4 ? 25 : 30;
             setFont(cs);
             const lines = q.choices.map(c => wrap(c, W - 190)), minH = q.passage || q.pic || n > 4 ? 42 : 54;
             const rowH = lines.map(l => Math.max(minH, l.length * (cs + 2) + 18));
-            const need = rowH.reduce((a, b) => a + b + 8, 0) + (type === 'multi' ? 58 : 0) + (done ? why.length * 25 + 44 : 0);
+            const need = rowH.reduce((a, b) => a + b + 8, 0) + (type === 'multi' ? 58 : 0) + (done || hint ? why.length * 25 + 44 : 0);
             const gap = Math.max(2, Math.min(8, 8 + (H - 30 - y - need) / (n + 1)));
             q.choices.forEach((c, i) => {
               const h = rowH[i], on = marks.has(i), good = type === 'multi' ? q.as.includes(i) : i === q.a, mine = type === 'multi' ? on : i === picked;
@@ -916,12 +921,12 @@ const Learn = {
               if (type === 'multi') { rbox(72, y + h / 2 - 12, 24, 24, 6, on ? '#ffd76a' : 'rgba(255,255,255,.12)', '#ffd76a', 2); if (on) text('✓', 84, y + h / 2 - 15, '#1a1030', 'center'); }
               else text('ABCDEF'[i], 84, y + (h - cs) / 2 - 2, '#ffd76a', 'center');
               lines[i].forEach((l, j) => text(l, 116, y + (h - lines[i].length * (cs + 2)) / 2 + j * (cs + 2) - 1, '#fff'));
-              if (i === cut && !done) { ctx.fillStyle = 'rgba(20,12,44,.72)'; ctx.beginPath(); ctx.roundRect(56, y, W - 112, h, 14); ctx.fill(); ctx.strokeStyle = '#ffd76a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(116, y + h / 2); ctx.lineTo(W - 90, y + h / 2); ctx.stroke(); setFont(20); text('OWL CHARM', W - 80, y + h / 2 - 11, '#ffd76a', 'right'); }
+              if ((i === cut || struck.has(i)) && !done) { ctx.fillStyle = 'rgba(20,12,44,.72)'; ctx.beginPath(); ctx.roundRect(56, y, W - 112, h, 14); ctx.fill(); ctx.strokeStyle = i === cut ? '#ffd76a' : '#ff9a8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(116, y + h / 2); ctx.lineTo(W - 90, y + h / 2); ctx.stroke(); if (i === cut) { setFont(20); text('OWL CHARM', W - 80, y + h / 2 - 11, '#ffd76a', 'right'); } }
               hits.push({ x: 56, y, w: W - 112, h, i });
               y += h + gap;
             });
             if (type === 'multi' && !done) { const r = { x: W / 2 - 130, y: y + 2, w: 260, h: 46, i: n }; rbox(r.x, r.y + 3, r.w, r.h, 23, 'rgba(8,4,20,.35)'); rbox(r.x, r.y, r.w, r.h, 23, marks.size ? '#2f9a54' : '#3a3458', sel === n ? '#ffd76a' : '#7a66d0', 3); setFont(18, true); text('SUBMIT', W / 2, r.y + 10, marks.size ? '#fff' : '#8f86a8', 'center'); hits.push(r); }
-            if (done) { setFont(18, true); text(head, 56, y + 6, ok && mode.both !== false ? '#7fe08a' : '#ffb07a'); setFont(24); why.forEach((l, i) => text(l, 56, y + 34 + i * 25, '#e8e0f4')); }
+            if (done || hint) { setFont(18, true); text(head, 56, y + 6, (ok && mode.both !== false) || late ? '#7fe08a' : '#ffb07a'); setFont(24); why.forEach((l, i) => text(l, 56, y + 34 + i * 25, '#e8e0f4')); }
           }
           if (readText && ok === null) { sayHit = { x: 44, y: H - 70, w: 200, h: 40 }; rbox(sayHit.x, sayHit.y, sayHit.w, sayHit.h, 20, '#2f7ab0', Speak.on ? '#ffffff' : '#9fe0ff', 2.5); setFont(15, true); text(Speak.on ? 'READING...' : 'READ TO ME', sayHit.x + 100, sayHit.y + 10, '#fff', 'center'); }
           if (done && t > 500 && Math.floor(t / 400) % 2) { setFont(24); text('▼', W - 70, H - 54, '#c9a24a'); }
@@ -930,6 +935,35 @@ const Learn = {
       };
       UI.push(m);
     });
+  },
+  // A hint for the first miss. Where the wrong answer shows WHAT went wrong, say so; otherwise give the skill's key idea.
+  hintFor(q, picked) {
+    picked = String(picked);
+    if (q.tips && q.tips[picked]) return q.tips[picked];
+    const nv = t => { t = String(t); if (t.includes(':') || t.includes('/')) return null; const m = t.replace(/,/g, '').match(/^\$?(\d+(\.\d+)?)/); return m ? +m[1] : null; };
+    const a = nv(q.type === 'num' ? q.ans : q.choices[q.a]), p = nv(picked);
+    if (a !== null && p !== null && SKILLS[q.skill].sub === 'math' && !/\b(Which|Select|Round|about)\b/.test(q.q)) {
+      const m = q.q.match(/(\d[\d,]*) ([+−]) (\d[\d,]*) = \?/);
+      if (m) { const x = +m[1].replace(/,/g, ''), y = +m[3].replace(/,/g, '');
+        if (m[2] === '−' && p === x + y) return 'Look at the sign. It says TAKE AWAY, but that answer is what you get when you add.';
+        if (m[2] === '+' && p === Math.abs(x - y)) return 'Look at the sign. It says ADD, but that answer is what you get when you take away.'; }
+      const d = Math.round(Math.abs(p - a) * 100) / 100;
+      if (d === 1) return 'So close! You are off by just 1. Count the ones again.';
+      if (d === 10) return 'You are off by exactly 10. The ones are right, so check the tens again.';
+      if (d === 100) return 'You are off by exactly 100. Check the hundreds again.';
+      return p > a ? 'That is too big. Think it through once more.' : 'That is too small. Think it through once more.';
+    }
+    if (q.passage) return 'Go back to the passage. Find the sentence that answers the question, then pick again.';
+    const les = (G.learn.grade <= 2 && LESSON_G2[q.skill]) || LESSONS[q.skill];
+    if (SKILLS[q.skill].sub !== 'math') {   // English: a way of working first
+      if (/_{2,}/.test(q.q)) return 'Try each choice in the gap and read the whole sentence. Only one will make sense and sound right.';
+      if (/spelled/.test(q.q)) return 'Say the word slowly and look at every letter. Which one looks the way you have seen it in books?';
+      if (/sound|rhyme|syllable/i.test(q.q)) return 'Say each word out loud, slowly, and listen. Your ears will tell you.';
+    }
+    // otherwise the line of the lesson that talks about the same things as this question
+    const words = t => new Set(String(t).toLowerCase().match(/[a-z]{4,}/g) || []), qw = words(q.q + ' ' + q.choices.join(' '));
+    let best = null, top = 0; for (const l of les || []) { let n = 0; for (const w of words(l)) if (qw.has(w)) n++; if (n > top) { top = n; best = l; } }
+    return best || (les && SKILLS[q.skill].sub === 'math' ? les[0] : 'Read the question again slowly. Cross out the choices you know are wrong, then pick from what is left.');
   },
   // SKILL BUILDER: what happens when the same kind of question (or the same skill) keeps going wrong.
   // Watch a solved one -> try one with two choices -> try one with all the choices -> two on your own.
@@ -955,7 +989,7 @@ const Learn = {
         await say(who, 'STEP 3: Now with all the choices. Take your time.');
         await until(fresh(), T + '   ·   ALMOST THERE');
         await say(who, 'STEP 4: ON YOUR OWN. Get two in a row and this one is fixed.');
-        let row = 0; for (let i = 0; i < 4 && row < 2; i++) row = (await this.ask(this.make(b.id, null, bank ? null : b.sig), `${T}   ·   ON YOUR OWN   ${row} OF 2`)) ? row + 1 : 0;
+        let row = 0; for (let i = 0; i < 4 && row < 2; i++) row = (await this.ask(this.make(b.id, null, bank ? null : b.sig), `${T}   ·   ON YOUR OWN   ${row} OF 2`, false, { noHint: 1 })) ? row + 1 : 0;
         if (row >= 2) {
           k.miss = 0; if (b.sig && k.w) delete k.w[b.sig]; G.scrap += 15; Snd.sfx('badge');
           L.retry = (L.retry || []).filter(r => r.id !== b.id); L.retry.push({ id: b.id, at: L.total + 8, sig: b.sig });   // one more check a little later, so it sticks

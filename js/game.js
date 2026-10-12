@@ -212,6 +212,49 @@ function prepMap(name) {
 const LIGHT = document.createElement('canvas'); LIGHT.width = 480; LIGHT.height = 360;
 const AMB = Array.from({ length: 46 }, (_, i) => ({ x: Math.random() * W, y: Math.random() * H, p: Math.random() * 6.3, s: .4 + Math.random() }));
 let ambT = 0;
+// ---- GUIDE: a trail of gold arrows along the walkable path to the next story step, and a marker over the goal.
+const Guide = {
+  key: null, path: [], tgt: null,
+  steps: [['coach', 'school', 28, 17], ['bash', 'mall', 6, 4], ['cop', 'mall', 33, 4], ['battery', 'mall', 20, 2], ['wrenBeat', 'world', 107, 72], ['krush', 'world', 120, 84], ['broadcast', 'world', 106, 8],
+    ['flatline', 'hospital', 17, 10], ['bellTolls', 'hospital', 17, 2], ['butler', 'manor', 18, 12], ['bellSilenced', 'manor', 18, 3], ['cleared', 'world', 15, 92]],
+  final() { if (!flag('starter')) return null; for (const s of this.steps) if (!flag(s[0])) return { map: s[1], x: s[2], y: s[3] }; return null; },
+  // the goal on THIS map: the thing itself, or the door that leads toward it
+  local(t) {
+    if (t.map === G.map) return t;
+    const k = Object.keys(WARPS).find(k => k.startsWith(G.map + ':') && (G.map !== 'world' || WARPS[k][0] === t.map)); if (!k) return null;
+    const [x, y] = k.split(':')[1].split(',').map(Number); return { map: G.map, x, y, door: true };
+  },
+  solve() {
+    const f = G.guide === false ? null : this.final(), t = f && this.local(f);
+    const key = t ? [G.map, G.x, G.y, t.x, t.y, Object.keys(G.flags).length].join() : '';
+    if (key === this.key) return; this.key = key; this.path = []; this.tgt = t; if (!t) return;
+    const m = MAPS[G.map].m, w = m.w, solid = new Set(entsOn(G.map).filter(e => e.solid).map(e => e.x + e.y * w));
+    const ok = (x, y) => x >= 0 && y >= 0 && x < w && y < m.h && !TINFO[m.t[y][x]].s && !solid.has(x + y * w);
+    // cheapest route, not just shortest: roads and paths cost 1, plain ground 2, tall grass (where monsters jump out) 4
+    const cost = (x, y) => { const c = m.t[y][x]; return '=-:b'.includes(c) ? 1 : TINFO[c].enc ? 4 : 2; };
+    const prev = new Map(), dist = new Map(), start = G.x + G.y * w, B = [[start]]; prev.set(start, -1); dist.set(start, 0); let end = -1;
+    for (let d = 0; d < B.length && end < 0; d++) for (let i = 0; B[d] && i < B[d].length; i++) {
+      const c = B[d][i]; if (dist.get(c) !== d) continue; const x = c % w, y = (c - x) / w;
+      if (Math.abs(x - t.x) + Math.abs(y - t.y) <= 1) { end = c; break; }
+      for (const k in DV) { const nx = x + DV[k][0], ny = y + DV[k][1], n = nx + ny * w; if (!ok(nx, ny)) continue; const nd = d + cost(nx, ny); if (!dist.has(n) || dist.get(n) > nd) { dist.set(n, nd); prev.set(n, c); (B[nd] = B[nd] || []).push(n); } }
+    }
+    if (end < 0) return; const p = []; for (let c = end; c !== -1; c = prev.get(c)) p.push([c % w, Math.floor(c / w)]); this.path = p.reverse();
+  },
+  draw(camX, camY, now) {
+    this.solve(); const p = this.path, t = this.tgt; if (!t || !p.length) return;
+    ctx.save(); ctx.translate(Math.round(-camX), Math.round(-camY)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = Math.min(p.length - 1, 13); i >= 1; i--) {
+      const [x, y] = p[i], nx = p[i + 1] || [t.x, t.y]; if (nx[0] === x && nx[1] === y) continue;
+      const ph = (((now / 130 - i) % 6) + 6) % 6, al = .3 + .7 * Math.max(0, 1 - ph / 2.5);
+      ctx.save(); ctx.translate(x * 48 + 24, y * 48 + 24); ctx.rotate(Math.atan2(nx[1] - y, nx[0] - x)); ctx.scale(1.3, 1.3); ctx.globalAlpha = al;
+      for (const [lw, col] of [[11, '#2a1840'], [6, '#ffd24a']]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(-9, -11); ctx.lineTo(5, 0); ctx.lineTo(-9, 11); ctx.stroke(); }
+      ctx.restore();
+    }
+    const bx = t.x * 48 + 24, by = t.y * 48 - 26 + Math.sin(now / 160) * 7;
+    ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#2a1840'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(bx - 17, by - 20); ctx.lineTo(bx + 17, by - 20); ctx.lineTo(bx, by + 6); ctx.closePath(); ctx.stroke(); ctx.fill();
+    ctx.restore();
+  }
+};
 function worldDraw() {
   const mp = MAPS[G.map], m = mp.m; if (!mp.gt) prepMap(G.map);
   const now = performance.now(), f = Math.floor(now / 520) % 2, world = G.map === 'world';
@@ -319,6 +362,7 @@ function worldDraw() {
   const vg = ctx.createRadialGradient(W / 2, H / 2, 300, W / 2, H / 2, 640); vg.addColorStop(0, 'rgba(10,4,30,0)'); vg.addColorStop(1, `rgba(8,2,24,${.42 + z.dark * .3})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   // ---- HUD
   if (!Battle.on) {
+    Guide.draw(camX, camY, now);
     rbox(10, 10, 372, 46, 23, 'rgba(26,14,58,.82)', '#f2c14e', 2.5);
     ctx.drawImage(Art.sprite('brain'), 12, 4, 54, 54);
     setFont(27); text(`${G.learn.right}   ${brainRank(G.learn.right)}`, 68, 20, '#ffb8d4');
@@ -414,6 +458,7 @@ async function optionsMenu() {
   while (true) {
     const opts = [
       [`Grade level: ${G.learn.grade}`, async () => { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }],
+      [`Guide arrows: ${G.guide === false ? 'off' : 'ON'}`, async () => { G.guide = G.guide === false; }],
       [`Read the story aloud: ${G.readAloud ? 'ON' : 'off'}`, async () => { G.readAloud = !G.readAloud; if (!Speak.can()) await say(null, 'This device does not have a reading voice available, so nothing will be read aloud.'); }],
       [`Reading voice: ${Speak.label()}`, async () => {
         if (!Speak.can()) { await say(null, 'This device has no reading voice turned on. On a Fire tablet: Settings, then Accessibility or Keyboard & Language, then Text-to-Speech.'); return; }
@@ -431,7 +476,7 @@ async function optionsMenu() {
         const k = await typeAnswer(Grader.key() ? 'A key is saved. Paste a new one, or type "none" to remove it.' : 'Paste an Anthropic API key (it starts with sk-ant-).', { rows: 2, cancel: 'Cancel', placeholder: 'sk-ant-...' });
         if (k === null) return; if (/^none$/i.test(k)) { Grader.setKey(''); toast('Claude marking off'); } else { Grader.setKey(k); toast('Claude marking on'); } }],
       ['Back', null]];
-    const i = await menu(opts.map(o => o[0]), { x: 210, y: 110, w: 560, rows: 11, title: 'OPTIONS' });
+    const i = await menu(opts.map(o => o[0]), { x: 210, y: 110, w: 560, rows: 12, title: 'OPTIONS' });
     if (i < 0 || !opts[i][1]) return;
     await opts[i][1]();
   }
