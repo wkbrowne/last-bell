@@ -90,10 +90,16 @@ addEventListener('blur', () => { Input.held = {}; });
 cv.addEventListener('pointerdown', e => {
   Snd.unlock();
   if (Touch.enabled && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
-  const r = cv.getBoundingClientRect();
-  Input.taps.push({ x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height });
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+  // Out in the world, PRESS AND HOLD (mouse or finger) walks toward the pointer; a quick click still talks and searches.
+  if (typeof walkable === 'function' && walkable()) { Pointer.down = true; Pointer.x = x; Pointer.y = y; Pointer.t = performance.now(); Pointer.id = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (err) {} }
+  else Input.taps.push({ x, y });
   e.preventDefault();
 });
+const Pointer = { down: false, x: 0, y: 0, t: 0, dir: null };
+cv.addEventListener('pointermove', e => { if (!Pointer.down) return; const r = cv.getBoundingClientRect(); Pointer.x = (e.clientX - r.left) * W / r.width; Pointer.y = (e.clientY - r.top) * H / r.height; });
+const pointerUp = () => { if (!Pointer.down) return; Pointer.down = false; if (Pointer.dir) { Input.held[Pointer.dir] = false; Pointer.dir = null; } else if (performance.now() - Pointer.t < 320) Input.taps.push({ x: Pointer.x, y: Pointer.y }); };
+cv.addEventListener('pointerup', pointerUp); cv.addEventListener('pointercancel', pointerUp);
 const inRect = (x, y, r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 
 // ---------------------------------------------------------------- drawing helpers

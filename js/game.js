@@ -172,7 +172,23 @@ function interact() {
   const wn = G.map === 'world' && wandAt(x, y); if (wn && wn.state === 'walk') { script(() => pretender(wn)); return; }
   if (tileAt(G.map, x, y) === 'D') script(() => say(null, pick(['Locked. Something inside goes "uuuugh."', 'Locked tight.', "Nobody's home. Well. Nobody you want to meet."])));
 }
+// true when Dex is free to walk: in the world, with no dialogue, menu or cutscene running
+function walkable() { return Scene === 'world' && !UI.stack.length && Script.n === 0 && !Battle.on && !!G; }
+// press-and-hold steering: head toward the pointer along whichever of across / up-down is farther
+function pointerSteer() {
+  if (Pointer.dir) { Input.held[Pointer.dir] = false; Pointer.dir = null; }
+  if (!Pointer.down) return; if (!walkable()) { Pointer.down = false; return; }
+  if (performance.now() - Pointer.t < 170) return;
+  const m = MAPS[G.map].m, pxX = PL.px * 3, pxY = PL.py * 3, camX = clamp(pxX + 24 - W / 2, 0, Math.max(0, m.w * 48 - W)), camY = clamp(pxY + 24 - H / 2, 0, Math.max(0, m.h * 48 - H));
+  const dx = Pointer.x - (pxX - camX + 24), dy = Pointer.y - (pxY - camY + 24); if (Math.hypot(dx, dy) < 30) return;
+  // a little stickiness so the direction does not flicker when the pointer is near a diagonal
+  let d = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+  if (Pointer.last && Pointer.last !== d && Math.abs(Math.abs(dx) - Math.abs(dy)) < 26 && ((Pointer.last === 'left' && dx < 0) || (Pointer.last === 'right' && dx > 0) || (Pointer.last === 'up' && dy < 0) || (Pointer.last === 'down' && dy > 0))) d = Pointer.last;
+  if (DIRKEYS.some(k => Input.held[k])) return;   // the keyboard or the on-screen pad wins
+  Pointer.dir = Pointer.last = d; Input.held[d] = true;
+}
 function worldUpdate(dt, pr) {
+  pointerSteer();
   G.time += dt; if (PL.banner > 0) PL.banner -= dt;
   wandUpdate(dt);
   if (Script.n > 0 || Battle.on) return;
@@ -286,14 +302,17 @@ const Guide = {
   },
   draw(camX, camY, now) {
     this.solve(); const p = this.path, t = this.tgt; if (!t || !p.length) return;
-    ctx.save(); ctx.translate(Math.round(-camX), Math.round(-camY)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    if (p.length > 2) {
-      // ONE small arrow just ahead of Dex, pointing the way the route goes next
-      const a = p[1], b = p[Math.min(p.length - 1, 4)], ang = Math.atan2(b[1] - p[0][1], b[0] - p[0][0]), bob = Math.sin(now / 260) * 4;
-      ctx.save(); ctx.translate(PL.px * 3 + 24 + Math.cos(ang) * (58 + bob), PL.py * 3 + 22 + Math.sin(ang) * (58 + bob)); ctx.rotate(ang); ctx.globalAlpha = .82;
-      ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#2a1840'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-8, -11); ctx.lineTo(-3, 0); ctx.lineTo(-8, 11); ctx.closePath(); ctx.stroke(); ctx.fill();
+    if (p.length > 9) {
+      // ONE arrow, out near the edge of the screen on the side he needs to walk toward
+      const b = p[Math.min(p.length - 1, 10)], ang = Math.atan2(b[1] - p[0][1], b[0] - p[0][0]), cx = PL.px * 3 + 24 - camX, cy = PL.py * 3 + 22 - camY;
+      const c = Math.cos(ang), s2 = Math.sin(ang), L = 64, R = W - 64, T = 124, B = H - 96;
+      let k = 1e9; if (c > .001) k = Math.min(k, (R - cx) / c); if (c < -.001) k = Math.min(k, (L - cx) / c); if (s2 > .001) k = Math.min(k, (B - cy) / s2); if (s2 < -.001) k = Math.min(k, (T - cy) / s2);
+      k = Math.max(90, k) + Math.sin(now / 260) * 6;
+      ctx.save(); ctx.translate(cx + c * k, cy + s2 * k); ctx.rotate(ang); ctx.scale(1.7, 1.7); ctx.globalAlpha = .85; ctx.lineJoin = 'round';
+      ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#2a1840'; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-8, -11); ctx.lineTo(-3, 0); ctx.lineTo(-8, 11); ctx.closePath(); ctx.stroke(); ctx.fill();
       ctx.restore();
     }
+    ctx.save(); ctx.translate(Math.round(-camX), Math.round(-camY)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (p.length <= 9) {   // close to the goal: a small marker over it
       const bx = t.x * 48 + 24, by = t.y * 48 - 24 + Math.sin(now / 200) * 5;
       ctx.globalAlpha = .9; ctx.fillStyle = '#ffd24a'; ctx.strokeStyle = '#2a1840'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(bx - 12, by - 14); ctx.lineTo(bx + 12, by - 14); ctx.lineTo(bx, by + 4); ctx.closePath(); ctx.stroke(); ctx.fill();
