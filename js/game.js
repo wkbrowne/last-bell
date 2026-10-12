@@ -8,7 +8,7 @@ async function script(fn) { Script.n++; try { await fn(); } catch (e) { console.
 
 function newState() {
   return { map: 'world', x: 41, y: 64, dir: 'up', party: [], pen: [], bag: { snack: 5, juice: 3 }, scrap: 40, flags: {}, badges: [], dex: {}, seen: {},
-    wins: 0, night: 0, saved: [], gear: { sword: 0, charms: {}, wins: 0 }, eggs: [], roosts: [], crew: [], bond: {}, rest: { map: 'world', x: 41, y: 64 }, log: [], obj: '', time: 0, steps: 0,
+    wins: 0, night: 0, saved: [], gear: { sword: 0, charms: {}, wins: 0 }, goal: 20, limitMin: 0, dayStreak: 0, day: null, readAloud: false, eggs: [], roosts: [], crew: [], bond: {}, rest: { map: 'world', x: 41, y: 64 }, log: [], obj: '', time: 0, steps: 0,
     learn: { grade: 2, sk: {}, right: 0, total: 0, streak: 0, best: 0, recent: [], flip: false } };
 }
 const flag = k => !!G.flags[k];
@@ -161,6 +161,7 @@ function arrive() {
   if (Math.random() < .3) spawnWanderer();
   checkZone();
   if (Script.n > 0) return;
+  { const D = dayState(); if ((!D.done && D.q >= G.goal) || (G.limitMin && D.ms >= G.limitMin * 60000 && !D.wrapped)) { script(sessionCheck); return; } }
   if (PL.pendingOffer) { PL.pendingOffer = false; script(() => Learn.maybeOffer()); return; }
   if (PL.grace > 0) { PL.grace--; return; }
   if (TINFO[tileAt(G.map, G.x, G.y)].enc && G.party.length && Math.random() < .1) { const z = zoneAt(G.map, G.x, G.y); script(() => wild(z)); }
@@ -323,6 +324,7 @@ function worldDraw() {
     setFont(27); text(`${G.learn.right}   ${brainRank(G.learn.right)}`, 68, 20, '#ffb8d4');
     text(`⚙ ${G.scrap}`, 366, 20, '#ffd76a', 'right');
     { const eg = curEgg(); if (eg) { const pu = 1 + Math.sin(now / 300) * .04 * (1 + (eg.wm + eg.we) / 20); rbox(392, 10, 176, 46, 23, 'rgba(26,14,58,.82)', '#f2c14e', 2.5); ctx.drawImage(Art.sprite('egg_' + eg.el), 394 + 24 - 24 * pu, 8 + 26 - 27 * pu, 48 * pu, 52 * pu); bar(448, 20, 104, 8, eg.wm / 20, '#7fe0d8'); bar(448, 38, 104, 8, eg.we / 20, '#ffb0d0'); } }
+    { const D = dayState(), gx = W - 268; rbox(gx, 10, 176, 46, 23, 'rgba(26,14,58,.82)', D.done ? '#a8ffb8' : '#f2c14e', 2.5); setFont(21); text(D.done ? 'GOAL DONE ★' : `Today ${Math.min(D.q, G.goal)}/${G.goal}`, gx + 88, 14, D.done ? '#a8ffb8' : '#fff', 'center'); bar(gx + 20, 40, 136, 6, D.q / G.goal, D.done ? '#5fe070' : '#ffd76a'); }
     if (G.obj) { setFont(23); const ls = wrap('▸ ' + G.obj, 540); rbox(10, 62, 572, ls.length * 25 + 14, 14, 'rgba(26,14,58,.72)'); ls.forEach((l, i) => text(l, 24, 69 + i * 25, '#f4eeff')); }
     if (PL.banner > 0) {
       const a = clamp(PL.banner / 500, 0, 1), up = clamp((2600 - PL.banner) / 300, 0, 1); ctx.globalAlpha = a; setFont(19, true);
@@ -406,22 +408,73 @@ const crewPage = () => page(() => {
   });
   setFont(20); text('Talk with your crew at campfires to grow your bond. Stronger bonds, stronger powers.', 44, H - 50, '#8f86a8');
 });
+// a sum a second-grader will not do in his head keeps grown-up settings for grown-ups
+async function grownUp() { const a = rint(13, 19), b = rint(6, 9), t = await typeAnswer(`Grown-ups only. What is ${a} × ${b}?`, { rows: 1, cancel: 'Cancel', placeholder: 'answer' }); if (t === null) return false; if (parseInt(t, 10) !== a * b) { await say(null, 'Not quite. This is for grown-ups.'); return false; } return true; }
 async function optionsMenu() {
   while (true) {
-    const i = await menu([`Grade level: ${G.learn.grade}`, `Sound: ${Snd.muted ? 'OFF' : 'ON'}`, 'Report Card (for grown-ups)', `Claude marking: ${Grader.key() ? 'ON' : 'off'}  (grown-ups)`, 'Back'], { x: 270, y: 200, w: 480, title: 'OPTIONS' });
-    if (i === 0) { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }
-    else if (i === 1) Snd.toggleMute();
-    else if (i === 2) await Learn.report();
-    else if (i === 3) {
-      // a sum a second-grader will not do in his head keeps the key screen for grown-ups
-      const a = rint(13, 19), b = rint(6, 9), gate = await typeAnswer(`Grown-ups only. What is ${a} × ${b}?`, { rows: 1, cancel: 'Cancel', placeholder: 'answer' });
-      if (gate === null) continue; if (parseInt(gate, 10) !== a * b) { await say(null, 'Not quite. This setting is for grown-ups.'); continue; }
-      await say(null, 'With an Anthropic API key, typed sentences in the Writing Workshop are marked by Claude, with a line of feedback. The key stays on this device only. Each sentence marked is one small paid API call.');
-      const k = await typeAnswer(Grader.key() ? 'A key is saved. Paste a new one, or type "none" to remove it.' : 'Paste an Anthropic API key (it starts with sk-ant-).', { rows: 2, cancel: 'Cancel', placeholder: 'sk-ant-...' });
-      if (k === null) continue; if (/^none$/i.test(k)) { Grader.setKey(''); toast('Claude marking off'); } else { Grader.setKey(k); toast('Claude marking on'); }
-    }
-    else return;
+    const opts = [
+      [`Grade level: ${G.learn.grade}`, async () => { const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, sel: G.learn.grade - 2, title: 'Question level' }); if (g >= 0) G.learn.grade = 2 + g; }],
+      [`Read the story aloud: ${G.readAloud ? 'ON' : 'off'}`, async () => { G.readAloud = !G.readAloud; if (!Speak.can()) await say(null, 'This device does not have a reading voice available, so nothing will be read aloud.'); }],
+      [`Sound: ${Snd.muted ? 'off' : 'ON'}`, async () => { Snd.toggleMute(); }],
+      [`Daily goal: ${G.goal} questions`, async () => { const k = await menu(['10 questions', '20 questions', '30 questions'], { x: 330, y: 250, w: 300, sel: [10, 20, 30].indexOf(G.goal), title: 'Daily goal' }); if (k >= 0) G.goal = [10, 20, 30][k]; }],
+      [`Play-time limit: ${G.limitMin ? G.limitMin + ' minutes' : 'off'}  (grown-ups)`, async () => { if (!(await grownUp())) return; const k = await menu(['Off', '15 minutes', '20 minutes', '30 minutes', '45 minutes'], { x: 330, y: 230, w: 300, title: 'Stop for the day after' }); if (k >= 0) G.limitMin = [0, 15, 20, 30, 45][k]; }],
+      ['Report Card  (grown-ups)', () => Learn.report()],
+      [`Claude marking: ${Grader.key() ? 'ON' : 'off'}  (grown-ups)`, async () => {
+        if (!(await grownUp())) return;
+        await say(null, 'With an Anthropic API key, typed sentences in the Writing Workshop are marked by Claude, with a line of feedback. The key stays on this device only. Each sentence marked is one small paid API call.');
+        const k = await typeAnswer(Grader.key() ? 'A key is saved. Paste a new one, or type "none" to remove it.' : 'Paste an Anthropic API key (it starts with sk-ant-).', { rows: 2, cancel: 'Cancel', placeholder: 'sk-ant-...' });
+        if (k === null) return; if (/^none$/i.test(k)) { Grader.setKey(''); toast('Claude marking off'); } else { Grader.setKey(k); toast('Claude marking on'); } }],
+      ['Back', null]];
+    const i = await menu(opts.map(o => o[0]), { x: 230, y: 150, w: 520, title: 'OPTIONS' });
+    if (i < 0 || !opts[i][1]) return;
+    await opts[i][1]();
   }
+}
+// ---------------------------------------------------------------- a day's play: a goal, a wrap-up, a place to stop
+const dayKey = (off) => new Date(Date.now() - (off || 0) * 864e5).toLocaleDateString('en-CA');
+function dayState() {
+  const d = dayKey();
+  if (!G.day || G.day.date !== d) { if (!(G.day && G.day.done && G.day.date === dayKey(1))) G.dayStreak = 0; G.day = { date: d, q: 0, r: 0, ms: 0, done: false, wrapped: false, sk: {} }; }
+  return G.day;
+}
+function dayTick(skill, ok) { const D = dayState(); D.q++; if (ok) D.r++; const k = D.sk[skill] || (D.sk[skill] = [0, 0]); k[0]++; if (ok) k[1]++; }
+function daySummary(title, sub) {
+  const D = dayState(), best = Object.keys(D.sk).filter(k => SKILLS[k] && D.sk[k][1] > 0).sort((a, b) => D.sk[b][1] - D.sk[a][1]).slice(0, 3).map(k => SKILLS[k].n);
+  const st = Learn.standing(), next = st.weak[0] ? st.weak[0].n : SKILLS[Learn.pickFocus()].n;
+  return page(() => {
+    ctx.fillStyle = 'rgba(12,6,30,.84)'; ctx.fillRect(0, 0, W, H); panel(90, 60, W - 180, H - 130);
+    setFont(24, true); text(title, W / 2, 86, '#ffd76a', 'center'); setFont(26); text(sub, W / 2, 136, '#c8ffb8', 'center');
+    ctx.drawImage(Art.sprite('fire'), W / 2 - 60, 160, 120, 120);
+    setFont(30); text(`${D.q} questions today   ·   ${D.q ? Math.round(100 * D.r / D.q) : 0}% right`, W / 2, 292, '#fff', 'center');
+    text(`Day streak: ${G.dayStreak || 0}  ${'★'.repeat(Math.min(7, G.dayStreak || 0))}`, W / 2, 334, '#ffd76a', 'center');
+    setFont(25); wrap('Got stronger at: ' + (best.join(', ') || 'showing up, which counts'), W - 260).forEach((l, i) => text(l, W / 2, 390 + i * 30, '#f4eeff', 'center'));
+    text('Next time: ' + next, W / 2, 470, '#ffb0d0', 'center');
+    const [m, n] = Learn.progress(); text(`Grade ${G.learn.grade} skills mastered: ${m} of ${n}`, W / 2, 506, '#9fe0ff', 'center');
+    if (Math.floor(performance.now() / 400) % 2) text('▼', W - 130, H - 110, '#c9a24a');
+  });
+}
+async function stopForToday() { await say('dex', pick(['Good work today. See you tomorrow.', 'That is a wrap. The Nest will keep the light on.', 'Brain: bigger. Zombies: sleepier. Good day.'])); saveGame(); await fadeOut(500); Scene = 'title'; WAND.length = 0; Fx.fade = 0; script(titleFlow); }
+async function sessionCheck() {
+  const D = dayState();
+  if (!D.done && D.q >= G.goal) {
+    D.done = true; G.dayStreak = (G.dayStreak || 0) + 1; G.scrap += 50; give('potion', 1, true); Snd.sfx('badge');
+    await daySummary('DAILY GOAL COMPLETE!', `${G.goal} Brain Blasts done.  +50 scrap and a Healing Potion`);
+    if (G.dayStreak >= 3) await badge('days3'); if (G.dayStreak >= 7) await badge('days7');
+    if (await ask(Learn.teacher(), 'That was your goal for today. This is a great place to stop. Your brain keeps what it learned better after a rest.', ['Save and stop for today', 'Keep playing a bit']) === 0) { await stopForToday(); return true; }
+  } else if (G.limitMin && D.ms >= G.limitMin * 60000 && !D.wrapped) {
+    D.wrapped = true; Snd.sfx('badge');
+    await daySummary('CAMPFIRE TIME', `That is ${G.limitMin} minutes of play for today.`);
+    if (await ask(null, 'Time to stop for today. (A grown-up can allow more time.)', ['Save and stop', 'A grown-up says keep going']) === 1 && (await grownUp())) return false;
+    await stopForToday(); return true;
+  }
+  return false;
+}
+async function welcomeBack() {
+  const D = dayState(); if (D.told) return; D.told = true;
+  if (!G.log.length) return;
+  const st = Learn.standing();
+  await say(Learn.teacher(), `Welcome back! ${G.dayStreak ? `Day streak: ${G.dayStreak}. ` : ''}Today's goal is ${G.goal} Brain Blasts.${st.weak[0] ? ` We will give "${st.weak[0].n}" some extra turns.` : ''}`);
+  if (G.obj) await say('dex', 'Right. Where was I? ' + G.obj);
 }
 async function pauseMenu() {
   while (true) {
@@ -763,7 +816,7 @@ async function titleFlow() {
   while (true) {
     const has = hasSave();
     const i = await menu(has ? ['Continue', 'New Game'] : ['New Game'], { x: 340, y: 300, w: 280, cancel: false });
-    if (has && i === 0 && loadGame()) { await fadeOut(300); enterWorld(); await fadeIn(300); return; }
+    if (has && i === 0 && loadGame()) { await fadeOut(300); enterWorld(); await fadeIn(300); await welcomeBack(); return; }
     if (has && (await ask(null, 'Start over? Your saved game will be replaced the next time you save.', ['Yes, new game', 'Never mind'])) !== 0) continue;
     G = newState(); await fadeOut(300); Fx.fade = 0; await Story.intro(); return;
   }
@@ -788,6 +841,7 @@ function step(dt) {
     if (top) { if (top.tap) top.tap(t.x, t.y); else pr.push('a'); } else pr.push('a');
   }
   if (pr.includes('mute')) toast(Snd.toggleMute() ? 'Sound off' : 'Sound on');
+  if (G && (Scene === 'world' || Scene === 'battle')) dayState().ms += dt;
   if (UI.busy) UI.update(dt, pr); else if (Scene === 'world' && G) worldUpdate(dt, pr);
   if (Scene === 'title') titleDraw();
   else if (Scene === 'black') sceneBg(.62);

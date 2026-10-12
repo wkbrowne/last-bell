@@ -57,7 +57,7 @@ const SOUNDS = [
   ['bed', 'Which word has the same MIDDLE sound?', 'ten', ['bead', 'bad', 'bid'], 'Bed and ten both have the short E sound.'],
   ['splash', 'Which two sounds do you hear at the START?', 's and p', ['s and l', 'p and l', 's and h'], 'Splash starts /s/ /p/ /l/. The first two are s and p.']
 ];
-const SIGHT = [['because', 'become', 'before', 'between'], ['friend', 'found', 'front', 'fried'], ['people', 'purple', 'pebble', 'pupil'], ['thought', 'though', 'through', 'tough'], ['where', 'were', 'wear', 'there'], ['said', 'sad', 'side', 'sand'], ['their', 'there', 'three', 'these'], ['could', 'cold', 'cloud', 'would'], ['again', 'against', 'agent', 'ago'], ['little', 'litter', 'title', 'kettle'], ['every', 'very', 'ever', 'even'], ['many', 'may', 'money', 'main'], ['laugh', 'large', 'lunch', 'light'], ['enough', 'enjoy', 'engine', 'eleven'], ['know', 'now', 'knew', 'snow'], ['what', 'want', 'that', 'wait'], ['does', 'dose', 'goes', 'done'], ['come', 'came', 'comb', 'some']];
+const SIGHT = [['because', 'become', 'before', 'between'], ['friend', 'found', 'front', 'fried'], ['people', 'purple', 'pebble', 'pupil'], ['thought', 'though', 'through', 'tough'], ['where', 'were', 'when', 'there'], ['said', 'sad', 'side', 'sand'], ['these', 'those', 'three', 'them'], ['could', 'cold', 'cloud', 'would'], ['again', 'against', 'agent', 'ago'], ['little', 'litter', 'title', 'kettle'], ['every', 'very', 'ever', 'even'], ['many', 'may', 'money', 'main'], ['laugh', 'large', 'lunch', 'light'], ['enough', 'enjoy', 'engine', 'eleven'], ['know', 'now', 'knew', 'snow'], ['what', 'want', 'that', 'wait'], ['does', 'dose', 'goes', 'done'], ['come', 'came', 'comb', 'some']];
 addSkill('sounds', 'Phonological Awareness', { n: 'Listen for Sounds', sub: 'ela', std: 'RF.1.2 · RF.2.3', g: [2, 3], needs: 'speech', gen: () => { const it = pick(SOUNDS); return mc(it[1], it[2], it[3], `The word was "${it[0]}." ` + it[4], { say: `Listen. The word is: ${it[0]}. ... ${it[0]}.` }); } },
   ['Words are made of sounds. You can play with them like blocks: take one off, swap one, or count the beats.', 'RHYMING words end with the same sounds: cat, hat, bat. To count SYLLABLES, clap once for each beat: el-e-phant is three claps.', 'Press HEAR IT AGAIN as many times as you like. Say the word out loud yourself. Your mouth will help your ears.']);
 addSkill('sight', 'High-Frequency Words', { n: 'Sight Words', sub: 'ela', std: 'RF.2.3f · RF.3.3d', g: [2, 3], needs: 'speech', gen: () => { const it = pick(SIGHT); return mc('Which word did you hear?', it[0], it.slice(1), `The word was "${it[0]}." Look at ALL the letters, not just the first one.`, { say: `Find the word: ${it[0]}. ... ${it[0]}.` }); } },
@@ -145,7 +145,7 @@ Object.assign(DOMAIN, { reading: 'Comprehension: Literature', readinfo: 'Compreh
 
 // ============================================================ Maze Dash (the DIBELS Maze format)
 const MAZES = [
-  ['The Lost Boltbug', 'Dex heard a tiny buzz under the porch. He got down on his {knees|blue|sang} and looked. A little Boltbug was {stuck|happy|seven} in a spider web. Its light was very {dim|loud|tall}. Dex used a stick to {break|sleep|green} the web. The Boltbug shook its {wings|books|soup} and flew up. It landed on his {cap|river|because}. Then its light grew {bright|slowly|under} again. "You can stay with {me|it|of}," said Dex. The Boltbug buzzed {twice|chair|never}. That meant {yes|sock|ran}.'],
+  ['The Lost Boltbug', 'Dex heard a tiny buzz under the porch. He got down on his {knees|blue|sang} and looked. A little Boltbug was {stuck|happy|seven} in a spider web. Its light was very {dim|loud|tall}. Dex used a stick to {break|sleep|green} the web. The Boltbug shook its {wings|books|soup} and flew up. It landed on his {cap|river|because}. Then its light grew {bright|pencil|under} again. "You can stay with {me|it|of}," said Dex. The Boltbug buzzed {twice|chair|never}. That meant {yes|sock|ran}.'],
   ['Rain', 'Rain starts high up in the {sky|shoe|jump}. Tiny drops of water stick {together|purple|eaten} inside a cloud. When the drops get too {heavy|funny|seven}, they fall. Rain fills up rivers and {ponds|chairs|songs}. Plants need rain to {grow|laugh|blue}. Animals {drink|paint|tall} it. Too much rain can cause a {flood|pencil|happy}. Too little rain is called a {drought|doorway|dinner}. After the rain {stops|sings|green}, you may see a {rainbow|sandwich|quickly}.'],
   ["Bash's Tomatoes", 'Bash wanted to grow tomatoes on the roof. First he filled ten pots with {dirt|milk|noise}. He put one seed in each {pot|sky|run}. Every morning he gave them {water|shoes|songs}. For a long time, nothing {happened|purple|window}. Bash felt {sad|tall|seven}. Then one day a tiny green {leaf|rock|spoon} poked out. Soon there were {more|under|sing}. By summer the plants were as {tall|wet|loud} as Bash. He picked the first red {tomato|pencil|river} and shared it with his {friends|chairs|clouds}.'],
   ['The Night Market', 'The Night Market opens when the sun goes {down|soup|happy}. Lanterns hang over every {stall|cloud|jump}. A suit of armor sells {swords|rain|sleepy}. A newt in a tall hat stirs a {pot|shoe|song} of potion. A ghost with glasses reads old {books|rocks|feet}. Nobody here takes {money|trees|quiet}. To get a sword, you must answer a hard {question|window|purple}. Dex thinks that is {fair|blue|seven}. After all, a sharp mind is better than a sharp {blade|soup|green}.']
@@ -342,8 +342,8 @@ SENT.push(
   I(2, 'Which one is NOT a complete sentence?', 'The big red.', ['The bell rang.', 'Wren ran home.', 'It is raining.'], '"The big red" does not tell what happened. Red what? Did what?'));
 SKILLS.sentence.g = [2, 6]; SKILLS.sentence.std = 'L.2.1f · L.4.1f · L.5.1 · L.6.1';
 PUNCT.push(
-  I(2, null, 'Dear Mom,', ['Dear Mom', 'dear Mom,', 'Dear, Mom'], 'The greeting of a letter starts with a capital and ends with a comma.'),
-  I(2, null, 'Your friend, Dex', ['Your friend Dex,', 'your friend, Dex', 'Your, friend Dex'], 'The closing of a letter has a comma before your name.'),
+  I(2, 'Which letter GREETING is written correctly?', 'Dear Mom,', ['Dear Mom', 'dear Mom,', 'Dear, Mom'], 'The greeting of a letter starts with a capital and ends with a comma.'),
+  I(2, 'Which letter CLOSING is written correctly?', 'Your friend, Dex', ['Your friend Dex,', 'your friend, Dex', 'Your, friend Dex'], 'The closing of a letter has a comma before your name.'),
   I(2, null, 'We carve pumpkins on Halloween.', ['We carve pumpkins on halloween.', 'we carve pumpkins on Halloween.', 'We carve Pumpkins on Halloween.'], 'Holidays are special names, so they start with a capital letter.'),
   I(2, null, "That is Dex's backpack.", ['That is Dexs backpack.', "That is Dexs' backpack.", 'That is dex\'s backpack.'], "Add an apostrophe and s to show that something belongs to Dex."),
   I(2, null, 'Priya lives in Pacifica, California.', ['Priya lives in pacifica, california.', 'Priya lives in Pacifica California.', 'priya lives in Pacifica, California.'], 'Names of towns and states get capital letters, with a comma between them.'));
@@ -366,3 +366,114 @@ for (const p of PASSAGES) {
   if (p.title === 'All About Gloops') p.qs.push(['Why did the author write this passage?', 'to teach facts about Gloops', ['to tell a funny story', 'to get you to buy a Gloop', 'to explain how to cook moss'], 'It gives fact after fact, so the author wants to inform you.']);
   if (p.title === 'Why It Thunders') p.qs.push(['Why did the author write this passage?', 'to explain what causes thunder', ['to scare the reader', 'to tell a story about a storm', 'to sell umbrellas'], 'The passage explains how something works. That is writing to inform.']);
 }
+
+// ============================================================ pictures for young learners
+// Drawn math models: clocks, coins, number lines, arrays, base-ten blocks, bar charts, shapes, fraction circles, ten-frames.
+const Pic = {
+  h(p) { return { clock: 176, coins: 104, numline: 112, array: 36 + p.r * 30, blocks: 128, bars: 184, shape: 150, pie: 150, tenframe: 116 }[p.t] || 120; },
+  draw(p, x, y, w) { const h = this.h(p); rbox(x, y, w, h, 14, 'rgba(250,246,232,.96)', '#6a56b8', 3); ctx.save(); this[p.t](p, x, y, w, h, x + w / 2, y + h / 2); ctx.restore(); },
+  ink: '#2a1f38',
+  clock(p, x, y, w, h, cx, cy) {
+    const r = 76; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.3); ctx.fill(); ctx.strokeStyle = '#3b5ba9'; ctx.lineWidth = 7; ctx.stroke();
+    ctx.font = '700 19px ' + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = this.ink;
+    for (let i = 1; i <= 12; i++) { const a = i * Math.PI / 6 - Math.PI / 2; ctx.fillText(i, cx + Math.cos(a) * (r - 17), cy + Math.sin(a) * (r - 17) + 1); }
+    ctx.strokeStyle = '#9aa3b0'; ctx.lineWidth = 1.6; for (let i = 0; i < 60; i++) { if (i % 5 === 0) continue; const a = i * Math.PI / 30; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * (r - 5), cy + Math.sin(a) * (r - 5)); ctx.lineTo(cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1)); ctx.stroke(); }
+    const hand = (ang, len, wd, col) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len); ctx.stroke(); };
+    hand(((p.h % 12) + p.m / 60) * Math.PI / 6 - Math.PI / 2, r * .46, 8, '#e5483d'); hand(p.m * Math.PI / 30 - Math.PI / 2, r * .76, 5, this.ink);
+    ctx.fillStyle = this.ink; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, 6.3); ctx.fill();
+  },
+  coins(p, x, y, w, h, cx, cy) {
+    const K = { b: [86, 44, '#8fc78a', '$1'], q: [30, 30, '#c9d2de', '25¢'], d: [19, 19, '#e3e8ee', '10¢'], n: [25, 25, '#b4bdc9', '5¢'], p: [22, 22, '#d08a52', '1¢'] }, list = [];
+    for (const k of ['b', 'q', 'd', 'n', 'p']) for (let i = 0; i < (p[k] || 0); i++) list.push(k);
+    const widths = list.map(k => (k === 'b' ? 86 : K[k][0] * 2) + 12), tot = widths.reduce((a, b) => a + b, 0); let px = cx - tot / 2;
+    list.forEach((k, i) => { const c = K[k], mx = px + widths[i] / 2; ctx.strokeStyle = this.ink; ctx.lineWidth = 3;
+      if (k === 'b') { ctx.fillStyle = c[2]; ctx.beginPath(); ctx.roundRect(mx - 43, cy - 22, 86, 44, 5); ctx.fill(); ctx.stroke(); ctx.strokeStyle = '#4f8a54'; ctx.lineWidth = 1.5; ctx.strokeRect(mx - 37, cy - 16, 74, 32); }
+      else { ctx.fillStyle = c[2]; ctx.beginPath(); ctx.arc(mx, cy, c[0], 0, 6.3); ctx.fill(); ctx.stroke(); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx, cy, c[0] - 5, 3.6, 5.2); ctx.stroke(); }
+      ctx.fillStyle = this.ink; ctx.font = `700 ${k === 'd' ? 13 : 17}px ` + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c[3], mx, cy + 1); px += widths[i]; });
+  },
+  numline(p, x, y, w, h, cx, cy) {
+    const x0 = x + 54, x1 = x + w - 54, ly = cy + 16, X = v => x0 + (v - p.from) / (p.to - p.from) * (x1 - x0);
+    ctx.strokeStyle = this.ink; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0 - 26, ly); ctx.lineTo(x1 + 26, ly); ctx.stroke();
+    for (const [ax, s] of [[x0 - 26, -1], [x1 + 26, 1]]) { ctx.beginPath(); ctx.moveTo(ax, ly); ctx.lineTo(ax - s * 10, ly - 7); ctx.moveTo(ax, ly); ctx.lineTo(ax - s * 10, ly + 7); ctx.stroke(); }
+    ctx.font = '700 18px ' + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = this.ink;
+    for (let v = p.from; v <= p.to + 1e-9; v += p.step) { const big = !p.label || Math.round((v - p.from) / p.step) % p.label === 0; ctx.lineWidth = big ? 3.5 : 2; ctx.beginPath(); ctx.moveTo(X(v), ly - (big ? 11 : 7)); ctx.lineTo(X(v), ly + (big ? 11 : 7)); ctx.stroke(); if (big && !(p.hide || []).includes(v)) ctx.fillText(v, X(v), ly + 15); }
+    if (p.jump) { const [a, b] = p.jump, ax = X(a), bx = X(b), top = ly - 46; ctx.strokeStyle = '#e5483d'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.moveTo(ax, ly - 12); ctx.quadraticCurveTo((ax + bx) / 2, top - 22, bx, ly - 12); ctx.stroke(); const s = bx > ax ? 1 : -1; ctx.beginPath(); ctx.moveTo(bx, ly - 12); ctx.lineTo(bx - s * 12, ly - 16); ctx.moveTo(bx, ly - 12); ctx.lineTo(bx - s * 3, ly - 25); ctx.stroke(); ctx.fillStyle = '#e5483d'; ctx.textBaseline = 'bottom'; ctx.fillText((b > a ? '+' : '−') + Math.abs(b - a), (ax + bx) / 2, top - 6);
+      ctx.fillStyle = '#3b5ba9'; ctx.beginPath(); ctx.arc(ax, ly, 7, 0, 6.3); ctx.fill(); }
+    if (p.mark != null) { const mx = X(p.mark); ctx.fillStyle = '#e5483d'; ctx.beginPath(); ctx.arc(mx, ly, 9, 0, 6.3); ctx.fill(); ctx.strokeStyle = this.ink; ctx.lineWidth = 2.5; ctx.stroke(); if (!p.jump) { ctx.fillStyle = '#e5483d'; ctx.font = '700 24px ' + FONT_B; ctx.textBaseline = 'bottom'; ctx.fillText('?', mx, ly - 14); } }
+  },
+  array(p, x, y, w, h, cx, cy) {
+    const s = 30, ox = cx - p.c * s / 2, oy = cy - p.r * s / 2;
+    for (let r = 0; r < p.r; r++) for (let c = 0; c < p.c; c++) { const px = ox + c * s, py = oy + r * s; ctx.strokeStyle = this.ink; ctx.lineWidth = 2.5;
+      if (p.grid) { ctx.fillStyle = (r + c) % 2 ? '#bfe3ff' : '#d8efff'; ctx.fillRect(px, py, s, s); ctx.strokeRect(px, py, s, s); }
+      else { ctx.fillStyle = ['#7fd14f', '#57bdee', '#f6b93b', '#e07aa0', '#8e6be8'][r % 5]; ctx.beginPath(); ctx.arc(px + s / 2, py + s / 2, 11, 0, 6.3); ctx.fill(); ctx.stroke(); ctx.fillStyle = this.ink; ctx.beginPath(); ctx.arc(px + s / 2 - 4, py + s / 2 - 2, 1.8, 0, 6.3); ctx.arc(px + s / 2 + 4, py + s / 2 - 2, 1.8, 0, 6.3); ctx.fill(); } }
+  },
+  blocks(p, x, y, w, h, cx, cy) {
+    const tot = p.h * 62 + p.n * 15 + (p.o ? Math.ceil(p.o / 5) * 15 + 6 : 0) + 20; let px = cx - tot / 2; const top = cy - 30; ctx.lineWidth = 1;
+    for (let i = 0; i < p.h; i++) { ctx.fillStyle = '#f6b93b'; ctx.fillRect(px, top, 60, 60); ctx.strokeStyle = 'rgba(42,31,56,.35)'; for (let k = 1; k < 10; k++) { ctx.beginPath(); ctx.moveTo(px + k * 6, top); ctx.lineTo(px + k * 6, top + 60); ctx.moveTo(px, top + k * 6); ctx.lineTo(px + 60, top + k * 6); ctx.stroke(); } ctx.strokeStyle = this.ink; ctx.lineWidth = 2.5; ctx.strokeRect(px, top, 60, 60); ctx.lineWidth = 1; px += 66; }
+    px += 4;
+    for (let i = 0; i < p.n; i++) { ctx.fillStyle = '#57bdee'; ctx.fillRect(px, top, 10, 60); ctx.strokeStyle = 'rgba(42,31,56,.35)'; for (let k = 1; k < 10; k++) { ctx.beginPath(); ctx.moveTo(px, top + k * 6); ctx.lineTo(px + 10, top + k * 6); ctx.stroke(); } ctx.strokeStyle = this.ink; ctx.lineWidth = 2; ctx.strokeRect(px, top, 10, 60); ctx.lineWidth = 1; px += 15; }
+    px += 8;
+    for (let i = 0; i < p.o; i++) { const ux = px + Math.floor(i / 5) * 15, uy = top + (i % 5) * 12; ctx.fillStyle = '#7fd14f'; ctx.fillRect(ux, uy, 10, 10); ctx.strokeStyle = this.ink; ctx.lineWidth = 2; ctx.strokeRect(ux, uy, 10, 10); }
+    ctx.fillStyle = '#6d6680'; ctx.font = '600 15px ' + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('big square = 100      stick = 10      small cube = 1', cx, top + 68);
+  },
+  bars(p, x, y, w, h, cx, cy) {
+    const n = p.vals.length, mx = Math.max(...p.vals), top = Math.ceil(mx / 2) * 2, bx = x + 70, by = y + h - 40, bh = h - 62, bw = Math.min(110, (w - 140) / n - 26);
+    ctx.font = '600 15px ' + FONT_B; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+    for (let v = 0; v <= top; v += top > 5 ? 2 : 1) { const gy = by - v / top * bh; ctx.strokeStyle = v ? 'rgba(42,31,56,.18)' : this.ink; ctx.lineWidth = v ? 1.2 : 3; ctx.beginPath(); ctx.moveTo(bx, gy); ctx.lineTo(x + w - 40, gy); ctx.stroke(); ctx.fillStyle = this.ink; ctx.fillText(v, bx - 8, gy); }
+    ctx.strokeStyle = this.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - bh - 6); ctx.stroke();
+    p.vals.forEach((v, i) => { const px = bx + 30 + i * ((w - 140) / n), hh = v / top * bh; ctx.fillStyle = ['#7fd14f', '#57bdee', '#f6b93b', '#e07aa0'][i % 4]; ctx.fillRect(px, by - hh, bw, hh); ctx.strokeStyle = this.ink; ctx.lineWidth = 2.5; ctx.strokeRect(px, by - hh, bw, hh); ctx.fillStyle = this.ink; ctx.font = '700 17px ' + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(p.labels[i], px + bw / 2, by + 8); });
+  },
+  shape(p, x, y, w, h, cx, cy) {
+    ctx.strokeStyle = this.ink; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.fillStyle = p.col || '#57bdee';
+    if (p.cube) { const s = 62, d = 24, ox = cx - s / 2 - d / 2, oy = cy - s / 2 + d / 2; ctx.fillStyle = '#f6b93b'; ctx.fillRect(ox, oy, s, s); ctx.strokeRect(ox, oy, s, s); ctx.fillStyle = '#ffd98a'; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + d, oy - d); ctx.lineTo(ox + s + d, oy - d); ctx.lineTo(ox + s, oy); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d99a1e'; ctx.beginPath(); ctx.moveTo(ox + s, oy); ctx.lineTo(ox + s + d, oy - d); ctx.lineTo(ox + s + d, oy + s - d); ctx.lineTo(ox + s, oy + s); ctx.closePath(); ctx.fill(); ctx.stroke(); return; }
+    const n = p.sides, r = 60, rot = n === 4 ? Math.PI / 4 : -Math.PI / 2; ctx.beginPath(); for (let i = 0; i < n; i++) { const a = rot + i * 2 * Math.PI / n, px = cx + Math.cos(a) * r * (n === 4 && p.wide ? 1.5 : 1), py = cy + Math.sin(a) * r * (n === 4 && p.wide ? .72 : 1); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); ctx.fill(); ctx.stroke();
+  },
+  pie(p, x, y, w, h, cx, cy) {
+    const r = 62; ctx.strokeStyle = this.ink; ctx.lineWidth = 3.5;
+    if (p.bar) { const bw = 300, bh = 70, ox = cx - bw / 2, oy = cy - bh / 2; for (let i = 0; i < p.d; i++) { ctx.fillStyle = i < p.k ? '#f6b93b' : '#ffffff'; ctx.fillRect(ox + i * bw / p.d, oy, bw / p.d, bh); ctx.strokeRect(ox + i * bw / p.d, oy, bw / p.d, bh); } return; }
+    for (let i = 0; i < p.d; i++) { const a0 = -Math.PI / 2 + i * 2 * Math.PI / p.d, a1 = a0 + 2 * Math.PI / p.d; ctx.fillStyle = i < p.k ? '#f6b93b' : '#ffffff'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, a0, a1); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  },
+  tenframe(p, x, y, w, h, cx, cy) {
+    const s = 34, frames = p.a + p.b > 10 ? 2 : 1, fw = 5 * s, gap = 34, ox = cx - (frames * fw + (frames - 1) * gap) / 2, oy = cy - s;
+    for (let f = 0; f < frames; f++) for (let i = 0; i < 10; i++) { const px = ox + f * (fw + gap) + (i % 5) * s, py = oy + Math.floor(i / 5) * s, idx = f * 10 + i; ctx.fillStyle = '#ffffff'; ctx.fillRect(px, py, s, s); ctx.strokeStyle = this.ink; ctx.lineWidth = 2.5; ctx.strokeRect(px, py, s, s);
+      if (idx < p.a + p.b) { ctx.fillStyle = idx < p.a ? '#e5483d' : '#3f7ee8'; ctx.beginPath(); ctx.arc(px + s / 2, py + s / 2, 12, 0, 6.3); ctx.fill(); ctx.stroke(); } }
+  },
+  // a full-screen picture with a caption, used inside lessons
+  show(title, L) { return page(() => { ctx.fillStyle = 'rgba(12,6,30,.82)'; ctx.fillRect(0, 0, W, H); panel(40, 60, W - 80, H - 160); setFont(18, true); text('LOOK: ' + title.toUpperCase(), 68, 84, '#ffd76a'); const ph = Pic.h(L.pic); Pic.draw(L.pic, 80, 140, W - 160); setFont(28); let y = 160 + ph; wrap(L.cap, W - 180).forEach(l => { text(l, 84, y, '#fff'); y += 36; }); if (Math.floor(performance.now() / 400) % 2) { setFont(24); text('▼', W - 90, H - 140, '#c9a24a'); } }); }
+};
+const LPIC = {
+  time: { pic: { t: 'clock', h: 4, m: 10 }, cap: 'The short red hand is just past the 4, so the hour is 4. The long hand points at the 2: count by fives, 5, 10. It is 4:10.' },
+  money: { pic: { t: 'coins', q: 1, d: 2, n: 1, p: 3 }, cap: 'Biggest first: 25... then the dimes, 35, 45... the nickel, 50... the pennies, 51, 52, 53. That is 53¢.' },
+  place: { pic: { t: 'blocks', h: 2, n: 3, o: 4 }, cap: '2 big squares are 200. 3 sticks are 30. 4 small cubes are 4. Together they show 234.' },
+  numline: { pic: { t: 'numline', from: 20, to: 60, step: 5, label: 2, jump: [30, 45], mark: 45 }, cap: 'Start at 30. Jump forward 15. You land on 45. Jumping forward is adding.' },
+  groups: { pic: { t: 'array', r: 3, c: 4 }, cap: '3 rows with 4 in each row. Add 4 three times: 4 + 4 + 4 = 12.' },
+  shapes: { pic: { t: 'pie', d: 4, k: 1 }, cap: 'This circle is cut into 4 EQUAL parts. Each part is one fourth. One fourth is shaded.' },
+  addsub: { pic: { t: 'tenframe', a: 8, b: 5 }, cap: '8 + 5. Two of the blue ones fill up the first frame to make 10. That leaves 3 more. 10 + 3 = 13.' },
+  data: { pic: { t: 'bars', labels: ['Gloops', 'Boltbugs', 'Gnawbies'], vals: [5, 8, 3] }, cap: 'The tallest bar is Boltbugs: 8. The shortest is Gnawbies: 3. That is 8 − 3 = 5 more Boltbugs.' },
+  compare: { pic: { t: 'blocks', h: 3, n: 4, o: 8 }, cap: 'This is 348. To compare it with 384, look at the big squares first. Both have 3. Now the sticks: 4 sticks is less than 8 sticks. So 348 < 384.' }
+};
+// picture versions of the Grade 2 (and 3) math questions, mixed in with the plain ones
+const withPic = (id, maxG, chance, fn) => { const old = SKILLS[id].gen; SKILLS[id].gen = g => (g <= maxG && Math.random() < chance && fn(g)) || old(g); };
+withPic('time', 3, .55, g => { const hr = rint(1, 12), m = rint(0, g <= 2 ? 9 : 11) * 5, pd = v => String(v).padStart(2, '0'), A = `${hr}:${pd(m)}`;
+  return mc('What time does the clock show?', A, [`${m / 5 || 12}:${pd(hr * 5 % 60)}`, `${hr % 12 + 1}:${pd(m)}`, `${hr}:${pd((m + 15) % 60)}`, `${hr === 1 ? 12 : hr - 1}:${pd(m)}`].filter(x => x !== A), `The short red hand shows the hour: ${hr}. The long hand ${m ? `points at the ${m / 5}. Count by fives: ${m} minutes` : 'points straight up at the 12, so it is exactly on the hour'}. It is ${A}.`, { pic: { t: 'clock', h: hr, m } }); });
+withPic('money', 2, .6, () => { let q, d, n, p, v; do { q = rint(0, 2); d = rint(0, 3); n = rint(0, 2); p = rint(0, 4); v = q * 25 + d * 10 + n * 5 + p; } while (v >= 100 || q + d + n + p > 8 || [q, d, n, p].filter(x => x).length < 2);
+  return mc('How much money is this?', `${v}¢`, [q + d + n + p, v + 5, v - 5, v + 10, v + 1].filter(x => x > 0 && x !== v).map(x => x + '¢'), `Start with the biggest coins and count up: ${[q && q * 25, d && d * 10, n && n * 5, p && p].filter(x => x).join(' + ')} = ${v}¢.`, { pic: { t: 'coins', q, d, n, p } }); });
+withPic('groups', 2, .5, () => { const r = rint(2, 5), c = rint(2, 5); return coin()
+  ? mc('How many critters are there in all?', r * c, [r + c, r * c + c, r * c - 1, r * c + 1].filter(x => x !== r * c), `There are ${r} rows with ${c} in each row: ${Array(r).fill(c).join(' + ')} = ${r * c}.`, { pic: { t: 'array', r, c } })
+  : mc('Which addition matches the picture?', Array(r).fill(c).join(' + '), [`${r} + ${c}`, Array(r + 1).fill(c).join(' + '), Array(r).fill(c + 1).join(' + ')].filter(x => x !== Array(r).fill(c).join(' + ')), `Each row has ${c}. There are ${r} rows. So add ${c}, ${r} times.`, { pic: { t: 'array', r, c } }); });
+withPic('shapes', 2, .55, () => { const k = rint(0, 3);
+  if (k === 0) { const n = pick([3, 4, 5, 6, 8]); return mc('How many sides does this shape have?', n, [3, 4, 5, 6, 7, 8].filter(x => x !== n), 'Put your finger on one side and count each straight edge once, all the way around.', { pic: { t: 'shape', sides: n, col: pick(['#57bdee', '#7fd14f', '#f6b93b', '#e07aa0']) } }); }
+  if (k === 1) { const N = { 3: 'triangle', 5: 'pentagon', 6: 'hexagon', 4: 'quadrilateral' }, n = pick([3, 4, 5, 6]); return mc('What is this shape called?', N[n], Object.values(N).filter(x => x !== N[n]), `It has ${n} sides. A shape with ${n} sides is a ${N[n]}.`, { pic: { t: 'shape', sides: n, wide: n === 4 } }); }
+  if (k === 2) { const d = pick([2, 3, 4]), N = ['', '', 'one half', 'one third', 'one fourth'], bar = coin(); return mc(`What part of the ${bar ? 'rectangle' : 'circle'} is shaded?`, N[d], [N[2], N[3], N[4], 'one whole'].filter(x => x !== N[d]), `The ${bar ? 'rectangle' : 'circle'} is cut into ${d} equal parts and 1 is shaded. That is ${N[d]}.`, { pic: { t: 'pie', d, k: 1, bar } }); }
+  const r = rint(2, 4), c = rint(2, 5); return mc('This rectangle is split into same-size squares. How many squares are there?', r * c, [r + c, r * c + r, r * c - 1, 2 * (r + c)].filter(x => x !== r * c), `Count ${c} in each row, ${r} times: ${Array(r).fill(c).join(' + ')} = ${r * c}.`, { pic: { t: 'array', r, c, grid: 1 } }); });
+withPic('place', 2, .4, () => { const h = rint(1, 4), t = rint(0, 9), o = rint(1, 9), n = h * 100 + t * 10 + o; return mc('What number do the blocks show?', n, [h * 100 + o * 10 + t, h + t + o, h * 100 + t * 10, h * 10 + t + o, n + 10].filter(x => x !== n), `${h} big square${h > 1 ? 's' : ''} = ${h * 100}. ${t} stick${t === 1 ? '' : 's'} = ${t * 10}. ${o} small cube${o > 1 ? 's' : ''} = ${o}. Together: ${n}.`, { pic: { t: 'blocks', h, n: t, o } }); });
+withPic('addsub', 2, .25, () => { const a = rint(5, 9), b = rint(3, 9); return mc(`${a} + ${b} = ?`, a + b, [a + b + 1, a + b - 1, a + b + 2, a + b - 2], a + b > 10 ? `The red counters need ${10 - a} more to fill the first frame. That leaves ${b - (10 - a)} in the second frame. 10 + ${b - (10 - a)} = ${a + b}.` : `Count all the counters: ${a} red and ${b} blue make ${a + b}.`, { pic: { t: 'tenframe', a, b } }); });
+withPic('data', 3, .7, g => { const names = shuffle(['Gloops', 'Boltbugs', 'Gnawbies', 'Zaprats', 'Murdles']).slice(0, 3), v = shuffle([...Array(g <= 2 ? 8 : 10)].map((_, i) => i + 1)).slice(0, 3), hi = v.indexOf(Math.max(...v)), lo = v.indexOf(Math.min(...v)), pic = { t: 'bars', labels: names, vals: v }, t = rint(0, 3), head = 'The chart shows the critters Dex saw.  ';
+  if (t === 0) return mc(head + `How many MORE ${names[hi]} than ${names[lo]}?`, v[hi] - v[lo], [v[hi] + v[lo], v[hi], v[lo], v[hi] - v[lo] + 1].filter(x => x !== v[hi] - v[lo]), `Read the tops of the bars: ${v[hi]} and ${v[lo]}. Subtract to compare: ${v[hi]} − ${v[lo]} = ${v[hi] - v[lo]}.`, { pic });
+  if (t === 1) return mc(head + 'How many critters in all?', v[0] + v[1] + v[2], [v[0] + v[1], v[0] + v[1] + v[2] + 1, v[0] + v[1] + v[2] - 2, Math.max(...v)].filter(x => x !== v[0] + v[1] + v[2]), `Add all three bars: ${v[0]} + ${v[1]} + ${v[2]} = ${v[0] + v[1] + v[2]}.`, { pic });
+  if (t === 2) return mc(head + 'Which critter did he see the MOST?', names[hi], names.filter((_, i) => i !== hi).concat(['They are all the same']), `The tallest bar is ${names[hi]}.`, { pic });
+  return mc(head + `How many ${names[1]} did he see?`, v[1], [v[0], v[2], v[1] + 1, v[1] - 1].filter(x => x !== v[1] && x > 0), `Find the ${names[1]} bar and read across to the number on the left: ${v[1]}.`, { pic }); });
+withPic('numline', 3, .75, () => { const t = rint(0, 2);
+  if (t === 0) { const a = rint(1, 7) * 10; return mc('Which number belongs at the red dot?', a + 5, [a + 10, a + 2, a - 5, a + 15].filter(x => x !== a + 5), `The dot is halfway between ${a} and ${a + 10}. Halfway is 5 more than ${a}: ${a + 5}.`, { pic: { t: 'numline', from: a - 10, to: a + 20, step: 5, label: 2, mark: a + 5 } }); }
+  const a = rint(2, 6) * 5 + (t === 1 ? 0 : 20), b = rint(1, 4) * 5, fwd = t === 1, end = fwd ? a + b : a - b, lo = Math.floor(Math.min(a, end) / 10) * 10 - 10, hi2 = lo + 50;
+  return mc(`Start at ${a}. Jump ${fwd ? 'forward' : 'back'} ${b}. Where do you land?`, end, [fwd ? a - b : a + b, end + 5, end - 5, end + 10].filter(x => x !== end && x >= 0), `${fwd ? 'Forward means add' : 'Back means subtract'}: ${a} ${fwd ? '+' : '−'} ${b} = ${end}.`, { pic: { t: 'numline', from: Math.max(0, lo), to: Math.max(0, lo) + 50, step: 5, label: 2, jump: [a, end], hide: [end] } }); });

@@ -148,7 +148,11 @@ function say(who, str, opts) {
     const lines = wrap(str, W - tx - 50);
     const pages = [];
     for (let i = 0; i < lines.length; i += 4) pages.push(lines.slice(i, i + 4));
-    let pg = 0, chars = 0, sel = 0, done = 0, blip = 0;
+    let pg = 0, chars = 0, sel = 0, done = 0, blip = 0, readHit = null;
+    // story and lesson text can be read aloud: automatically when the setting is on, or with the READ button
+    const canRead = !opts.auto && Speak.can(), autoRead = canRead && typeof G !== 'undefined' && G && G.readAloud;
+    const speakPg = () => { if (canRead) Speak.say(pages[pg].join(' ').replace(/[★▸▶◀♥♡·]/g, ' ').replace(/\.\.\./g, ', ')); };
+    if (autoRead) Timers.add(150, speakPg);
     const total = () => pages[pg].join('').length;
     const ch = opts.choices;
     const m = {
@@ -162,21 +166,23 @@ function say(who, str, opts) {
           if (ch && full && last) {
             if (k === 'up') { sel = (sel + ch.length - 1) % ch.length; Snd.sfx('move'); }
             if (k === 'down') { sel = (sel + 1) % ch.length; Snd.sfx('move'); }
-            if (k === 'a') { Snd.sfx('ok'); UI.pop(m); res(sel); return; }
+            if (k === 'a') { Snd.sfx('ok'); if (canRead) Speak.stop(); UI.pop(m); res(sel); return; }
             continue;
           }
+          if (k === 'read') { speakPg(); continue; }
           if (k === 'a' || k === 'b') {
             if (!full) chars = total();
-            else if (!last) { pg++; chars = 0; }
-            else if (!ch) { UI.pop(m); res(); return; }
+            else if (!last) { pg++; chars = 0; if (autoRead) speakPg(); else if (canRead) Speak.stop(); }
+            else if (!ch) { if (canRead) Speak.stop(); UI.pop(m); res(); return; }
           }
         }
       },
       tap(x, y) {
         const full = chars >= total(), last = pg === pages.length - 1;
+        if (readHit && inRect(x, y, readHit)) { speakPg(); return; }
         if (ch && full && last) {
           const h = (m.hits || []).find(r => inRect(x, y, r));
-          if (h) { Snd.sfx('ok'); UI.pop(m); res(h.i); }
+          if (h) { Snd.sfx('ok'); if (canRead) Speak.stop(); UI.pop(m); res(h.i); }
           return;
         }
         m.update(0, ['a']);
@@ -189,6 +195,7 @@ function say(who, str, opts) {
           panel(30, BOX_Y - 34, nw, 40);
           text(sp.n, 48, BOX_Y - 28, sp.col || '#ffd76a');
         }
+        if (canRead) { readHit = { x: W - 150, y: BOX_Y - 32, w: 124, h: 38 }; rbox(readHit.x, readHit.y, readHit.w, readHit.h, 19, '#2f7ab0', Speak.on ? '#ffffff' : '#9fe0ff', 2.5); setFont(15, true); text(Speak.on ? 'READING' : 'READ', readHit.x + 62, readHit.y + 9, '#fff', 'center'); }
         if (hasPortrait) {
           const pg2 = ctx.createLinearGradient(0, BOX_Y + 38, 0, BOX_Y + 158); pg2.addColorStop(0, '#7a62c8'); pg2.addColorStop(1, '#3d2c78');
           rbox(34, BOX_Y + 38, 120, 120, 18, pg2, '#f2c14e', 3);

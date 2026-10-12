@@ -113,3 +113,19 @@ Each skill sits in a box from 0 (shaky) to 4 (solid). A right answer moves it up
 
 In a 300-question simulation of a student weak in three skills, those three took 36% of the questions and
 every other skill still came up at least five times.
+
+## Built for a young learner
+
+- **Pictures.** Grade 2 math questions are mixed with drawn models: analog clocks, labeled coins and dollar
+  bills, number lines with jumps, rows of counters, base-ten blocks, bar charts, shapes, shaded fraction
+  circles and ten-frames. Nine Grade 2 lessons end with a worked picture before the proof questions.
+- **Read-aloud.** Story and lesson text can be read by the device voice: automatically (on by default for
+  grades 2-3, switch under Options) or with the READ button on any dialogue box. Question cards have READ TO ME.
+- **A day's play.** A daily goal (10, 20 or 30 questions, default 20) with a progress pill on screen. Meeting
+  it shows a campfire wrap-up (questions, percent right, what got stronger, what is next), gives a small
+  reward, counts a day streak, and offers to save and stop. A grown-up can set a play-time limit; when it is
+  reached the game wraps up and needs a grown-up to continue. Coming back on a new day gives a short recap.
+- **Proofreading pass (Grade 2).** Fixed: spelling choices that were real words (vary, dose, cud, wen),
+  sight-word sets containing sound-alikes (where/wear, their/there), synonym questions that could offer a
+  second right answer, "persons" and "waked" as wrong answers, a subtraction that could go negative, an
+  ambiguous bedtime question, and letter greetings described as sentences.

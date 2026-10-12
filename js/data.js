@@ -211,6 +211,8 @@ const BADGES = {
   hatch: ['Dragon Hatcher', 'Hatched a dragon with math AND English.'],
   rider: ['Dragon Rider', 'Flew on dragonback.'],
   clutch: ['Keeper of the Clutch', 'Hatched all five dragons.'],
+  days3: ['Three in a Row', 'Met the daily goal three days running.'],
+  days7: ['Whole Week', 'Met the daily goal seven days running.'],
   comics: ['Collector', 'Found all 8 Captain Cosmos comics.']
 };
 const BRAIN_RANKS = [[0, 'Zombie Bait'], [10, 'Rookie'], [25, 'Sidekick'], [50, 'Brainiac'], [90, 'Mastermind'], [140, 'Mega Mind'], [200, 'Galaxy Brain'], [300, 'LEGEND']];

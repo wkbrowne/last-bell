@@ -130,7 +130,7 @@ const Story = {
     Scene = 'black'; Snd.play('toccata');
     await sleep(400);
     const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, cancel: false, sel: 0, title: 'What grade are you in?' });
-    G.learn.grade = 2 + g;
+    G.learn.grade = 2 + g; G.readAloud = G.learn.grade <= 3;
     const n = t => say(null, t);
     await n('Day 42 since the Green Night.');
     await n("That's the night the sky turned the color of lime soda, every grown-up in Wexler Falls got REALLY bitey, and weird little monsters crawled out of the storm drains.");

@@ -36,7 +36,7 @@ const MATH = {
   addsub: { n: 'Add & Subtract', std: '2.OA.2 · 2.NBT.5 · 3.NBT.2 · 4.NBT.4', g: [2, 4], gen(g) {
     if (g <= 2) {
       const t = rint(0, 6);
-      if (t === 4) { const a = rint(120, 680), b = rint(110, 299), add = coin(), A = add ? a + b : a - b; return mc(`${a} ${add ? '+' : '−'} ${b} = ?`, A, [A + 10, A - 10, A + 100, A - 100, A + 1].filter(x => x > 0), `Work one place at a time: hundreds, tens, then ones. ${a} ${add ? '+' : '−'} ${b} = ${A}.`); }
+      if (t === 4) { const b = rint(110, 299), a = rint(b + 15, 680), add = coin(), A = add ? a + b : a - b; return mc(`${a} ${add ? '+' : '−'} ${b} = ?`, A, [A + 10, A - 10, A + 100, A - 100, A + 1].filter(x => x > 0), `Work one place at a time: hundreds, tens, then ones. ${a} ${add ? '+' : '−'} ${b} = ${A}.`); }
       if (t === 5) { const n = rint(120, 880), d = pick([10, 100]), more = coin(), A = more ? n + d : n - d; return mc(`What is ${d} ${more ? 'more' : 'less'} than ${n}?`, A, [more ? n - d : n + d, more ? n + d * (d === 10 ? 10 : .1) : n - d * (d === 10 ? 10 : .1), n + (more ? 1 : -1), A + (d === 10 ? 100 : 10)].filter(x => x > 0 && x !== A), `Only the ${d === 10 ? 'tens' : 'hundreds'} digit changes. It goes ${more ? 'up' : 'down'} by one: ${A}.`); }
       if (t === 6) { const a = rint(11, 29), b = rint(11, 29), c = rint(11, 29), S = a + b + c; return mc(`${a} + ${b} + ${c} = ?`, S, [S + 10, S - 10, S + 1, a + b, S - 2], `Add the tens: ${a - a % 10} + ${b - b % 10} + ${c - c % 10} = ${S - a % 10 - b % 10 - c % 10}. Add the ones: ${a % 10} + ${b % 10} + ${c % 10} = ${a % 10 + b % 10 + c % 10}. Together: ${S}.`); }
       if (t === 0) { const a = rint(4, 9), b = rint(3, 9), s = a + b; return mc(`${a} + ${b} = ?`, s, [s + 1, s - 1, s + 2, s - 2, s + 10], s > 10 ? `Make a ten! ${a} needs ${10 - a} more to make 10. That leaves ${b - (10 - a)} more: 10 + ${b - (10 - a)} = ${s}.` : `Start at ${a} and count on ${b} more. You land on ${s}.`); }
@@ -76,7 +76,7 @@ const MATH = {
       if (k === 3) { const ON = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'], TN = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'], t2 = t < 2 ? t + 2 : t, n2 = h * 100 + t2 * 10 + o; return mc(`Which number is "${ON[h]} hundred ${TN[t2]}-${ON[o]}"?`, n2, [h * 100 + o * 10 + t2, h * 1000 + t2 * 10 + o, h * 100 + t2 + o, t2 * 100 + h * 10 + o], `${ON[h]} hundred is ${h * 100}, ${TN[t2]} is ${t2 * 10}, and ${ON[o]} is ${o}. Put them together: ${n2}.`); }
       if (k === 0) { const i = rint(0, 2), dg = [h, t, o][i], v = dg * [100, 10, 1][i]; return mc(`What is the value of the digit ${dg} in ${n}?`, v, [dg, dg * 10, dg * 100].filter(x => x !== v).concat([dg + 10]), `The ${dg} is in the ${['hundreds', 'tens', 'ones'][i]} place, so it is worth ${v}.`); }
       if (k === 1) return mc(`Which one shows the number ${n}?`, `${h * 100} + ${t * 10} + ${o}`, [`${h * 10} + ${t * 10} + ${o}`, `${h * 100} + ${t} + ${o}`, `${h} + ${t} + ${o}`, `${h * 100} + ${o * 10} + ${t}`], `${n} has ${h} hundreds, ${t} tens, and ${o} ones. That is ${h * 100} + ${t * 10} + ${o}.`);
-      return mc(`Which number has ${h} hundreds, ${t} tens, and ${o} ones?`, n, [h * 100 + o * 10 + t, t * 100 + h * 10 + o, o * 100 + t * 10 + h, h + t + o], `Hundreds come first, then tens, then ones: ${h}, ${t}, ${o} makes ${n}.`);
+      return mc(`Which number has ${h} hundred${h > 1 ? 's' : ''}, ${t} ten${t > 1 ? 's' : ''}, and ${o} one${o > 1 ? 's' : ''}?`, n, [h * 100 + o * 10 + t, t * 100 + h * 10 + o, o * 100 + t * 10 + h, h + t + o], `Hundreds come first, then tens, then ones: ${h}, ${t}, ${o} makes ${n}.`);
     }
     if (g >= 5) { const [a, b, c, d] = ds, i = rint(0, 2), dg = [b, c, d][i], nm = ['tenths', 'hundredths', 'thousandths'];
       return mc(`In ${a}.${b}${c}${d}, what is the value of the digit ${dg}?`, `${dg} ${nm[i]}`, [`${dg} ${nm[(i + 1) % 3]}`, `${dg} ${nm[(i + 2) % 3]}`, `${dg} ones`, `${dg} tens`], `After the decimal point the places go: tenths, hundredths, thousandths. The ${dg} sits in the ${nm[i]} place.`); }
@@ -185,8 +185,8 @@ const MATH = {
     const s = rint(1, 4), k = pick([2, 3]); return mc(`What number comes next?  ${s}, ${s * k}, ${s * k * k}, ${s * k * k * k}, ?`, s * k ** 4, [s * k ** 3 + k, s * k ** 3 * 2 + 1, s * k ** 4 + k, s * k ** 3 + s * k * k], `Each number is multiplied by ${k}. ${s * k ** 3} × ${k} = ${s * k ** 4}.`);
   } },
   time: { n: 'Telling Time', std: '2.MD.7 · 3.MD.1', g: [2, 3], gen(g) {
-    if (g <= 2 && Math.random() < .25) { const [what, A] = pick([['eating breakfast before school', '7:00 a.m.'], ['watching the sun go down', '7:00 p.m.'], ['getting into bed for the night', '8:30 p.m.'], ['waking up for school', '6:30 a.m.'], ['eating dinner', '6:00 p.m.'], ['eating lunch at school', '12:00 noon']]);
-      return mc(`Dex is ${what}. What time is it most likely to be?`, A, ['7:00 a.m.', '7:00 p.m.', '12:00 midnight', '3:00 a.m.', '12:00 noon'].filter(x => x !== A), 'a.m. is the morning, from midnight until noon. p.m. is the afternoon and evening, from noon until midnight.'); }
+    if (g <= 2 && Math.random() < .2) { const [what, A, ws] = pick([['eating breakfast before school', '7:00 a.m.', ['7:00 p.m.', '12:00 midnight', '3:00 p.m.']], ['watching the sun go down', '7:00 p.m.', ['7:00 a.m.', '12:00 noon', '3:00 a.m.']], ['getting into bed for the night', '8:30 p.m.', ['8:30 a.m.', '12:00 noon', '3:00 p.m.']], ['waking up for school', '6:30 a.m.', ['6:30 p.m.', '12:00 noon', '11:00 p.m.']], ['eating dinner', '6:00 p.m.', ['6:00 a.m.', '10:00 a.m.', '3:00 a.m.']], ['eating lunch at school', '12:00 noon', ['12:00 midnight', '6:00 a.m.', '9:00 p.m.']]]);
+      return mc(`Dex is ${what}. What time is it most likely to be?`, A, ws, 'a.m. is the morning, from midnight until noon. p.m. is the afternoon and evening, from noon until midnight.'); }
     if (g <= 2) {
       const hr = rint(1, 11);
       if (coin()) { const nn = rint(1, 11), mm = String(nn * 5).padStart(2, '0'), A = `${hr}:${mm}`; return mc(`On a clock, the short hand is between ${hr} and ${hr + 1}. The long hand points at the ${nn}. What time is it?`, A, [`${hr + 1}:${mm}`, `${hr}:${String(nn).padStart(2, '0')}`, `${nn}:${String(hr * 5).padStart(2, '0')}`, `${hr}:${String((nn * 5 + 5) % 60).padStart(2, '0')}`], `The short hand tells the hour: ${hr}. For the long hand, count by 5s around the clock. The ${nn} means ${nn * 5} minutes. So it is ${A}.`); }
@@ -291,8 +291,8 @@ const MATH = {
 };
 
 // ============================================================ ENGLISH
-const PLURALS = [['child', 'children'], ['mouse', 'mice'], ['tooth', 'teeth'], ['foot', 'feet'], ['goose', 'geese'], ['wolf', 'wolves'], ['leaf', 'leaves'], ['knife', 'knives'], ['man', 'men'], ['woman', 'women'], ['person', 'people'], ['sheep', 'sheep'], ['deer', 'deer'], ['shelf', 'shelves'], ['city', 'cities'], ['story', 'stories'], ['box', 'boxes'], ['bush', 'bushes'], ['hero', 'heroes'], ['potato', 'potatoes'], ['monkey', 'monkeys'], ['life', 'lives'], ['party', 'parties'], ['fox', 'foxes']];
-const PAST = [['run', 'ran'], ['eat', 'ate'], ['bring', 'brought'], ['catch', 'caught'], ['think', 'thought'], ['throw', 'threw'], ['fly', 'flew'], ['hide', 'hid'], ['bite', 'bit'], ['fight', 'fought'], ['teach', 'taught'], ['buy', 'bought'], ['swim', 'swam'], ['write', 'wrote'], ['see', 'saw'], ['go', 'went'], ['take', 'took'], ['find', 'found'], ['build', 'built'], ['keep', 'kept'], ['feel', 'felt'], ['draw', 'drew'], ['ring', 'rang'], ['wake', 'woke'], ['sing', 'sang'], ['fall', 'fell']];
+const PLURALS = [['child', 'children'], ['mouse', 'mice'], ['tooth', 'teeth'], ['foot', 'feet'], ['goose', 'geese'], ['wolf', 'wolves'], ['leaf', 'leaves'], ['knife', 'knives'], ['man', 'men'], ['woman', 'women'], ['sheep', 'sheep'], ['deer', 'deer'], ['shelf', 'shelves'], ['city', 'cities'], ['story', 'stories'], ['box', 'boxes'], ['bush', 'bushes'], ['hero', 'heroes'], ['potato', 'potatoes'], ['monkey', 'monkeys'], ['life', 'lives'], ['party', 'parties'], ['fox', 'foxes']];
+const PAST = [['run', 'ran'], ['eat', 'ate'], ['bring', 'brought'], ['catch', 'caught'], ['think', 'thought'], ['throw', 'threw'], ['fly', 'flew'], ['hide', 'hid'], ['bite', 'bit'], ['fight', 'fought'], ['teach', 'taught'], ['buy', 'bought'], ['swim', 'swam'], ['write', 'wrote'], ['see', 'saw'], ['go', 'went'], ['take', 'took'], ['find', 'found'], ['build', 'built'], ['keep', 'kept'], ['feel', 'felt'], ['draw', 'drew'], ['ring', 'rang'], ['sing', 'sang'], ['fall', 'fell']];
 const I = (g, q, a, w, why) => ({ g, q, a, w, why });
 const SVA = [
   I(2, 'The critter ___ fast.', 'runs', ['run', 'running', 'runned'], 'One critter runs. Add -s to the action word when there is just one.'),
@@ -368,7 +368,7 @@ const PUNCT = [
   I(6, null, 'Wren packed three things: a rope, a map, and a flashlight.', ['Wren packed three things, a rope a map and a flashlight.', 'Wren packed: three things a rope, a map, and a flashlight.', 'Wren packed three things a rope, a map, and, a flashlight.'], 'A colon can introduce a list after a complete sentence.'),
   I(6, null, 'Mr. Munch (a very large critter) runs the shop.', ['Mr. Munch (a very large critter runs the shop).', 'Mr. Munch a very large critter (runs the shop).', '(Mr. Munch) a very large critter runs the shop.'], 'Parentheses hold extra information. The sentence should still make sense without it.')
 ];
-const SPELL = [[2, 'said', 'sed', 'sayd', 'siad'], [2, 'they', 'thay', 'tha', 'thei'], [2, 'were', 'wer', 'wure', 'wher'], [2, 'could', 'cud', 'coud', 'culd'], [2, 'when', 'wen', 'whin', 'wehn'], [2, 'little', 'littel', 'litle', 'littul'], [2, 'what', 'wut', 'waht', 'whut'], [2, 'does', 'duz', 'dose', 'dos'], [2, 'friend', 'frend', 'freind', 'frind'], [2, 'very', 'vary', 'verry', 'vere'],
+const SPELL = [[2, 'said', 'sed', 'sayd', 'siad'], [2, 'they', 'thay', 'tha', 'thei'], [2, 'were', 'wer', 'wure', 'wher'], [2, 'could', 'cood', 'coud', 'culd'], [2, 'when', 'whenn', 'whin', 'wehn'], [2, 'little', 'littel', 'litle', 'littul'], [2, 'what', 'wut', 'waht', 'whut'], [2, 'does', 'duz', 'doez', 'dos'], [2, 'friend', 'frend', 'freind', 'frind'], [2, 'very', 'vry', 'verry', 'vere'],
   [3, 'because', 'becuase', 'becaus', 'becuz'], [3, 'friend', 'freind', 'frend', 'friand'], [3, 'people', 'peeple', 'poeple', 'pepole'], [3, 'school', 'skool', 'scool', 'shcool'], [3, 'different', 'diffrent', 'diferent', 'differant'], [3, 'favorite', 'favrite', 'faverite', 'favorit'], [3, 'enough', 'enuff', 'enouf', 'anough'], [3, 'caught', 'cought', 'caugt', 'cawt'], [3, 'thought', 'thout', 'thougt', 'thaught'], [3, 'again', 'agen', 'agian', 'agin'],
   [4, 'believe', 'beleive', 'belive', 'beleeve'], [4, 'beautiful', 'beutiful', 'beautifull', 'butiful'], [4, 'surprise', 'suprise', 'surprize', 'serprise'], [4, 'calendar', 'calender', 'calandar', 'kalendar'], [4, 'island', 'iland', 'ileland', 'islend'], [4, 'probably', 'probly', 'probaly', 'prabably'], [4, 'weird', 'wierd', 'weerd', 'wird'], [4, 'library', 'libary', 'librery', 'liberry'], [4, 'February', 'Febuary', 'Februery', 'Feburary'],
   [5, 'necessary', 'neccessary', 'necesary', 'nessesary'], [5, 'separate', 'seperate', 'separete', 'seprate'], [5, 'definitely', 'definately', 'definitly', 'defanitely'], [5, 'embarrass', 'embarass', 'embaras', 'imbarrass'], [5, 'restaurant', 'restarant', 'resturant', 'restaurent'], [5, 'temperature', 'temperture', 'tempature', 'temprature'], [5, 'receive', 'recieve', 'receeve', 'receve'], [5, 'government', 'goverment', 'governmant', 'govenment'],
@@ -540,16 +540,17 @@ const PASSAGES = [
 ];
 
 const pluralQ = () => { const [w, a] = pick(PLURALS); const ws = [...new Set([w + 's', w + 'es', w.slice(0, -1) + 'ies', a + 's', w.slice(0, -1) + 'ves', w + 'en'])].filter(x => x !== a); return mc(`One ${w}, two ___.  Which word is the correct plural of "${w}"?`, a, ws, `The plural of "${w}" is "${a}." Some plurals do not just add -s. You have to learn them by heart!`); };
-const pastQ = () => { const [v, a] = pick(PAST); const ws = [...new Set([v + 'ed', v + 'd', a + 'ed', v + v.slice(-1) + 'ed', v + 't'])].filter(x => x !== a); return mc(`Today I ${v}. Yesterday I ___.  Which is the past tense of "${v}"?`, a, ws, `"${v[0].toUpperCase() + v.slice(1)}" is an irregular verb. Its past tense is "${a}," not "${v}ed."`); };
+const pastQ = () => { const [v, a] = pick(PAST); const ws = [...new Set([v + 'ed', a + 'ed', v + v.slice(-1) + 'ed', v + 't'].concat(v.endsWith('e') ? [v + 'd'] : []))].filter(x => x !== a); return mc(`Today I ${v}. Yesterday I ___.  Which is the past tense of "${v}"?`, a, ws, `"${v[0].toUpperCase() + v.slice(1)}" is an irregular verb. Its past tense is "${a}," not "${v}ed."`); };
 const itemQ = (bank, pre) => g => { const it = pick(band(bank, g)); return mc((pre ? pre + '\n' : '') + it.q, it.a, it.w, it.why); };
 const ELA = {
   plural: { n: 'Plural Nouns', std: 'L.2.1b · L.3.1b', g: [2, 4], gen: pluralQ },
   past: { n: 'Past-Tense Verbs', std: 'L.2.1d · L.3.1d', g: [2, 4], gen: pastQ },
   sva: { n: 'Subject-Verb Agreement', std: 'L.2.1 · L.3.1f · L.5.1', g: [2, 5], gen: itemQ(SVA, 'Pick the word that completes the sentence.') },
   homophone: { n: 'Tricky Sound-Alikes', std: 'L.2.2 · L.4.1g', g: [2, 6], gen: itemQ(HOMO, 'Pick the word that completes the sentence.') },
-  punct: { n: 'Punctuation & Capitals', std: 'L.2.2 – L.6.2', g: [2, 6], gen: g => { const it = pick(band(PUNCT, g)); return mc('Which sentence is written correctly?', it.a, it.w, it.why, { small: true }); } },
+  punct: { n: 'Punctuation & Capitals', std: 'L.2.2 – L.6.2', g: [2, 6], gen: g => { const it = pick(band(PUNCT, g)); return mc(it.q || 'Which sentence is written correctly?', it.a, it.w, it.why, { small: true }); } },
   spelling: { n: 'Spelling', std: 'L.2.2 – L.6.2', g: [2, 6], gen: g => { const it = pick(band(SPELL, g)); return mc('Which word is spelled correctly?', it.a, it.w, `The correct spelling is "${it.a}." Say it slowly and picture each letter.`); } },
-  synant: { n: 'Synonyms & Antonyms', std: 'L.2.5 – L.6.5', g: [2, 6], gen: g => { const pool = band(SYN, g), it = pick(pool), others = shuffle(pool.filter(x => x !== it)); const syn = coin();
+  synant: { n: 'Synonyms & Antonyms', std: 'L.2.5 – L.6.5', g: [2, 6], gen: g => { const FAM = { big: 'size', tiny: 'size', small: 'size', enormous: 'size', brief: 'size', fast: 'speed', quick: 'speed', rapid: 'speed', happy: 'joy', glad: 'joy', brave: 'nerve', scared: 'nerve', timid: 'nerve', quiet: 'sound', shout: 'sound', cold: 'temp', frigid: 'temp', angry: 'calm', tranquil: 'calm', hostile: 'kind', benevolent: 'kind', obvious: 'hide', conceal: 'hide', vanish: 'hide' };
+    const pool = band(SYN, g), it = pick(pool), others = shuffle(pool.filter(x => x !== it && !(FAM[x.w] && FAM[x.w] === FAM[it.w]))); const syn = coin();
     return mc(`Which word means ${syn ? 'almost the SAME as' : 'the OPPOSITE of'} "${it.w}"?`, syn ? it.s : it.o, [syn ? it.o : it.s, others[0].s, others[1].o, others[2].s], `"${it.w[0].toUpperCase() + it.w.slice(1)}" means about the same as "${it.s}." Its opposite is "${it.o}."`); } },
   affix: { n: 'Word Parts', std: 'L.2.4b – L.6.4b', g: [2, 6], gen: g => { const pool = band(AFFIX, g), it = pick(pool), ws = shuffle([...new Set(pool.map(x => x.m))].filter(x => x !== it.m)).concat(shuffle([...new Set(AFFIX.map(x => x.m))].filter(x => x !== it.m))).filter((x, i, arr) => arr.indexOf(x) === i).slice(0, 3);
     return mc(`In the word "${it.word}," what does the word part "${it.part}" mean?`, it.m, ws, `"${it.part}" means "${it.m}." Knowing word parts helps you figure out new words.`); } },
@@ -585,7 +586,7 @@ ELA.spelling.multi = g => { const seen = new Set(), it = shuffle(band(SPELL, g).
 ELA.pos.multi = () => { const W3 = { NOUN: ['zombie', 'tower', 'snack', 'critter', 'school', 'bell', 'river', 'wrench'], VERB: ['run', 'hide', 'jump', 'build', 'shout', 'climb', 'whisper', 'crunch'], ADJECTIVE: ['spooky', 'tiny', 'loud', 'brave', 'slimy', 'quick', 'rusty', 'fuzzy'] }, kind = pick(Object.keys(W3)), nC = rint(2, 3);
   const yes = shuffle(W3[kind].slice()).slice(0, nC), no = shuffle([].concat(...Object.keys(W3).filter(k => k !== kind).map(k => W3[k]))).slice(0, 5 - nC);
   return ms(`Select ALL the ${kind}S.`, yes, no, { NOUN: 'A noun names a person, place, or thing.', VERB: 'A verb is an action word: something you can DO.', ADJECTIVE: 'An adjective describes what something is like.' }[kind]); };
-ELA.punct.multi = g => { const it = shuffle(band(PUNCT, g).slice()).slice(0, 3); if (it.length < 3) return null;
+ELA.punct.multi = g => { const it = shuffle(band(PUNCT, g).filter(x => !x.q)).slice(0, 3); if (it.length < 3) return null;
   return ms('Select the TWO sentences that are written correctly.', [it[0].a, it[1].a], [it[0].w[0], it[1].w[1], it[2].w[0]], `${it[0].why} ${it[1].why}`); };
 const DOMAIN = {};
 for (const [d, ids] of Object.entries({ 'Number & Operations': 'addsub place compare round mult div fraccmp fracadd fracmul decimals pow10 negint', 'Algebra & Algebraic Thinking': 'unknown groups ooo expr factors word ratio', 'Measurement & Data': 'time money data mean', 'Geometry': 'shapes area',
@@ -695,6 +696,7 @@ const Learn = {
   record(q, ok) {
     const L = G.learn, k = this.sk(q.skill);
     k.n++; L.total++;
+    if (typeof dayTick === 'function') dayTick(q.skill, ok);
     { const eg = G.eggs && G.eggs.find(x => !x.hatched); if (ok && eg && SKILLS[q.skill]) { if (SKILLS[q.skill].sub === 'math') eg.wm = Math.min(20, eg.wm + 1); else eg.we = Math.min(20, eg.we + 1); } }
     if (ok) { k.r++; L.right++; L.streak++; L.best = Math.max(L.best, L.streak); k.miss = Math.max(0, k.miss - 1); k.cs = (k.cs || 0) + 1; k.box = Math.min(4, this.box(k) + 1); if (!k.m && k.cs >= 4 && k.n >= 5) { k.m = true; k.slip = 0; (L.fresh = L.fresh || []).push(q.skill); } }
     else { k.miss++; L.streak = 0; k.cs = 0; k.box = 0; L.retry = L.retry || []; if (!this.focus && !L.retry.some(r => r.id === q.skill) && L.retry.length < 6) L.retry.push({ id: q.skill, at: L.total + 3 }); if (k.m) { k.slip = (k.slip || 0) + 1; if (k.slip >= 2) { k.m = false; k.slip = 0; } } }
@@ -784,6 +786,7 @@ const Learn = {
           const qs = q.passage ? 27 : (q.q.length > 110 ? 30 : 36);
           setFont(qs); const ql = wrap(q.q, W - 120);
           ql.forEach((l, i) => text(l, 56, y + i * (qs + 4), '#ffffff')); y += ql.length * (qs + 4) + 10;
+          if (q.pic) { const ph = Pic.h(q.pic); Pic.draw(q.pic, 56, y, W - 112); y += ph + 10; }
           const done = ok !== null && !quiet;
           let why = [], head = '';
           if (done) {
@@ -807,7 +810,7 @@ const Learn = {
           } else {
             const cs = q.small || n > 4 ? 25 : 30;
             setFont(cs);
-            const lines = q.choices.map(c => wrap(c, W - 190)), minH = q.passage || n > 4 ? 42 : 54;
+            const lines = q.choices.map(c => wrap(c, W - 190)), minH = q.passage || q.pic || n > 4 ? 42 : 54;
             const rowH = lines.map(l => Math.max(minH, l.length * (cs + 2) + 18));
             const need = rowH.reduce((a, b) => a + b + 8, 0) + (type === 'multi' ? 58 : 0) + (done ? why.length * 25 + 44 : 0);
             const gap = Math.max(2, Math.min(8, 8 + (H - 30 - y - need) / (n + 1)));
@@ -909,6 +912,7 @@ const Learn = {
     Snd.play('nest');
     await say(who, `LESSON: ${s.n.toUpperCase()}`, { col: '#ffd76a' });
     for (const p of LESSONS[id]) await say(who, p);
+    if (typeof LPIC !== 'undefined' && LPIC[id]) await Pic.show(s.n, LPIC[id]);
     await say(who, 'Now show me. Get THREE in a row and this skill is officially MASTERED.');
     let row = 0, fails = 0;
     while (row < 3) {
