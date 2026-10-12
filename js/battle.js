@@ -21,7 +21,7 @@ const Battle = {
     for (let i = 0; i < 3; i++) { Fx.flash = .8; await tween(Fx, 'flash', 0, 110); }
     await fadeOut(180);
     Snd.play(o.music || (o.kind === 'wild' ? 'battle' : 'boss'));
-    this.on = true; Scene = 'battle';
+    this.on = true; Scene = 'battle'; Sess.note('play', 'battle');
     await fadeIn(180);
     await Promise.all([tween(st, 'ex', 0, 450, easeOut), tween(st, 'px', 0, 450, easeOut)]);
     const f0 = st.foes[0], zs = SPECIES[f0.sp].z;
@@ -67,7 +67,7 @@ const Battle = {
     if (result === 'win' || result === 'caught') await this.evolutions();
     await fadeOut(250);
     for (const c of G.party) { delete c.st; delete c.stun; }
-    this.on = false; Scene = prevScene; Snd.play(prevMusic);
+    this.on = false; Scene = prevScene; Snd.play(prevMusic); Sess.note('play', 'world');
     await fadeIn(250);
     return result;
   },

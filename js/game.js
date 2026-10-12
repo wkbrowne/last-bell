@@ -1,6 +1,8 @@
 'use strict';
 const SAVE_KEY = 'lastbell_save_v1';
 let G = null, Scene = 'title';
+// Sittings: when she starts and stops, and what she was doing when she left. It reads the live G, so call it only when G is set.
+const Sess = LearnCore.sessions({ state: () => G, now: Date.now });
 const PL = { px: 0, py: 0, moving: false, t: 0, fx: 0, fy: 0, tx: 0, ty: 0, step: 0, grace: 0, zone: null, banner: 0, bannerText: '', pendingOffer: false };
 const Script = { n: 0 };
 const DV = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -8,7 +10,7 @@ async function script(fn) { Script.n++; try { await fn(); } catch (e) { console.
 
 function newState() {
   return { map: 'world', x: 41, y: 64, dir: 'up', party: [], pen: [], bag: { snack: 5, juice: 3 }, scrap: 40, flags: {}, badges: [], dex: {}, seen: {},
-    wins: 0, night: 0, saved: [], gear: { sword: 0, charms: {}, wins: 0 }, goal: 20, limitMin: 0, dayStreak: 0, day: null, readAloud: false, eggs: [], roosts: [], crew: [], bond: {}, rest: { map: 'world', x: 41, y: 64 }, log: [], obj: '', time: 0, steps: 0,
+    wins: 0, night: 0, saved: [], gear: { sword: 0, charms: {}, wins: 0 }, goal: 20, limitMin: 0, dayStreak: 0, day: null, readAloud: false, eggs: [], roosts: [], crew: [], bond: {}, rest: { map: 'world', x: 41, y: 64 }, log: [], obj: '', time: 0, steps: 0, sessions: [],
     learn: { grade: 2, sk: {}, right: 0, total: 0, streak: 0, best: 0, recent: [], flip: false } };
 }
 const flag = k => !!G.flags[k];
@@ -49,9 +51,12 @@ async function useItem(id, c) {
   await say(null, `Used ${it.n} on ${cname(c)}.`, { auto: 600 });
   return true;
 }
-function saveGame() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(G, (k, v) => (k === 'st' || k === 'stun' || k === 'dhp') ? undefined : v)); toast('Game saved'); } catch (e) { toast('Could not save'); }
+function saveGame(silent) {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(G, (k, v) => (k === 'st' || k === 'stun' || k === 'dhp') ? undefined : v)); if (!silent) toast('Game saved'); } catch (e) { if (!silent) toast('Could not save'); }
 }
+// Leaving the page (tab switched, app closed) ends the sitting and keeps it, so the report can say where she stopped.
+document.addEventListener('visibilitychange', () => { if (document.hidden && G) { Sess.away(); saveGame(true); } });
+addEventListener('pagehide', () => { if (G) { Sess.away(); saveGame(true); } });
 function loadGame() {
   try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; const d = JSON.parse(s), n = newState(); G = Object.assign(n, d); G.learn = Object.assign(n.learn, d.learn); Learn.migrate(); return true; } catch (e) { return false; }
 }
@@ -124,7 +129,7 @@ async function pretender(w) {
 // Dex carries his current sword on his back, so redraw him when it changes.
 function syncGear() { HUM.dex.sword = (G && G.gear.sword) || 0; for (const k in Art.cache) if (k.startsWith('h:dex') || k.startsWith('s:dex')) delete Art.cache[k]; }
 function enterWorld() {
-  syncGear();
+  syncGear(); Sess.note('play', 'world');
   Scene = 'world'; PL.px = G.x * 16; PL.py = G.y * 16; PL.moving = false; PL.zone = null; checkZone(true);
 }
 function checkZone(quiet) {
@@ -566,6 +571,7 @@ async function sessionCheck() {
     D.done = true; G.dayStreak = (G.dayStreak || 0) + 1; G.scrap += 50; give('potion', 1, true); Snd.sfx('badge');
     await daySummary('DAILY GOAL COMPLETE!', `${G.goal} Brain Blasts done.  +50 scrap and a Healing Potion`);
     if (G.dayStreak >= 3) await badge('days3'); if (G.dayStreak >= 7) await badge('days7');
+    Sess.note('goal-done');
     if (await ask(Learn.teacher(), 'That was your goal for today. This is a great place to stop. Your brain keeps what it learned better after a rest.', ['Save and stop for today', 'Keep playing a bit']) === 0) { await stopForToday(); return true; }
   } else if (G.limitMin && D.ms >= G.limitMin * 60000 && !D.wrapped) {
     D.wrapped = true; Snd.sfx('badge');
@@ -588,7 +594,9 @@ async function pauseMenu() {
     const opts = [['Team', partyMenu], ['Bag', bagMenu], ['Study Hall', () => Learn.studyHall()], ['Practice & Tests', () => Learn.practiceMenu()], ['Dragons', eggsPage]];
     if (flag('canFly')) opts.push(['Fly', flyMenu]);
     opts.push(["Dex's Log", journal], ['Badges', badgesPage], ['Crew', crewPage], ['Save', async () => saveGame()], ['Options', optionsMenu], ['Close', null]);
+    Sess.pause(true);      // the menu itself is a pause; Study Hall and the rest count as play again once chosen
     const i = await menu(opts.map(o => o[0]), { x: W - 300, y: 20, w: 280, rows: 12, title: 'MENU' });
+    Sess.pause(false);
     if (i < 0 || !opts[i][1]) return;
     if ((await opts[i][1]()) === 'exit') return;
   }
@@ -630,6 +638,7 @@ const dragonsOwned = () => G.party.concat(G.pen).filter(c => SPECIES[c.sp].drago
 const rideable = () => G.party.find(c => SPECIES[c.sp].dragon && SPECIES[c.sp].stage >= 2 && c.hp > 0);
 async function eggNest(elm, need, cold) {
   const D = DRAGONS[elm];
+  Sess.note('play', 'egg');
   if (!flag(need)) { await say(null, cold); return; }
   if (!flag('eggSeen')) { setFlag('eggSeen'); await say(null, 'In a nest of old feathers sits an egg the size of a football. It is warm. It is HUMMING.'); await say('dex', 'That is not a critter egg. That is a... no way.'); await say('guide', 'FIELD GUIDE: Dragon eggs sleep under Wexler Falls. An egg only goes with someone whose mind is sharp in BOTH numbers and words. First it tests you. Then it must be kept warm with right answers.'); }
   if (curEgg()) { await say(null, `The ${D.egg} hums at you. But you are already keeping one egg warm, and a dragon needs ALL of your attention. Hatch that one first.`); return; }
@@ -740,6 +749,7 @@ const SHOPS = {
 };
 async function nightShop(id) {
   const S = SHOPS[id];
+  Sess.note('play', 'shop');
   if (!flag('shop_' + id)) { setFlag('shop_' + id); for (const l of S.intro) await say(S.who, l); if (!flag('marketLog')) { setFlag('marketLog'); logAdd('Found the Night Market in the Lost Lot. Friendly monsters, and they do not take scrap. You pay by solving math. A ghost says thinking is the one thing the Bell cannot switch off. That explains a LOT.'); } }
   else await say(S.who, pick(S.hello));
   if (S.extra) await S.extra();
@@ -762,6 +772,7 @@ async function nightShop(id) {
   }
 }
 async function munchShop() {
+  Sess.note('play', 'shop');
   if (!flag('munchTip')) { setFlag('munchTip'); await say('munch', "Psst. Munch only sells snacks. For the GOOD stuff, go to the Night Market. South of your tower, down the dirt path."); await say('munch', "Swords! Potions! Magic! But Munch's cousins do not take scrap. They take SMARTS."); }
   await say('munch', pick(['MUNCH TRADE! Shiny scrap for crunchy snacks.', 'Munch not eat kids. Kids are mostly elbows.', 'Welcome, tiny customer! Munch has the good stuff.']));
   const stock = ['snack', 'juice', 'wipes'].concat(flag('priya') ? ['soda'] : [], flag('bash') ? ['salts'] : [], flag('wren') ? ['slush'] : []);
@@ -945,6 +956,7 @@ function frame(ts) {
   if (PERF.lvl >= 2 && (PERF.skip = !PERF.skip)) { PERF.carry = dt; return; }
   step(Math.min(66, dt + (PERF.carry || 0))); PERF.carry = 0;
 }
+let SESS_ACC = 0;   // ms since the sitting was last ticked
 function step(dt) {
   fitCanvas(); ctx.setTransform(KPX, 0, 0, KPX, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = PERF.lvl ? 'low' : 'medium';
   Timers.update(dt); updateTweens(dt);
@@ -955,6 +967,7 @@ function step(dt) {
   }
   if (pr.includes('mute')) toast(Snd.toggleMute() ? 'Sound off' : 'Sound on');
   if (G && (Scene === 'world' || Scene === 'battle')) dayState().ms += dt;
+  if (G && Scene !== 'title' && !document.hidden && (SESS_ACC += dt) >= 1000) { SESS_ACC = 0; Sess.tick(); }
   if (UI.busy) UI.update(dt, pr); else if (Scene === 'world' && G) worldUpdate(dt, pr);
   if (Scene === 'title') titleDraw();
   else if (Scene === 'black') sceneBg(.62);

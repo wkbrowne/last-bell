@@ -318,6 +318,7 @@ Learn.factDash = async function () {
   await checkFeats();
 };
 Learn.practiceMenu = async function () {
+  Sess.note('play', 'practice');
   while (true) {
     const i = await menu(['Fact Dash  (1 minute of number facts)', 'Practice Test  (10 questions)', 'Maze Dash  (3-minute reading)', 'Read-Aloud Check  (with a grown-up)', 'Writing Workshop', 'Quick Check  (12 questions, sets a head start)', 'Back'], { x: 200, y: 160, w: 560, title: 'PRACTICE & TESTS' });
     if (i === 0) await this.factDash(); else if (i === 1) await this.testDay(); else if (i === 2) await this.mazeDash(); else if (i === 3) await this.readAloud(); else if (i === 4) await this.workshop(); else if (i === 5) await this.placement(); else return;

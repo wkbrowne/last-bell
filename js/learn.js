@@ -698,7 +698,7 @@ const ENG = LearnCore.create({
   kinds: (group, id) => Learn.kinds(id, GRP.grade(group)),
   prereq: (group, id) => ({ group: GRP.sub(group) + (GRP.grade(group) - 1), id }),      // the same skill a grade earlier, where there is one
   harder: (group, id) => ({ group: GRP.sub(group) + (GRP.grade(group) + 1), id }),      // and a grade later, for stretch questions
-  answered: (group, id, ok) => { if (typeof dayTick === 'function') dayTick(id, ok); },
+  answered: (group, id, ok) => { if (typeof dayTick === 'function') dayTick(id, ok); if (typeof Sess !== 'undefined' && G) Sess.answered(ok); },
   config: { newStart: 99, newPerDay: 99, stretch: .35 }
 });
 const Learn = {
@@ -801,6 +801,7 @@ const Learn = {
   // 'num' (type the answer), and two-part evidence questions (Part A + Part B, both must be right).
   // mode.test = practice-test conditions: no feedback until the end.
   async ask(q, title, noRecord, mode) {
+    Sess.note('question', title === 'BRAIN LOCK' ? 'gate' : /ONE MORE TRY/i.test(q.tag || '') ? 'retry' : /REVIEW/i.test(q.tag || '') ? 'review' : 'plain');
     let ok = await this.card(q, title, q.partB ? Object.assign({}, mode, { hold: 1, part: 'PART A' }) : mode);
     if (q.partB) {
       const b = Object.assign({ skill: q.skill, passage: q.passage, ptitle: q.ptitle, small: true }, q.partB);
@@ -1030,18 +1031,23 @@ const Learn = {
       // trouble is in the new part; otherwise the earlier one is built up in the rounds and this one rests for today.
       const pre = ENG.warmupFor(grp, b.id);
       if (pre) {
+        Sess.note('lesson', 'teach/warm');
         await say(who, 'First, three warm-ups from a step earlier. They show me where to start.');
         let got = 0; for (let i = 0; i < 3; i++) if (await this.ask(this.make(pre.id, GRP.grade(pre.group)), `WARM-UP   ${i + 1} OF 3`, false, { noHint: 1 })) got++;
         if (ENG.warmupDone(grp, b.id, pre, got) === 'back') { await say(who, 'Good to know. We will build up the earlier step first. A few WARM-UP questions will pop up as we go, and then this one will feel much easier.'); return; }
         await say(who, 'Those are solid. So it is the new part we need to work on.');
       }
       for (let round = 0; round < 2; round++) {
+        Sess.note('lesson', 'teach/watch');
         await say(who, round ? 'STEP 1 again: WATCH. Here is another one, already solved.' : 'STEP 1: WATCH. I will do one. Just look at how it works.');
         await this.card(fresh(), T + '   ·   WATCH', { demo: 1 });
+        Sess.note('lesson', 'teach/two');
         await say(who, 'STEP 2: TOGETHER. Your turn, with only two choices. If you miss, we look at why, and then you get it again.');
         await until(this.two(fresh(true)), T + '   ·   TOGETHER');
+        Sess.note('lesson', 'teach/all');
         await say(who, 'STEP 3: Now with all the choices. Take your time.');
         await until(fresh(), T + '   ·   ALMOST THERE');
+        Sess.note('lesson', 'teach/solo');
         await say(who, 'STEP 4: ON YOUR OWN. Get two in a row and this one is fixed.');
         let row = 0; for (let i = 0; i < 4 && row < 2; i++) row = (await this.ask(this.make(b.id, og, bank ? null : b.sig), `${T}   ·   ON YOUR OWN   ${row} OF 2`, false, { noHint: 1 })) ? row + 1 : 0;
         if (row >= 2) {
@@ -1125,7 +1131,7 @@ const Learn = {
   // Teach, then require proof of understanding: three right in a row.
   async lesson(id) {
     const s = SKILLS[id], who = this.teacher(), k = this.sk(id), prev = Snd.curName;
-    Snd.play('nest');
+    Sess.note('play', 'study'); Snd.play('nest');
     await say(who, `LESSON: ${s.n.toUpperCase()}`, { col: '#ffd76a' });
     const les = (G.learn.grade <= 2 && LESSON_G2[id]) || LESSONS[id];
     for (const p of les) await say(who, p);
@@ -1161,6 +1167,7 @@ const Learn = {
   // For grown-ups: accuracy by skill, with the standard each one maps to.
   async report() {
     const L = G.learn, list = this.forGrade(L.grade);
+    Sess.note('report');
     await page(() => {
       ctx.fillStyle = 'rgba(6,4,14,.9)'; ctx.fillRect(0, 0, W, H); panel(20, 14, W - 40, H - 28);
       setFont(18, true); text('REPORT CARD', 44, 34, '#ffd76a');
@@ -1192,6 +1199,18 @@ const Learn = {
       y += 8; setFont(18, true); text('REVIEW', 44, y, '#ffd76a'); y += 34; setFont(22);
       text(`Skills mastered: ${mastered.length}.  Due for review today: ${dueNow}.  Reviews come back after 1, 3, 7, 14, 30 and 60 days.`, 44, y, '#f4eeff'); y += 28;
       text(L.placed === L.grade ? `Quick check done. ${head} skills still have a head start from it.` : 'Quick check not done yet. It is under Practice & Tests.', 44, y, '#f4eeff');
+      setFont(20); text('Tap for more.', W - 60, H - 50, '#8f86a8', 'right');
+    });
+    // page 3: the last sittings, newest first, and where she stopped most often this week
+    const when = ms => { const d = new Date(ms); return d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+    const L = Sess.lines(when, 7);
+    await page(() => {
+      ctx.fillStyle = 'rgba(6,4,14,.9)'; ctx.fillRect(0, 0, W, H); panel(20, 14, W - 40, H - 28);
+      setFont(18, true); text('WHEN SHE STOPS', 44, 34, '#ffd76a'); let y = 74;
+      setFont(22); text(L.summary || (L.rows.length ? 'Each sitting below ends where she put the game down.' : 'No sittings recorded yet. Play a little and come back.'), 44, y, '#c8ffb8'); y += 36;
+      // rows are long; take the biggest size at which the widest one still fits the panel
+      let px = 21; for (; px > 14; px--) { setFont(px); if (L.rows.slice(0, 10).every(r => ctx.measureText(r).width <= W - 88)) break; }
+      L.rows.slice(0, 10).forEach(r => { text(r, 44, y, '#f4eeff'); y += 28; });
       setFont(20); text('Tap to close.', W - 60, H - 50, '#8f86a8', 'right');
     });
   }
