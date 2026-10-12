@@ -11,8 +11,8 @@ cp -R index.html manifest.json icon-192.png icon-512.png js $B/assets/
 sed -i '' -E 's/\.js\?v=[0-9]+/.js/g' $B/assets/index.html
 $BT/aapt2 compile --dir android/res -o $B/res.zip
 $BT/aapt2 link -o $B/base.apk -I $AJ --manifest android/AndroidManifest.xml -A $B/assets --java $B/gen $B/res.zip
-javac -nowarn --release 11 -cp $AJ -d $B/obj $B/gen/com/wkbrowne/lastbell/R.java android/src/com/wkbrowne/lastbell/MainActivity.java
-$BT/d8 --release --lib $AJ --min-api 22 --output $B $(find $B/obj -name '*.class')
+javac -nowarn --release 8 -cp $AJ -d $B/obj $B/gen/com/wkbrowne/lastbell/R.java android/src/com/wkbrowne/lastbell/MainActivity.java
+$S/build-tools/36.0.0/d8 --release --lib $AJ --min-api 22 --output $B $(find $B/obj -name '*.class')
 (cd $B && zip -q -j base.apk classes.dex)
 $BT/zipalign -f 4 $B/base.apk $B/aligned.apk
 KS=android/lastbell.keystore
