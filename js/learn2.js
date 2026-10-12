@@ -284,3 +284,85 @@ Learn.practiceMenu = async function () {
     if (i === 0) await this.testDay(); else if (i === 1) await this.mazeDash(); else if (i === 2) await this.readAloud(); else if (i === 3) await this.workshop(); else return;
   }
 };
+
+// ============================================================ final grade 2 pass: the standards that were still uncovered
+addSkill('numline', 'Number & Operations', { n: 'Number Lines', sub: 'math', std: '2.MD.6 · 3.NF.2', g: [2, 3], gen(g) {
+  const t = rint(0, g >= 3 ? 4 : 3);
+  if (t === 0) { const a = rint(1, 8) * 10; return mc(`A number line is marked ${a - 10}, ${a}, ${a + 10}, ${a + 20}. Which number is HALFWAY between ${a} and ${a + 10}?`, a + 5, [a + 10, a + 2, a - 5, a + 15].filter(x => x !== a + 5), `Halfway between ${a} and ${a + 10} is 5 more than ${a}: ${a + 5}.`); }
+  if (t === 1) { const a = rint(12, 60), b = rint(5, 30); return mc(`Start at ${a} on a number line. Jump FORWARD ${b}. Where do you land?`, a + b, [a - b > 0 ? a - b : a + b + 10, a + b + 10, a + b - 1, a + b + 1].filter(x => x !== a + b), `Forward means add: ${a} + ${b} = ${a + b}.`); }
+  if (t === 2) { const a = rint(40, 95), b = rint(5, 30); return mc(`Start at ${a} on a number line. Jump BACK ${b}. Where do you land?`, a - b, [a + b, a - b - 10, a - b + 1, a - b - 1].filter(x => x !== a - b && x > 0), `Back means subtract: ${a} − ${b} = ${a - b}.`); }
+  if (t === 3) { const tgt = rint(3, 8) * 10, near = tgt + pick([-3, -2, 2, 3]), others = shuffle([tgt - 12, tgt + 14, tgt - 19, tgt + 21, tgt + 9, tgt - 8]).slice(0, 3); return mc(`Which number is CLOSEST to ${tgt} on a number line?`, near, others, `${near} is only ${Math.abs(near - tgt)} away from ${tgt}. The others are farther.`); }
+  const d = pick([2, 3, 4]); return mc(`A number line from 0 to 1 is cut into ${d} equal parts. What number is at the FIRST mark after 0?`, `1/${d}`, [`1/${d + 1}`, `${d}/1`, `1/${d * 2}`, `${d - 1 || 2}/${d}`].filter(x => x !== `1/${d}`), `${d} equal parts means each part is one ${['', '', 'half', 'third', 'fourth'][d]}: 1/${d}.`);
+} }, ['A number line is a ruler for numbers. Numbers get BIGGER as you move right and SMALLER as you move left.', 'Adding is jumping forward (right). Subtracting is jumping back (left). Start at 34, jump forward 10, land on 44.', 'To find what is halfway between two numbers, find the middle. Halfway between 20 and 30 is 25.']);
+const GRAM2 = [
+  I(2, 'A group of wolves is called a...', 'pack', ['herd', 'flock', 'school'], 'Some groups have special names: a pack of wolves, a herd of cows, a flock of birds, a school of fish.'),
+  I(2, 'A group of fish is called a...', 'school', ['pack', 'team', 'flock'], 'A school of fish. (No homework, though.)'),
+  I(2, 'A group of birds is called a...', 'flock', ['herd', 'pack', 'class'], 'A flock of birds.'),
+  I(2, 'A group of cows is called a...', 'herd', ['flock', 'school', 'pack'], 'A herd of cows.'),
+  I(2, 'Dex made the sandwich all by ___.', 'himself', ['hisself', 'him', 'he'], 'Use "himself" when a boy does something to or for himself. "Hisself" is not a word.'),
+  I(2, 'We fixed the radio ___.', 'ourselves', ['ourself', 'us', 'we'], '"Ourselves" goes with "we."'),
+  I(2, 'Priya taught ___ to read maps.', 'herself', ['hers', 'her', 'she'], '"Herself" goes with "she."'),
+  I(2, 'The critters fed ___.', 'themselves', ['theirselves', 'them', 'they'], '"Themselves" goes with "they." "Theirselves" is not a word.'),
+  I(2, 'I can tie my shoes by ___.', 'myself', ['me', 'I', 'mine'], '"Myself" goes with "I."'),
+  I(2, 'Wren runs ___.', 'quickly', ['quick', 'quickness', 'quicked'], 'The word tells HOW she runs, so it needs -ly: quickly.'),
+  I(2, 'The ___ dragon slept in the cave.', 'quiet', ['quietly', 'quieted', 'quietness'], 'The word describes the dragon (a thing), so use quiet, not quietly.'),
+  I(2, 'Bash spoke ___ to the ferns.', 'softly', ['soft', 'softness', 'softer'], 'The word tells HOW he spoke, so it needs -ly: softly.'),
+  I(2, 'Which would you say to your principal?', 'Good morning. May I ask a question?', ["Hey, what's up?", 'Yo!', 'Gimme a sec.'], 'With grown-ups at school we use polite, formal words.'),
+  I(2, 'Which sentence is the most POLITE and formal?', 'I would like some water, please.', ['Gimme water.', 'Water. Now.', 'I wanna drink.'], 'Formal language uses whole words and "please."'),
+  I(2, 'What does the compound word "birdhouse" mean?', 'a house for a bird', ['a bird that is a house', 'a very big bird', 'a house shaped like a bird'], 'A compound word joins two words. Bird + house is a house for a bird.'),
+  I(2, 'Which two words make the compound word "sunlight"?', 'sun + light', ['su + nlight', 'sunl + ight', 'sunny + lit'], 'Sunlight is light from the sun.'),
+  I(3, 'Which word names something you CANNOT touch?', 'bravery', ['wrench', 'tower', 'snack'], 'Bravery is an idea, not an object. Words like that are called abstract nouns.'),
+  I(3, 'Which sentence compares correctly?', 'Bash is taller than Dex.', ['Bash is more taller than Dex.', 'Bash is tallest than Dex.', 'Bash is most tall than Dex.'], 'To compare two things, add -er and use "than."'),
+  I(3, 'Which sentence compares THREE or more correctly?', 'Krush is the biggest critter of all.', ['Krush is the bigger critter of all.', 'Krush is the most biggest critter.', 'Krush is more big of all.'], 'To compare three or more, add -est.')
+];
+addSkill('grammar2', 'Language & Grammar', { n: 'Grammar Power', sub: 'ela', std: 'L.2.1a,c,e · L.2.3 · L.2.4d · L.3.1', g: [2, 3], gen: itemQ(GRAM2) },
+  ['Some groups have their own names: a PACK of wolves, a HERD of cows, a FLOCK of birds, a SCHOOL of fish.', 'When someone does something alone, we use a -self word: I did it myself. He did it himself. They did it themselves.', 'A describing word for a THING has no -ly: the quiet dragon. A word that tells HOW something is done usually ends in -ly: it slept quietly.']);
+const SHADES = [
+  I(2, 'Which word means to throw the HARDEST?', 'hurl', ['toss', 'throw', 'drop'], 'Toss is gentle, throw is normal, and hurl is with all your might.'),
+  I(2, 'Which is the STRONGEST way to say "big"?', 'gigantic', ['large', 'big', 'medium'], 'Big, large, huge, gigantic: each one is bigger than the last.'),
+  I(2, 'Which word shows someone is the MOST upset?', 'furious', ['annoyed', 'mad', 'fine'], 'Annoyed is a little upset. Mad is more. Furious is the most.'),
+  I(2, 'Which word means to move the FASTEST?', 'sprint', ['stroll', 'walk', 'jog'], 'Stroll, walk, jog, sprint: slowest to fastest.'),
+  I(2, 'Which word means just a LITTLE bit wet?', 'damp', ['soaked', 'drenched', 'flooded'], 'Damp is slightly wet. Soaked and drenched are very wet.'),
+  I(2, 'Which word means VERY cold?', 'freezing', ['cool', 'chilly', 'warm'], 'Cool, chilly, cold, freezing: each one is colder.'),
+  I(2, 'Which word means to look at something for a long time?', 'stare', ['glance', 'peek', 'blink'], 'A glance and a peek are quick. A stare is long.'),
+  I(2, 'Which food would you describe as SPICY?', 'hot peppers', ['ice cream', 'plain bread', 'milk'], 'Spicy foods make your mouth feel hot.'),
+  I(2, 'Which of these would you describe as COZY?', 'a warm blanket', ['a rainstorm', 'a cactus', 'a loud alarm'], 'Cozy means warm, soft and comfortable.'),
+  I(3, 'Which word means you are SURE something is true?', 'know', ['wonder', 'suspect', 'guess'], 'Wonder, guess, suspect, believe, know: each one is more certain.'),
+  I(3, 'Which is the STRONGEST way to say "happy"?', 'overjoyed', ['glad', 'pleased', 'content'], 'Content and glad are mild. Overjoyed is as happy as it gets.'),
+  I(3, 'Which word means to eat very quickly and greedily?', 'gobble', ['nibble', 'taste', 'chew'], 'To nibble is to take tiny bites. To gobble is to eat fast.')
+];
+addSkill('shades', 'Vocabulary', { n: 'Shades of Meaning', sub: 'ela', std: 'L.2.5a,b · L.3.5c', g: [2, 3], gen: itemQ(SHADES) },
+  ['Some words mean almost the same thing, but one is STRONGER. Big, huge, gigantic. Cool, cold, freezing.', 'Line them up from weakest to strongest in your head, like a ladder. Toss is at the bottom, throw is in the middle, hurl is at the top.', 'Picking the exact word makes writing better. "Dex was furious" tells you much more than "Dex was mad."']);
+// sentences, punctuation, research and reading: grade 2 items
+SENT.push(
+  I(2, 'Which is a COMPLETE sentence?', 'The critter ran under the porch.', ['Under the porch.', 'The little critter.', 'Ran fast.'], 'A complete sentence tells WHO and WHAT THEY DID.'),
+  I(2, 'Put the words in order to make a sentence:  ran / the / fast / critter', 'The critter ran fast.', ['Ran the fast critter.', 'Critter the fast ran.', 'Fast critter the ran.'], 'Start with who (the critter), then what it did (ran fast).'),
+  I(2, 'Which sentence tells you the MOST?', 'The tiny gray critter ran under the porch.', ['The critter ran.', 'It ran.', 'Critter.'], 'Adding describing words and where it happened makes a sentence tell more.'),
+  I(2, '"Dex is tall. Dex is fast."  Which sentence joins them?', 'Dex is tall and fast.', ['Dex is tall Dex is fast.', 'Dex tall fast.', 'Dex is tall, fast is Dex.'], 'Use "and" to join two ideas about the same person.'),
+  I(2, 'Which one is NOT a complete sentence?', 'The big red.', ['The bell rang.', 'Wren ran home.', 'It is raining.'], '"The big red" does not tell what happened. Red what? Did what?'));
+SKILLS.sentence.g = [2, 6]; SKILLS.sentence.std = 'L.2.1f · L.4.1f · L.5.1 · L.6.1';
+PUNCT.push(
+  I(2, null, 'Dear Mom,', ['Dear Mom', 'dear Mom,', 'Dear, Mom'], 'The greeting of a letter starts with a capital and ends with a comma.'),
+  I(2, null, 'Your friend, Dex', ['Your friend Dex,', 'your friend, Dex', 'Your, friend Dex'], 'The closing of a letter has a comma before your name.'),
+  I(2, null, 'We carve pumpkins on Halloween.', ['We carve pumpkins on halloween.', 'we carve pumpkins on Halloween.', 'We carve Pumpkins on Halloween.'], 'Holidays are special names, so they start with a capital letter.'),
+  I(2, null, "That is Dex's backpack.", ['That is Dexs backpack.', "That is Dexs' backpack.", 'That is dex\'s backpack.'], "Add an apostrophe and s to show that something belongs to Dex."),
+  I(2, null, 'Priya lives in Pacifica, California.', ['Priya lives in pacifica, california.', 'Priya lives in Pacifica California.', 'priya lives in Pacifica, California.'], 'Names of towns and states get capital letters, with a comma between them.'));
+RESEARCH.push(
+  I(2, 'Which word comes FIRST in ABC order?', 'apple', ['bell', 'critter', 'dragon'], 'A comes before B, C and D.'),
+  I(2, 'Which word comes FIRST in ABC order?', 'bat', ['bell', 'big', 'bus'], 'They all start with b, so look at the SECOND letter: a comes before e, i and u.'),
+  I(2, 'Which word comes LAST in ABC order?', 'zombie', ['moon', 'tower', 'storm'], 'Z is the last letter of the alphabet.'),
+  I(2, 'You do not know what the word "gloomy" means. Where should you look?', 'a dictionary', ['a calendar', 'a map', 'a cookbook'], 'A dictionary tells what words mean. The words are in ABC order.'),
+  I(2, 'In a book, what is a CAPTION?', 'words that explain a picture', ['the name of the author', 'the last page', 'a list of chapters'], 'A caption sits next to a picture and tells you about it.'),
+  I(2, 'Why are some words in a book printed in BOLD (dark) letters?', 'They are important words to notice.', ['The printer made a mistake.', 'They are spelled wrong.', 'They are the easy words.'], 'Bold print tells you: this word matters. It is often explained in the glossary.'),
+  I(2, 'What does a HEADING tell you?', 'what the next part is about', ['who wrote the book', 'how many pages there are', 'what the pictures cost'], 'A heading is like a little title for one part of the page.'),
+  I(2, 'Where do you look to find the page where a chapter starts?', 'the table of contents', ['the back cover', 'a caption', 'the glossary'], 'The table of contents is at the front. It lists the chapters and their pages.'));
+SKILLS.research.g = [2, 6]; SKILLS.research.n = 'Research & Book Skills'; SKILLS.research.std = 'L.2.2e · L.2.4e · RI.2.5 · W.3.8 – W.6.8';
+PASSAGES.push({ g: [2, 2], title: 'Rain Song (a poem)', text: 'Drip, drop, on the top / of the tower in the night. / Drip, drop, do not stop, / wash the town till morning light. / Dex is dry and Dex is warm, / listening to the gentle storm.', qs: [
+  ['Which two words from the poem RHYME?', 'night and light', ['top and tower', 'town and till', 'dry and Dex'], 'Rhyming words end with the same sound: night, light.'],
+  ['Which words are repeated to give the poem a beat?', 'Drip, drop', ['morning light', 'gentle storm', 'the tower'], 'Repeating "Drip, drop" sounds like rain falling again and again.'],
+  ['How does Dex feel in this poem?', 'safe and cozy', ['scared and cold', 'angry and loud', 'bored and sleepy'], 'He is dry and warm, and the storm is "gentle."', ['Dex is dry and Dex is warm,', ['Drip, drop, on the top', 'of the tower in the night.', 'wash the town till morning light.']]]] });
+for (const p of PASSAGES) {
+  if (p.title === "Wren's Race") p.qs.push(['What happens at the END of the story?', 'Wren runs faster than ever.', ['Wren trips on a root.', 'Wren wants to be the fastest.', 'Wren scrapes her knee.'], 'The ending is the last thing that happens in a story.'], ['What happens at the BEGINNING of the story?', 'Wren wants to be the fastest kid in town.', ['Wren runs faster than ever.', 'Wren scrapes her knee.', 'Wren brushes off the dirt.'], 'The beginning tells who the story is about and what they want.']);
+  if (p.title === 'All About Gloops') p.qs.push(['Why did the author write this passage?', 'to teach facts about Gloops', ['to tell a funny story', 'to get you to buy a Gloop', 'to explain how to cook moss'], 'It gives fact after fact, so the author wants to inform you.']);
+  if (p.title === 'Why It Thunders') p.qs.push(['Why did the author write this passage?', 'to explain what causes thunder', ['to scare the reader', 'to tell a story about a storm', 'to sell umbrellas'], 'The passage explains how something works. That is writing to inform.']);
+}

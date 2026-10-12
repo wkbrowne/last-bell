@@ -62,3 +62,54 @@ progress on.
 - `js/pupvec.js`: the sentence-meaning model, loaded only when the Workshop opens
 - `js/engine.js`: read-aloud and the typing box
 - `android/.../MainActivity.java`: Android text-to-speech bridge
+
+## Grade 2 standards map
+
+Every Grade 2 Common Core standard that can be asked on a screen has a skill. 33 skills: 12 math, 21 English.
+
+| Standards | Skill |
+|---|---|
+| 2.OA.1, 2.MD.5 | Word Problems |
+| 2.OA.2, 2.NBT.5-8 | Add & Subtract (facts to 20, within 100, within 1000, 10 or 100 more and less, three addends) |
+| 2.OA.3-4, 2.G.2 | Even, Odd & Equal Groups; Shapes & Equal Parts (rows and columns) |
+| 2.NBT.1, 2.NBT.3 | Place Value (digit value, expanded form, number names) |
+| 2.NBT.2 | Mystery Numbers & Patterns (skip counting) |
+| 2.NBT.4 | Compare Numbers |
+| 2.NBT.9, MP.3 | Who Is Right? |
+| 2.MD.1-4, 2.MD.9-10 | Charts & Measuring (units, tools, charts, line-plot data) |
+| 2.MD.6 | Number Lines |
+| 2.MD.7 | Telling Time (five minutes, a.m. and p.m.) |
+| 2.MD.8 | Counting Money (coins, dollar bills, change) |
+| 2.G.1, 2.G.3 | Shapes & Equal Parts |
+| RF.2.3 | Phonics & Word Sounds; Sight Words; Listen for Sounds |
+| RF.2.4 | Fill the Gap; Maze Dash; Read-Aloud Check |
+| RL.2.1-7 | Reading: Stories (includes a poem, story beginning and ending) |
+| RI.2.1-8 | Reading: Information (includes author's purpose); Research & Book Skills (text features) |
+| SL.2.2 | Listening |
+| W.2.1-3 | Writing Workshop |
+| L.2.1 | Plural Nouns; Past-Tense Verbs; Subject-Verb Agreement; Parts of Speech; Grammar Power; Building Sentences |
+| L.2.2 | Punctuation & Capitals; Spelling; Research & Book Skills (ABC order, dictionary) |
+| L.2.3 | Grammar Power (formal and informal) |
+| L.2.4 | Context Clues; Word Parts; Grammar Power (compound words) |
+| L.2.5 | Synonyms & Antonyms; Shades of Meaning |
+
+Not covered because a screen cannot do it: measuring a real object with a ruler (2.MD.1), drawing shapes and
+graphs (2.G.1, 2.MD.10), speaking and discussion (SL.2.1, SL.2.4-6), handwriting, and longer writing pieces.
+
+## How practice adapts
+
+Each skill sits in a box from 0 (shaky) to 4 (solid). A right answer moves it up one box; a miss sends it to box 0.
+
+- **Weaknesses come back.** A missed skill returns three questions later, marked "One more try". At most one
+  question in three is a retry. Box-0 skills are also dealt twice in each round.
+- **Strengths are kept warm.** Solid skills still come back, marked "Review", but less often the higher the
+  box: every round, then every second, third and fourth round.
+- **Stretch and warm-up.** A mastered skill sometimes returns one grade harder ("Stretch"). A skill missed
+  three times gets an easier version first ("Warm-up"), where an earlier grade has that skill. Neither counts
+  toward mastery.
+- **Mastery.** Four right in a row with at least five attempts, or passing the Study Hall proof. Two later
+  misses take mastery away so the skill returns to regular practice.
+- **Night Watch** runs always drill the weakest unmastered skill.
+
+In a 300-question simulation of a student weak in three skills, those three took 36% of the questions and
+every other skill still came up at least five times.
