@@ -6,6 +6,6 @@ cd "$(dirname "$0")"
 n=$(sed -n "s/^const CACHE = 'last-bell-v\([0-9]*\)';/\1/p" sw.js)
 [ -n "$n" ] || { echo "bump.sh: no CACHE line in sw.js"; exit 1; }
 m=$((n + 1))
-sed -i '' "s/last-bell-v$n'/last-bell-v$m'/; s/?v=$n\b/?v=$m/g" sw.js
-sed -i '' "s/?v=$n\b/?v=$m/g" index.html
+sed -i '' "s/last-bell-v$n'/last-bell-v$m'/; s/?v=$n\([^0-9]\)/?v=$m\1/g" sw.js
+sed -i '' "s/?v=$n\([^0-9]\)/?v=$m\1/g" index.html
 echo "cache v$n -> v$m ($(grep -c "?v=$m" index.html) script tags in index.html, $(grep -c "?v=$m" sw.js) in sw.js)"
