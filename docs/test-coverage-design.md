@@ -312,3 +312,22 @@ event. In the app it opens the tablet's share sheet; in a browser it shares or d
 
 **How to use it.** Read the findings every week or two, change one thing, and see whether that finding goes away in
 the next fortnight. Act on patterns, not single events: one child is a small sample.
+
+## A gentler start, tap to use, and backups (v1.28)
+
+**A gentler start.** Measured with `HUNT.earlyGame()`: a plain player (one critter, always the first move, three
+answers in four right) from a new game until the first boss falls. Before: the boss beaten on the fifth try, 8 lost
+battles out of 12. After: beaten on the second try in all three runs, 1–2 lost battles.
+- The starter begins at level 6; the school area and the first two school fights are two to three levels lower.
+- In Grades 2 and 3 enemies hit for 70% and 82% of normal damage.
+- In Grades 2 and 3 a win gives each standing critter a quarter of its health back.
+- A boss that wins comes back two levels weaker each time, up to six.
+- When the team is under 40% health the crew says so once, and the guide arrow points to the nearest campfire or the
+  Nest until they have rested.
+
+**Tap to use.** A quick tap on a character, object, wandering stranger or door walks Dex to it (up to 30 steps) and
+uses it. Tapping plain ground still acts on whatever he is facing. Holding a direction or pressing again cancels the walk.
+
+**Backups.** Options → "Back up or restore progress" (grown-up gate). Back up shares or saves the whole game as one
+line of text beginning `ZZSAVE1:`; restore takes that text pasted back in, shows what it contains, and asks before
+replacing anything. Separately, once a day the previous save is kept as a spare, and a damaged save falls back to it.

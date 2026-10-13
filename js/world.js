@@ -146,7 +146,7 @@ const ENC = {
   suburbs: [['gnawbie', 3, 5, 3], ['thornpup', 3, 5, 3], ['shambler', 4, 6, 4], ['murdle', 4, 6, 2], ['sprinter', 5, 6, 1]],
   park: [['boltbug', 4, 6, 4], ['thornpup', 4, 6, 3], ['gnawbie', 4, 6, 2], ['murdle', 5, 6, 2]],
   lot: [['gloop', 5, 7, 4], ['thornpup', 5, 7, 3], ['dustmoth', 5, 7, 2], ['shambler', 5, 7, 2]],
-  school: [['shambler', 6, 8, 4], ['sprinter', 6, 8, 3], ['lunchlady', 7, 8, 1], ['boltbug', 6, 8, 2]],
+  school: [['shambler', 5, 7, 4], ['sprinter', 5, 7, 3], ['lunchlady', 6, 7, 1], ['boltbug', 5, 7, 2]],
   downtown: [['sprinter', 9, 12, 3], ['shambler', 10, 12, 3], ['gnawbie', 10, 12, 2], ['murdle', 10, 12, 2], ['zaprat', 10, 11, 1]],
   mall: [['shambler', 11, 13, 3], ['sprinter', 11, 13, 3], ['zaprat', 11, 13, 2], ['boltbug', 11, 13, 2]],
   junk: [['scrapup', 14, 16, 3], ['rubblet', 14, 17, 3], ['gnawbie', 15, 17, 2], ['hazmat', 15, 17, 3]],

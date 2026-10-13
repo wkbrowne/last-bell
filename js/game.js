@@ -51,16 +51,40 @@ async function useItem(id, c) {
   await say(null, `Used ${it.n} on ${cname(c)}.`, { auto: 600 });
   return true;
 }
+// Once a day the save from before is kept as a second copy, in case the main one is ever damaged.
+function keepCopy() { try { const old = localStorage.getItem(SAVE_KEY), day = new Date().toDateString(); if (old && localStorage.getItem(SAVE_KEY + '_bakday') !== day) { JSON.parse(old); localStorage.setItem(SAVE_KEY + '_bak', old); localStorage.setItem(SAVE_KEY + '_bakday', day); } } catch (e) {} }
 function saveGame(silent) {
+  keepCopy();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(G, (k, v) => (k === 'st' || k === 'stun' || k === 'dhp') ? undefined : v)); if (!silent) toast('Game saved'); } catch (e) { if (!silent) toast('Could not save'); }
 }
 // Leaving the page (tab switched, app closed) ends the sitting and keeps it, so the report can say where she stopped.
 document.addEventListener('visibilitychange', () => { if (document.hidden && G) { Sess.away(); saveGame(true); } });
 addEventListener('pagehide', () => { if (G) { Sess.away(); saveGame(true); } });
 function loadGame() {
-  try { const s = localStorage.getItem(SAVE_KEY); if (!s) return false; const d = JSON.parse(s), n = newState(); G = Object.assign(n, d); G.learn = Object.assign(n.learn, d.learn); Learn.migrate(); return true; } catch (e) { return false; }
+  const tryKey = k => { try { const s = localStorage.getItem(k); if (!s) return false; const d = JSON.parse(s); if (!d || !Array.isArray(d.party) || !d.learn) return false; const n = newState(); G = Object.assign(n, d); G.learn = Object.assign(n.learn, d.learn); Learn.migrate(); return true; } catch (e) { return false; } };
+  return tryKey(SAVE_KEY) || tryKey(SAVE_KEY + '_bak');   // fall back to yesterday's copy if the main save is damaged
 }
-const hasSave = () => { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } };
+const hasSave = () => { try { return !!(localStorage.getItem(SAVE_KEY) || localStorage.getItem(SAVE_KEY + '_bak')); } catch (e) { return false; } };
+// BACKUP: the whole game as one line of text a grown-up can mail to themselves, and put back on this or another tablet.
+const Backup = {
+  TAG: 'ZZSAVE1:',
+  make() { saveGame(true); return this.TAG + btoa(unescape(encodeURIComponent(localStorage.getItem(SAVE_KEY) || ''))); },
+  read(text) { try { const i = String(text).indexOf(this.TAG); if (i < 0) return null; const d = JSON.parse(decodeURIComponent(escape(atob(String(text).slice(i + this.TAG.length).replace(/[^A-Za-z0-9+/=]/g, ''))))); return d && Array.isArray(d.party) && d.learn ? d : null; } catch (e) { return null; } },
+  describe(d) { const top = d.party.reduce((a, c) => Math.max(a, c.lvl || 0), 0); return `Grade ${d.learn.grade}, ${d.learn.right || 0} questions right, ${d.party.length} critter${d.party.length === 1 ? '' : 's'} (top level ${top}), ${(d.badges || []).length} badges`; },
+  restore(d) { try { const cur = localStorage.getItem(SAVE_KEY); if (cur) localStorage.setItem(SAVE_KEY + '_bak', cur); localStorage.setItem(SAVE_KEY, JSON.stringify(d)); return loadGame(); } catch (e) { return false; } },
+  async menu() {
+    while (true) {
+      const i = await menu(['Back up: save or send a copy', 'Restore: put a copy back', 'Back'], { x: 220, y: 240, w: 520, title: 'BACK UP PROGRESS' });
+      if (i === 0) { const r = await shareText('Zombie Zone progress backup', 'zombie-zone-progress.txt', this.make()); await say(null, r === 'failed' ? 'The backup could not be saved on this device.' : r === 'cancelled' ? 'Nothing was sent.' : r === 'saved' ? 'Saved as zombie-zone-progress.txt in your downloads. Keep it somewhere safe.' : 'Done. Keep that message somewhere safe: it is the whole game.'); }
+      else if (i === 1) {
+        const t = await typeAnswer('Paste the backup text here (it starts with ZZSAVE1:)', { max: 400000, rows: 4, cancel: 'Cancel', placeholder: 'Press and hold here, then choose Paste' }); if (t === null) continue;
+        const d = this.read(t); if (!d) { await say(null, 'That is not a Zombie Zone backup, or part of it is missing. Copy the whole text and try again.'); continue; }
+        if ((await ask(null, `Backup found: ${this.describe(d)}.\nReplace the game on this device with it? The game that is here now is kept as a spare copy.`, ['Yes, restore it', 'No'])) !== 0) continue;
+        if (this.restore(d)) { await fadeOut(300); enterWorld(); await fadeIn(300); await say(null, 'Restored. Welcome back!'); return; } await say(null, 'The backup could not be restored.');
+      } else return;
+    }
+  }
+};
 
 // ---------------------------------------------------------------- world
 const tileAt = (map, x, y) => { const m = MAPS[map].m; return (x >= 0 && y >= 0 && x < m.w && y < m.h) ? m.t[y][x] : 'W'; };
@@ -145,11 +169,24 @@ async function blackout() {
   await fadeOut(400); healAll(); warpTo(G.rest.map, G.rest.x, G.rest.y, 'down'); checkZone(true); await fadeIn(400);
   await say('dex', pick(['Okay. Deep breath. Everybody gets a snack, and we try again.', "Apocalypse Rule #9: Losing just means you're not done yet.", 'We almost had it. Maybe a little practice in Study Hall first?']));
 }
-async function afterBattle() { await checkFeats(); await Learn.maybeOffer(); }
+// The team is worn out: under 40% of its health left. The guide arrow then points to the nearest place to rest.
+function hurt() { const p = G && G.party; if (!p || !p.length) return false; return p.reduce((a, c) => a + Math.max(0, c.hp), 0) / p.reduce((a, c) => a + maxHp(c), 0) < .4; }
+// After a win the team gets a little of its health back (Grades 2 and 3), so one long walk is not a slow defeat.
+function catchBreath() { if (!G || G.learn.grade > 3) return; for (const c of G.party) if (c.hp > 0) { c.hp = Math.min(maxHp(c), c.hp + Math.ceil(maxHp(c) * .25)); c.dhp = c.hp; } }
+async function afterBattle() {
+  await checkFeats(); if (G.party.some(c => c.hp > 0)) catchBreath();
+  if (!hurt()) PL.restTold = false;
+  else if (!PL.restTold) { PL.restTold = true; await say(Learn.teacher(), 'Our critters are worn out. Follow the arrow to the nearest campfire or the Nest and choose REST. It heals everyone.'); }
+  await Learn.maybeOffer();
+}
+// A boss that beats him comes back two levels weaker each time (up to six), so nobody is stuck behind a fight forever.
 async function bossFight(o) {
-  const r = await Battle.run(Object.assign({ kind: 'boss' }, o));
-  if (r !== 'win') { await blackout(); return false; }
-  await checkFeats(); PL.pendingOffer = true; return true;
+  const last = o.foes[o.foes.length - 1], key = String(last[2] || last[0]), L = G.lost || (G.lost = {}), ease = Math.min(6, 2 * (L[key] || 0));
+  const foes = ease ? o.foes.map(f => [f[0], Math.max(2, f[1] - ease)].concat(f.slice(2))) : o.foes;
+  if (ease) await say(Learn.teacher(), 'They still look tired from last time. This is our chance!');
+  const r = await Battle.run(Object.assign({ kind: 'boss' }, o, { foes }));
+  if (r !== 'win') { L[key] = (L[key] || 0) + 1; await blackout(); return false; }
+  delete L[key]; catchBreath(); await checkFeats(); PL.pendingOffer = true; return true;
 }
 async function wild(z) {
   const tb = z.enc; let r = Math.random() * tb.reduce((a, e) => a + e[3], 0), e = tb[0];
@@ -170,6 +207,42 @@ function arrive() {
   if (PL.pendingOffer) { PL.pendingOffer = false; script(() => Learn.maybeOffer()); return; }
   if (PL.grace > 0) { PL.grace--; return; }
   if (TINFO[tileAt(G.map, G.x, G.y)].enc && G.party.length && Math.random() < .1) { const z = zoneAt(G.map, G.x, G.y); script(() => wild(z)); }
+}
+// What was tapped: a character or object that does something, a wandering stranger, or a door. Null for plain ground.
+function tapTarget(x, y) {
+  const m = MAPS[G.map].m, pxX = PL.px * 3, pxY = PL.py * 3, camX = clamp(pxX + 24 - W / 2, 0, Math.max(0, m.w * 48 - W)), camY = clamp(pxY + 24 - H / 2, 0, Math.max(0, m.h * 48 - H)), wx = x + camX, wy = y + camY;
+  let best = null, bd = 1e9;
+  for (const e of entsOn(G.map)) { if (!e.act) continue; const S = (ESIZE[e.spr] || (HUM[e.spr] ? 98 : 82)) * (ESIZE[e.spr] ? 1 : (e.big || 1)), cx = e.x * 48 + 24, by = e.y * 48 + 45;
+    if (Math.abs(wx - cx) < Math.max(30, S * .42) && wy > by - S * .95 - 6 && wy < by + 12) { const d = Math.hypot(wx - cx, wy - (by - S * .4)); if (d < bd) { bd = d; best = { x: e.x, y: e.y }; } } }
+  if (G.map === 'world') for (const w of WAND) if (w.state === 'walk' && Math.abs(wx - (w.px * 3 + 24)) < 34 && wy > w.py * 3 - 56 && wy < w.py * 3 + 54) best = best || { x: w.x, y: w.y };
+  if (best) return best;
+  const tx = Math.floor(wx / 48), ty = Math.floor(wy / 48);
+  for (const [cx, cy] of [[tx, ty], [tx, ty + 1]]) { if (WARPS[`${G.map}:${cx},${cy}`]) return { x: cx, y: cy, door: true }; if (tileAt(G.map, cx, cy) === 'D') return { x: cx, y: cy }; }
+  return null;
+}
+// the shortest walk from Dex to a tile next to (tx, ty); null if it is more than 30 steps or cannot be reached
+function pathNextTo(tx, ty) {
+  const m = MAPS[G.map].m, w = m.w, prev = new Map(), q = [G.x + G.y * w]; prev.set(q[0], -1);
+  for (let i = 0; i < q.length && i < 3000; i++) { const c = q[i], x = c % w, y = (c - x) / w;
+    if (Math.abs(x - tx) + Math.abs(y - ty) === 1) { const p = []; for (let k = c; k !== -1; k = prev.get(k)) p.push([k % w, Math.floor(k / w)]); p.reverse(); return p.length <= 31 ? p.slice(1) : null; }
+    for (const d in DV) { const nx = x + DV[d][0], ny = y + DV[d][1], n = nx + ny * w; if (!prev.has(n) && passable(nx, ny)) { prev.set(n, c); q.push(n); } } }
+  return null;
+}
+// A quick tap on something walks Dex over to it and uses it. Returns false when plain ground was tapped.
+function worldTap(x, y) {
+  const t = tapTarget(x, y); if (!t) return false;
+  const path = Math.abs(t.x - G.x) + Math.abs(t.y - G.y) === 1 ? [] : pathNextTo(t.x, t.y); if (!path) return false;
+  PL.auto = { path, t }; return true;
+}
+// one step of an automatic walk: a direction to move, or null when it has arrived (and used the thing) or was cancelled
+function autoStep() {
+  const a = PL.auto; if (!a) return null;
+  if (Pointer.down) { PL.auto = null; return null; }
+  const dirTo = (x, y) => x > G.x ? 'right' : x < G.x ? 'left' : y > G.y ? 'down' : 'up';
+  if (a.path.length) { const [nx, ny] = a.path[0]; if (Math.abs(nx - G.x) + Math.abs(ny - G.y) !== 1 || !passable(nx, ny)) { PL.auto = null; return null; } a.path.shift(); return dirTo(nx, ny); }
+  PL.auto = null; if (Math.abs(a.t.x - G.x) + Math.abs(a.t.y - G.y) !== 1) return null;
+  G.dir = dirTo(a.t.x, a.t.y); if (a.t.door) return G.dir;   // a doorway: step into it
+  interact(); return null;
 }
 function interact() {
   const [dx, dy] = DV[G.dir], x = G.x + dx, y = G.y + dy, e = entAt(G.map, x, y);
@@ -196,16 +269,17 @@ function worldUpdate(dt, pr) {
   pointerSteer();
   G.time += dt; if (PL.banner > 0) PL.banner -= dt;
   wandUpdate(dt);
-  if (Script.n > 0 || Battle.on) return;
+  if (Script.n > 0 || Battle.on) { PL.auto = null; return; }
   if (PL.moving) {
     PL.t += dt / (Input.held.run ? 80 : 130);
     if (PL.t >= 1) { PL.moving = false; G.x = PL.tx; G.y = PL.ty; PL.px = G.x * 16; PL.py = G.y * 16; arrive(); }
     else { PL.px = (PL.fx + (PL.tx - PL.fx) * PL.t) * 16; PL.py = (PL.fy + (PL.ty - PL.fy) * PL.t) * 16; }
     if (PL.moving || Script.n > 0) return;
   }
-  for (const k of pr) { if (k === 'a') { interact(); return; } if (k === 'b') { script(pauseMenu); return; } }
-  const d = DIRKEYS.find(k => Input.held[k]);
-  if (!d) return;
+  for (const k of pr) { if (k === 'a') { PL.auto = null; interact(); return; } if (k === 'b') { PL.auto = null; script(pauseMenu); return; } }
+  let d = DIRKEYS.find(k => Input.held[k]);
+  if (d) PL.auto = null; else d = autoStep();
+  if (!d || Script.n > 0) return;
   G.dir = d;
   const nx = G.x + DV[d][0], ny = G.y + DV[d][1], w = WARPS[`${G.map}:${nx},${ny}`];
   if (w) { script(() => doWarp(w)); return; }
@@ -282,7 +356,14 @@ const Guide = {
   key: null, path: [], tgt: null,
   steps: [['coach', 'school', 28, 17], ['bash', 'mall', 6, 4], ['cop', 'mall', 33, 4], ['battery', 'mall', 20, 2], ['wrenBeat', 'world', 107, 72], ['krush', 'world', 120, 84], ['broadcast', 'world', 106, 8],
     ['flatline', 'hospital', 17, 10], ['bellTolls', 'hospital', 17, 2], ['butler', 'manor', 18, 12], ['bellSilenced', 'manor', 18, 3], ['cleared', 'world', 15, 92]],
-  final() { if (!flag('starter')) return null; for (const s of this.steps) if (!flag(s[0])) return { map: s[1], x: s[2], y: s[3] }; return null; },
+  final() {
+    if (!flag('starter')) return null;
+    if (hurt()) {   // rest first: the nearest campfire or the Nest
+      const spots = ENT.filter(e => (e.spr === 'fire' || e.spr === 'nest') && e.map === G.map && (!e.if || e.if())).sort((a, b) => Math.abs(a.x - G.x) + Math.abs(a.y - G.y) - Math.abs(b.x - G.x) - Math.abs(b.y - G.y));
+      return spots[0] ? { map: G.map, x: spots[0].x, y: spots[0].y, rest: true } : { map: 'world', x: 41, y: 62, rest: true };
+    }
+    for (const s of this.steps) if (!flag(s[0])) return { map: s[1], x: s[2], y: s[3] }; return null;
+  },
   // the goal on THIS map: the thing itself, or the door that leads toward it
   local(t) {
     if (t.map === G.map) return t;
@@ -291,7 +372,7 @@ const Guide = {
   },
   solve() {
     const f = G.guide === false ? null : this.final(), t = f && this.local(f);
-    const key = t ? [G.map, G.x, G.y, t.x, t.y, Object.keys(G.flags).length].join() : '';
+    const key = t ? [G.map, G.x, G.y, t.x, t.y, Object.keys(G.flags).length, hurt()].join() : '';
     if (key === this.key) return; this.key = key; this.path = []; this.tgt = t; if (!t) return;
     const m = MAPS[G.map].m, w = m.w, solid = new Set(entsOn(G.map).filter(e => e.solid).map(e => e.x + e.y * w));
     const ok = (x, y) => x >= 0 && y >= 0 && x < w && y < m.h && !TINFO[m.t[y][x]].s && !solid.has(x + y * w);
@@ -530,6 +611,7 @@ async function optionsMenu() {
       [`Daily goal: ${G.goal} questions`, async () => { const k = await menu(['10 questions', '20 questions', '30 questions'], { x: 330, y: 250, w: 300, sel: [10, 20, 30].indexOf(G.goal), title: 'Daily goal' }); if (k >= 0) G.goal = [10, 20, 30][k]; }],
       [`Play-time limit: ${G.limitMin ? G.limitMin + ' minutes' : 'off'}  (grown-ups)`, async () => { if (!(await grownUp())) return; const k = await menu(['Off', '15 minutes', '20 minutes', '30 minutes', '45 minutes'], { x: 330, y: 230, w: 300, title: 'Stop for the day after' }); if (k >= 0) G.limitMin = [0, 15, 20, 30, 45][k]; }],
       ['Report Card  (grown-ups)', () => Learn.report()],
+      ['Back up or restore progress  (grown-ups)', async () => { if (await grownUp()) await Backup.menu(); }],
       ['How play is going  (grown-ups)', async () => { if (await grownUp()) await PlayLog.report(); }],
       [`Claude marking: ${Grader.key() ? 'ON' : 'off'}  (grown-ups)`, async () => {
         if (!(await grownUp())) return;
@@ -964,7 +1046,7 @@ function step(dt) {
   const pr = Input.presses.splice(0);
   for (const t of Input.taps.splice(0)) {
     const top = UI.stack[UI.stack.length - 1];
-    if (top) { if (top.tap) top.tap(t.x, t.y); else pr.push('a'); } else pr.push('a');
+    if (top) { if (top.tap) top.tap(t.x, t.y); else pr.push('a'); } else if (!(walkable() && worldTap(t.x, t.y))) pr.push('a');
   }
   if (pr.includes('mute')) toast(Snd.toggleMute() ? 'Sound off' : 'Sound on');
   if (G && (Scene === 'world' || Scene === 'battle')) dayState().ms += dt;

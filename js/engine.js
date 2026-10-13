@@ -482,7 +482,7 @@ function typeAnswer(label, opts) {
   opts = opts || {};
   return new Promise(res => {
     const box = document.getElementById('typebox'), inp = document.getElementById('typein'), ok = document.getElementById('typeok'), no = document.getElementById('typecancel');
-    document.getElementById('typelabel').textContent = label; inp.value = opts.value || ''; inp.placeholder = opts.placeholder || 'Type here...'; inp.rows = opts.rows || 3; no.textContent = opts.cancel || 'Skip';
+    document.getElementById('typelabel').textContent = label; inp.value = opts.value || ''; inp.placeholder = opts.placeholder || 'Type here...'; inp.rows = opts.rows || 3; inp.maxLength = opts.max || 240; no.textContent = opts.cancel || 'Skip';
     box.hidden = false; setTimeout(() => { try { inp.focus(); } catch (e) {} }, 60);
     const m = { update() {}, draw() { if (opts.draw) opts.draw(); }, tap() {} }; UI.push(m);
     const close = v => { box.hidden = true; ok.onclick = no.onclick = null; try { inp.blur(); } catch (e) {} UI.pop(m); res(v); };

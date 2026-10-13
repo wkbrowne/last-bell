@@ -167,5 +167,26 @@ window.HUNT = {
     return { probe: 'battles', results, cards, finds: this.out() };
   },
 
+  // 7. How hard is the start? A plain player (one critter, always the first move, three answers in four right, rests when
+  //    the arrow says so) plays from a new game until the first boss is beaten. Not part of all(): it measures, it does not pass or fail.
+  async earlyGame(seed, until) {
+    seed = seed || 1; until = until || 'coach'; PlayLog.clear(); UI.stack.length = 0; Script.n = 0; const mute = Snd.muted; Snd.muted = true; Touch.enabled = true; G = newState();
+    const realCard = Learn.card; let cur = null, plan = [], n = 0, f = 0; const taps = new WeakMap(), digits = v => String(v).replace(/,/g, '').split('').map(c => ({ k: c })).concat([{ k: 'OK' }]);
+    Learn.card = function (q, t, m) { cur = q; n++; const type = q.type || 'mc', miss = (n * 7 + seed) % 4 === 0; plan = m && m.demo ? [] : type === 'num' ? (miss ? digits(1).concat(digits(q.ans)) : digits(q.ans)) : type === 'multi' ? q.as.map(i => ({ i })).concat([{ i: q.choices.length }]) : (miss ? [{ i: (q.a + 1) % q.choices.length }, { i: q.a }] : [{ i: q.a }]); const p = realCard.call(this, q, t, m); p.then(() => { if (cur === q) cur = null; }); return p; };
+    try {
+      script(() => Story.intro());
+      await this.frames(60000, i => { f = i; if (G && flag(until)) return false; for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
+        if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
+          if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+          else if (top && hs && hs.length && !cur) { const c = taps.get(top) || 0; taps.set(top, c + 1); if (top.close && c >= 1) pt = top.close; else { const h = hs[0]; pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+          else if (top && top.close && !cur) pt = top.close; Input.taps.push(pt); }
+        if (G && !top && Scene === 'world' && Script.n === 0) { const hx = G.x, hy = G.y; if (PL.moving) { G.x = PL.tx; G.y = PL.ty; } Guide.key = null; Guide.solve(); const p = Guide.path, t = Guide.tgt, gx = G.x, gy = G.y; G.x = hx; G.y = hy;
+          if (t) { const nx = p.length > 1 ? p[1] : [t.x, t.y], dx = nx[0] - gx, dy = nx[1] - gy, dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : dy < 0 ? 'up' : null; if (dir) Input.held[dir] = true; if (p.length <= 1 && i % 6 === 3) Input.presses.push('a'); } } });
+    } finally { Learn.card = realCard; Snd.muted = mute; for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; }
+    const E = PlayLog.load(), be = E.filter(e => e[1] === 'battle-end'), boss = be.filter(e => e[2].kind === 'boss');
+    const r = { reached: !!(G && flag(until)), gameMinutes: Math.round(f / 360) / 10, questions: E.filter(e => e[1] === 'q').length, battles: be.length, won: be.filter(e => e[2].res === 'win').length, lost: be.filter(e => e[2].res === 'lose').length, blackouts: E.filter(e => e[1] === 'blackout').length, bossTries: boss.map(e => e[2].foe + ':' + e[2].res), levels: G.party.map(c => c.lvl) };
+    UI.stack.length = 0; Script.n = 0; PlayLog.clear(); return r;
+  },
+
   async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };

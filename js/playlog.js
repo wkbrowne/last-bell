@@ -6,6 +6,12 @@
 //   PlayLog.report()            the grown-up screens (findings, then the export button)
 //   PlayLog.csv()               the whole diary as text, for a spreadsheet
 // Loaded after game.js: it wraps the game's own functions rather than changing them.
+// Hands a piece of text to a grown-up: the tablet's share sheet in the app, a share or a download in a browser.
+async function shareText(title, name, text) {
+  try { if (window.LBShare) { window.LBShare.text(title, text); return 'shared'; } } catch (e) {}
+  try { const f = new File([text], name, { type: 'text/plain' }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title }); return 'shared'; } } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); return 'saved'; } catch (e) { return 'failed'; }
+}
 const PlayLog = {
   KEY: 'lastbell_log_v1', MAX: 5000, ev: null, lastInput: 0, idle: false, dirty: 0,
   load() { if (this.ev) return this.ev; try { this.ev = JSON.parse(localStorage.getItem(this.KEY) || '[]'); } catch (e) { this.ev = []; } if (!Array.isArray(this.ev)) this.ev = []; return this.ev; },
@@ -68,12 +74,7 @@ const PlayLog = {
     return L.join('\n');
   },
   // hand the file to a grown-up: the tablet's share sheet in the app, a share or a download in a browser
-  async exportFile() {
-    const text = this.csv(), name = 'zombie-zone-play-log.csv';
-    try { if (window.LBShare) { window.LBShare.text('Zombie Zone play log', text); return 'shared'; } } catch (e) {}
-    try { if (navigator.canShare && navigator.canShare({ files: [new File([text], name, { type: 'text/csv' })] })) { await navigator.share({ files: [new File([text], name, { type: 'text/csv' })], title: 'Zombie Zone play log' }); return 'shared'; } } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
-    try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); return 'saved'; } catch (e) { return 'failed'; }
-  },
+  exportFile() { return shareText('Zombie Zone play log', 'zombie-zone-play-log.csv', this.csv()); },
 
   // ---- screens
   async report() {

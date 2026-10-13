@@ -297,9 +297,11 @@ var LearnCore = (function () {
     return host;
   }
   // Each rule is run on a made-up answer history. Every line should come back true.
-  // `mk` is the engine to test (default: this file's create), so check.sh can run today's rules against yesterday's engine.
-  function checks(mk) {
-    mk = mk || create; var out = {}, H = fakeHost(), E = mk(H), n = 0;
+  // `eng` is the engine to test, {create, sessions} (default: this file's), so check.sh can run today's rules against yesterday's engine;
+  // `out` is the object the verdicts are written into, so a caller keeps the rules already run if a later one throws.
+  function checks(eng, out) {
+    var mk = typeof eng === 'function' ? eng : (eng && eng.create) || create, mks = (eng && eng.sessions) || sessions;
+    out = out || {}; var H = fakeHost(), E = mk(H), n = 0;
     var run = function (seq, sigFn, id) { H.fresh(); id = id || 'm0'; var vs = seq.map(function (a, q) { return E.record('m4', id, a[0] === 'R', { fast: a === 'Mf', unsure: a === 'U', sig: sigFn ? sigFn(q) : 'kind' + (n++) }); }); return { vs: vs, st: E.rec('m4', id) }; };
     var R = function (c) { var a = []; while (c--) a.push('R'); return a; }, r;
     r = run(['M']); out['a first-time miss is taught with no penalty'] = r.vs[0] === 'intro' && !r.st.miss && r.st.box === 1;
@@ -377,7 +379,7 @@ var LearnCore = (function () {
     H.fresh(); for (var q34 = 0; q34 < 4; q34++) { var p34 = E.pick('m4'); E.record('m4', p34.id, true, { sig: 'q' }); } H.skills('m4').forEach(function (id) { E.rest('m4', id); });
     out['when every skill is rested there is nothing to ask'] = E.pick('m4') === null;
     // SESSIONS: a fake clock and a fake save
-    var clock = 1700000000000, SS = { sessions: [] }, Z = sessions({ state: function () { return SS; }, now: function () { return clock; } }), mins = function (m) { clock += m * 60000; };
+    var clock = 1700000000000, SS = { sessions: [] }, Z = mks({ state: function () { return SS; }, now: function () { return clock; } }), mins = function (m) { clock += m * 60000; };
     Z.note('play', 'home'); Z.note('question', 'retry'); Z.answered(true); Z.answered(false); var z1 = Z.list();
     out['a session opens on the first sign of play and keeps the last event'] = z1.length === 1 && z1[0].q === 2 && z1[0].r === 1 && z1[0].last.kind === 'question' && z1[0].last.detail === 'retry';
     Z.note('lesson', 'teach/watch'); Z.note('lesson', 'teach/two'); Z.note('lesson', 'teach/all'); Z.note('lesson', 'refresh/watch');

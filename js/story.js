@@ -152,7 +152,7 @@ const Story = {
       } });
       if (await ask('dex', `${SPECIES[starters[i]].n}? You and me, pal?`, ['Yes!', 'Let me think...']) === 0) pickd = i;
     }
-    addCritter(makeCritter(starters[pickd], 5)); setFlag('starter');
+    addCritter(makeCritter(starters[pickd], 6)); setFlag('starter');
     await say(null, `${SPECIES[starters[pickd]].n} joined your team! The other two scamper off into the grass.`);
     await badge('first');
     await say('guide', "CAPTAIN COSMOS FIELD GUIDE, page 1: Critters run on BRAIN POWER. When their human thinks hard, they hit HARD.");
@@ -181,7 +181,7 @@ const Story = {
   async coach() {
     await say('coach', 'TWEEEEEET! OKAFOR! YOU ARE... LATE... FOR GYM!');
     await say('dex', "Coach, it's July."); await say('coach', 'DROP... AND GIVE ME... BRAAAAINS!');
-    if (!(await bossFight({ foes: [['sprinter', 9, 'Hall Monitor'], ['coach', 11]], bg: 'indoor' }))) return;
+    if (!(await bossFight({ foes: [['sprinter', 6, 'Hall Monitor'], ['coach', 8]], bg: 'indoor' }))) return;
     setFlag('coach'); await badge('coach');
     await say(null, 'Coach Krunk flops onto a pile of dodgeballs and starts snoring. A little blue Boltbug zips out of the equipment cage.');
     await say('priya', 'TESLA! You found her!'); await say('priya', '...Dex Okafor. Forty-two days, and you never once checked the SCHOOL?');
@@ -199,7 +199,7 @@ const Story = {
   },
   async lunch() {
     await say(null, 'The Lunch Zombie raises her ladle. "SEEECONDS?"');
-    if (!(await bossFight({ foes: [['shambler', 7], ['lunchlady', 9, 'Lunch Lady Doris']], bg: 'indoor', music: 'battle' }))) return;
+    if (!(await bossFight({ foes: [['shambler', 6], ['lunchlady', 8, 'Lunch Lady Doris']], bg: 'indoor', music: 'battle' }))) return;
     setFlag('lunch'); await say('dex', 'No thanks. I brought my own.');
   },
   async bash() {

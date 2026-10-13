@@ -212,6 +212,7 @@ const Battle = {
     d *= (SPECIES[u.sp].t === m.t ? 1.5 : 1) * eff * (crit ? 1.5 : 1) * (.85 + Math.random() * .15);
     if (brain === true) d *= 1.3 + .1 * Math.min(5, st.combo);
     if (brain === false) d *= .6;
+    if (!isP) d *= [.7, .7, .7, .82][G.learn.grade] || 1;   // enemies hit softer for the youngest players (Grades 2 and 3)
     if (isP && G.gear.sword) d *= 1 + .06 * G.gear.sword;
     if (isP && m.t === 'DRAGON' && brain === true) d *= 1 + .08 * Math.min(5, st.combo);
     d = Math.max(1, Math.floor(d));
