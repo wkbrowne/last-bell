@@ -1,0 +1,15 @@
+#!/bin/sh
+# Refuses a commit if any staged script has a syntax error, or the shared engine's tests fail.
+# Turned on once per clone with:  git config core.hooksPath hooks
+cd "$(git rev-parse --show-toplevel)"
+JSC=/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc
+[ -x "$JSC" ] || { echo "pre-commit: jsc not found (macOS only); skipping"; exit 0; }
+ok=1
+for f in $(git diff --cached --name-only --diff-filter=AM -- 'js/*.js' sw.js); do
+  out=$($JSC -e "try { checkSyntax('$f'); print('ok') } catch (e) { print('SYNTAX ERROR ' + '$f' + ': ' + e) }")
+  [ "$out" = ok ] || { echo "$out"; ok=0; }
+done
+if git diff --cached --quiet -- js/learn-core.js; then :; else
+  $JSC js/learn-core.js -e 'var c = LearnCore.checks(), bad = Object.keys(c).filter(function (k) { return c[k] !== true; }); print(bad.length ? "ENGINE FAILED: " + bad.join("; ") : "engine ok " + LearnCore.VERSION)' | grep -v "^engine ok" && ok=0
+fi
+[ $ok = 1 ] || { echo "pre-commit: not committed"; exit 1; }
