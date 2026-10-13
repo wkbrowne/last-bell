@@ -14,7 +14,7 @@ function newState() {
     learn: { grade: 2, sk: {}, right: 0, total: 0, streak: 0, best: 0, recent: [], flip: false } };
 }
 const flag = k => !!G.flags[k];
-const setFlag = (k, v) => { G.flags[k] = v === undefined ? true : v; };
+const setFlag = (k, v) => { G.flags[k] = v === undefined ? true : v; if (typeof PlayLog !== 'undefined' && !/^(z_|st_|comic)/.test(k)) PlayLog.add('flag', k); };
 function give(id, n, silent) { G.bag[id] = (G.bag[id] || 0) + n; if (!silent) toast(`+${n} ${ITEMS[id].n}`); }
 function setObj(t) { G.obj = t; toast('New goal!'); }
 function logAdd(t) { G.log.push(t); }
@@ -530,6 +530,7 @@ async function optionsMenu() {
       [`Daily goal: ${G.goal} questions`, async () => { const k = await menu(['10 questions', '20 questions', '30 questions'], { x: 330, y: 250, w: 300, sel: [10, 20, 30].indexOf(G.goal), title: 'Daily goal' }); if (k >= 0) G.goal = [10, 20, 30][k]; }],
       [`Play-time limit: ${G.limitMin ? G.limitMin + ' minutes' : 'off'}  (grown-ups)`, async () => { if (!(await grownUp())) return; const k = await menu(['Off', '15 minutes', '20 minutes', '30 minutes', '45 minutes'], { x: 330, y: 230, w: 300, title: 'Stop for the day after' }); if (k >= 0) G.limitMin = [0, 15, 20, 30, 45][k]; }],
       ['Report Card  (grown-ups)', () => Learn.report()],
+      ['How play is going  (grown-ups)', async () => { if (await grownUp()) await PlayLog.report(); }],
       [`Claude marking: ${Grader.key() ? 'ON' : 'off'}  (grown-ups)`, async () => {
         if (!(await grownUp())) return;
         await say(null, 'With an Anthropic API key, typed sentences in the Writing Workshop are marked by Claude, with a line of feedback. The key stays on this device only. Each sentence marked is one small paid API call.');

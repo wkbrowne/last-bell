@@ -137,7 +137,7 @@ window.HUNT = {
       await open('practice menu', () => Learn.practiceMenu()); await open('team', () => partyMenu()); await open('bag', () => bagMenu()); await open('rest at the Nest', () => restMenu(true));
       await open('day summary', () => daySummary('TEST', 'test')); await open('quick check', () => Learn.placement(), 2500); await open('fact dash', () => Learn.factDash(), 4500);
       await open('practice test', () => Learn.testDay(), 3000); await open('maze dash', () => Learn.mazeDash(), 2500); await open('forge shop', () => nightShop('forge'), 1500); await open('potion shop', () => nightShop('brew'), 1500); await open('magic shop', () => nightShop('magic'), 1500);
-      await open('lesson', () => Learn.lesson('addsub'), 3000); await open('skill builder', async () => { G.learn.build = { id: 'money', sig: null }; await Learn.builder(); }, 4000);
+      await open('play findings', () => PlayLog.report(), 1500); await open('how was today', async () => { dayState().mood = 0; await PlayLog.mood(); }); await open('lesson', () => Learn.lesson('addsub'), 3000); await open('skill builder', async () => { G.learn.build = { id: 'money', sig: null }; await Learn.builder(); }, 4000);
     } finally { Learn.card = realCard; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); }
     return { probe: 'screens', finds: this.out() };
   },

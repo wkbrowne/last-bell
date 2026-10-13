@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient());
         // listening questions and "read to me" use the tablet's own voice
         web.addJavascriptInterface(new Speech(), "LBSpeech");
+        web.addJavascriptInterface(new Share(), "LBShare");
         tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
             @Override public void onInit(int status) {
                 if (status != TextToSpeech.SUCCESS) return;
@@ -59,6 +60,18 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** Lets the grown-up report hand the play log to another app (mail, Drive, notes) through the share sheet. */
+    private class Share {
+        @JavascriptInterface public void text(final String title, final String body) {
+            runOnUiThread(new Runnable() { public void run() {
+                try {
+                    android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                    i.setType("text/plain"); i.putExtra(android.content.Intent.EXTRA_SUBJECT, title); i.putExtra(android.content.Intent.EXTRA_TEXT, body);
+                    startActivity(android.content.Intent.createChooser(i, title));
+                } catch (Exception e) { }
+            } });
+        }
+    }
     private class Speech {
         @JavascriptInterface public boolean ok() { return ttsReady; }
         @JavascriptInterface public void speak(String text) {

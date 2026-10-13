@@ -278,3 +278,37 @@ Found and fixed in this pass: Maze Dash crashed at the end of every round (the r
 Back row could only be closed by tapping the thin margin outside them (they now have a close button); the battle menu
 offered SWAP with nobody to swap to; the taller touch rows made the battle menu cover the HP panel; and a clock that
 jumped backwards could freeze Dex mid-step.
+
+## Play log and findings (v1.27)
+
+`js/playlog.js` keeps a diary of play on the device (its own storage key, separate from the save; the last 5,000
+events, roughly a month). Nothing is sent anywhere unless a grown-up uses the export button.
+
+**What is recorded:** each sitting starting and the app going to the background; story goals set and story steps
+reached; areas entered; battles (kind, enemy, result, seconds); blackouts; every question (skill, right or wrong, time
+taken); lessons and Skill Builder runs; closed gates walked into; idle stretches of 45 seconds or more; optional
+things chosen (shops, eggs, Fact Dash, Study Hall, night rescues, tests); the daily wrap-up; and the face he taps.
+
+**The face.** After the daily wrap-up, once a day: "How was playing today?" with three faces. It can be closed
+without answering.
+
+**Findings** (Options → "How play is going", behind the grown-up gate) are drawn from the last 14 days and written as
+sentences, each with a suggested change:
+
+| Finding | Fires when |
+|---|---|
+| Stuck | the current story goal has been open for 3 sittings or 30 minutes of play |
+| Too hard | lost to the same enemy 3 times without beating it, or more than 40% of battles lost |
+| Stops at teaching / after losing / at a shut way / during questions / wanders off | 3 sittings (or 2 and 40% of them) ended within two minutes of that |
+| Shorter sittings | the later half of sittings average under 70% of the earlier half |
+| Never touched | three or more optional activities unused after 4 sittings |
+| Not fun | 40% or more of at least 3 check-ins were a sad face |
+| Long pauses | more than 45 seconds on the same skill 3 times |
+| Too many misses | under 55% right over at least 20 questions |
+| Keeps trying a shut way | the same closed gate walked into 4 times |
+
+**Export.** The same screen saves or shares the whole log as a CSV file: the findings at the top, then one line per
+event. In the app it opens the tablet's share sheet; in a browser it shares or downloads.
+
+**How to use it.** Read the findings every week or two, change one thing, and see whether that finding goes away in
+the next fortnight. Act on patterns, not single events: one child is a small sample.

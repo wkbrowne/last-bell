@@ -39,7 +39,7 @@ function comic(map, x, y, n) {
 }
 const sign = (map, x, y, txt) => E({ map, x, y, spr: 'sign', act: () => say(null, txt) });
 const camp = (map, x, y) => E({ map, x, y, spr: 'fire', act: () => restMenu(false) });
-function gate(map, x, y, sp, fl, fn, human) { E({ map, x, y, spr: sp, human, if: () => !flag(fl), act: async () => { await fn(); if (G.obj) await say(null, 'This way is shut for now. Follow the gold arrow instead: ' + G.obj); } }); }
+function gate(map, x, y, sp, fl, fn, human) { E({ map, x, y, spr: sp, human, if: () => !flag(fl), act: async () => { if (typeof PlayLog !== 'undefined') PlayLog.add('gate', fl); await fn(); if (G.obj) await say(null, 'This way is shut for now. Follow the gold arrow instead: ' + G.obj); } }); }
 
 // ------------------------------------------------------------ campfire talks (crew bonds)
 const TALKS = [
