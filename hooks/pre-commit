@@ -12,4 +12,6 @@ done
 if git diff --cached --quiet -- js/learn-core.js; then :; else
   $JSC js/learn-core.js -e 'var c = LearnCore.checks(), bad = Object.keys(c).filter(function (k) { return c[k] !== true; }); print(bad.length ? "ENGINE FAILED: " + bad.join("; ") : "engine ok " + LearnCore.VERSION)' | grep -v "^engine ok" && ok=0
 fi
+# a change to any script needs a new cache version, or installed copies keep the old one
+if ! git diff --cached --quiet -- 'js/*.js' && git diff --cached -- sw.js | grep -q '^+const CACHE' ; then :; elif ! git diff --cached --quiet -- 'js/*.js'; then echo "scripts changed but the cache version did not: run ./bump.sh and stage sw.js and index.html"; ok=0; fi
 [ $ok = 1 ] || { echo "pre-commit: not committed"; exit 1; }
