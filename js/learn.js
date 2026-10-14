@@ -735,7 +735,8 @@ const Learn = {
     const one = () => { let c = (S.multi && Math.random() < .25 && S.multi(g)) || null; if (!c || c.choices.length < 5) c = S.gen(g); c.sig = this.sig(c, S.sub); return c; };
     const key = c => c.q + (c.passage ? c.ptitle : '');
     let q = null;
-    if (want) { for (let i = 0; i < 250 && !q; i++) { const c = one(); if (c.sig === want) q = c; } if (k && k.w && k.w[want]) { k.wf = q ? 0 : (k.wf || 0) + 1; if (k.wf >= 3) { delete k.w[want]; k.wf = 0; } } }
+    // a retry asks for the same kind, but not the very same question she just had, unless the kind has no other
+    if (want) { let fw = null; for (let i = 0; i < 250 && !q; i++) { const c = one(); if (c.sig !== want) continue; if (!L.recent.includes(key(c))) q = c; else fw = fw || c; } q = q || fw; if (k && k.w && k.w[want]) { k.wf = q ? 0 : (k.wf || 0) + 1; if (k.wf >= 3) { delete k.w[want]; k.wf = 0; } } }
     if (!q) {
       const seen = k ? (k.seen = k.seen || []) : []; let fb = null;
       for (let i = 0; i < 10 && !q; i++) { const c = one(); if (L.recent.includes(key(c))) continue; fb = fb || c; if (!seen.includes(c.sig)) q = c; }
