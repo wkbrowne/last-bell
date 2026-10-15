@@ -396,3 +396,25 @@ board). Befriend and Defeat quests point to tall grass where that critter or typ
 real): every daily quest finished each day, the weekly trophy awarded, the board opened and closed, and an old save
 given quests. Thirty simulated days of quests at three stages of the game were checked: every quest with a place has
 one he can reach.
+
+## Quests and Act 2 together (v1.31)
+
+The Quest Board and Skyreach now feed each other instead of running side by side.
+
+- **Sky quests.** Once Gale has taken him up, the exploring slot can also be Sky Rings (steer through 4 right rings,
+  any flight counts), Fly to an island he can reach, or a Sky delivery (a parcel on the Gust Shrine, Thunder Forge or
+  Cloud Library, carried to Gale on Roost Rock). Islands are only picked if he can get there now (no dragon: Roost Rock
+  and the Gust Shrine only). The arrow follows these across maps through the perches.
+- **The board feeds the dragon.** While an egg is unhatched the brain quest is "Warm your egg: N right answers"; while
+  a dragon is hatched but too small to ride it is "Grow your dragon: master a skill". These are marked 🐉 on the board.
+  Every finished quest also warms an egg a little (+3), and a hatch or growth is checked right after the quest pays out.
+- **One kind of rescue.** Board rescues are walkie signals now, the same as Night Watch: the kid joins the others at
+  the Nest and counts toward "Kids rescued". A weekly quest can be "Answer 3 night signals".
+- **Rewards he cares about.** Every third quest earns a new cap colour for Dex (changed under Wardrobe on the board);
+  the weekly quest also brings a critter he does not have yet; a trophy shelf next to the board shows one cup per
+  weekly trophy.
+
+**Tests.** `HUNT.quests(6)`, `HUNT.quests(6, 'egg')` and `HUNT.quests(6, 'dragon')` play six days by taps each. They
+check the 🐉 quests appear, the egg warms (or hatches), caps are earned and change Dex, the shelf fills, the weekly
+critter arrives, signals count, and the bot flies between islands from the perch menus and steers through the right
+rings to finish sky quests. A run with a Sky Rings quest forced every day finished it every day.
