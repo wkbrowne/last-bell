@@ -214,6 +214,7 @@ const Battle = {
     if (brain === false) d *= .6;
     if (!isP) d *= [.7, .7, .7, .82][G.learn.grade] || 1;   // enemies hit softer for the youngest players (Grades 2 and 3)
     if (isP && G.gear.sword) d *= 1 + .06 * G.gear.sword;
+    if (isP && brain === true && G.gear.charms.thunder) d *= 1.15;   // the Thunder Charm, made from Thunder Glass in Skyreach
     if (isP && m.t === 'DRAGON' && brain === true) d *= 1 + .08 * Math.min(5, st.combo);
     d = Math.max(1, Math.floor(d));
     t.hp = Math.max(0, t.hp - d);
@@ -334,7 +335,7 @@ const Battle = {
       for (let i = 0; i < 4; i++) { const cx = ((now / (70 + i * 22)) + i * 290) % (W + 300) - 150, cy = 50 + i * 38; for (const [dx, dy, r] of [[0, 0, 26], [28, 6, 20], [-28, 8, 18], [8, -12, 20]]) { ctx.beginPath(); ctx.arc(cx + dx, cy + dy, r, 0, 6.3); ctx.fill(); } }
       ctx.restore();
     }
-    const pc = { grass: ['#5f9a6a', '#2a5240'], street: ['#7a7d96', '#3f4156'], indoor: ['#a9ab9c', '#5a5c52'], spooky: ['#4f8a6a', '#22483a'], junk: ['#b08a5c', '#5e442a'], manor: ['#d6584a', '#8a2430'] }[type];
+    const pc = { grass: ['#5f9a6a', '#2a5240'], street: ['#7a7d96', '#3f4156'], indoor: ['#a9ab9c', '#5a5c52'], spooky: ['#4f8a6a', '#22483a'], junk: ['#b08a5c', '#5e442a'], manor: ['#d6584a', '#8a2430'], sky: ['#f6f3ff', '#a99ad8'] }[type] || ['#5f9a6a', '#2a5240'];   // (an unknown backdrop falls back to grass)
     const plat = (x, y, w) => { ctx.fillStyle = 'rgba(10,4,30,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 8, w, w * .24, 0, 0, 6.3); ctx.fill(); const q = ctx.createRadialGradient(x, y - 10, w * .1, x, y, w); q.addColorStop(0, pc[0]); q.addColorStop(1, pc[1]); ctx.fillStyle = q; ctx.beginPath(); ctx.ellipse(x, y, w, w * .24, 0, 0, 6.3); ctx.fill(); ctx.strokeStyle = 'rgba(20,10,40,.35)'; ctx.lineWidth = 3; ctx.stroke(); };
     const foe = st.foes[Math.min(st.fi, st.foes.length - 1)], me = G.party[st.pi];
     plat(700 + st.ex, 276, 170); plat(250 + st.px, 478, 200);

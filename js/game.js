@@ -326,7 +326,7 @@ const Ground = {
     if (t === 'wall') c.drawImage(Art.wall(mp.mk[ty][tx], v & 1), tx * 48, ty * 48, 48.6, 48.6);
     else c.drawImage(Art.ground(t, mp.mk[ty][tx], v, f, mp.baseT, ch === '*' || ch === 'J'), tx * 48, ty * 48, 48.6, 48.6);
     if (t === 'wall') { if (mp.mk[ty][tx] && (tx * 29 + ty * 17) % 19 === 0) c.drawImage(Art.blood(10 + (tx % 3)), tx * 48, ty * 48 + 8, 48, 44); }
-    else if (t !== 'water' && t !== 'plank' && (tx * 73 + ty * 151) % (world ? (t === 'grass' ? 211 : 31) : (G.map === 'hospital' ? 11 : 23)) === 0) c.drawImage(Art.blood((tx * 3 + ty) % 10), tx * 48, ty * 48, 48, 48);
+    else if (t !== 'water' && t !== 'plank' && t !== 'cloud' && t !== 'stormcloud' && t !== 'sky' && (tx * 73 + ty * 151) % (world ? (t === 'grass' ? 211 : 31) : (G.map === 'hospital' ? 11 : 23)) === 0) c.drawImage(Art.blood((tx * 3 + ty) % 10), tx * 48, ty * 48, 48, 48);
     if (t === 'wall' && !mp.mk[ty][tx] && ty + 1 >= m.h) continue;
     if (ch === 'E') c.drawImage(Art.sprite('exitmat'), tx * 48 - 6, ty * 48 - 10, 60, 60);
   }
@@ -465,7 +465,7 @@ function worldDraw() {
   }
   ctx.restore();
   // ---- lighting
-  const z = zoneAt(G.map, G.x, G.y), zd = z.dark + (world ? .14 : .04);
+  const z = zoneAt(G.map, G.x, G.y), sunny = world && typeof Sky !== 'undefined' && Sky.clear() && z.dark < .4, zd = sunny ? z.dark * .35 : z.dark + (world ? .14 : .04);
   if (zd > .03) {
     const lg = LIGHT.getContext('2d'); lg.globalCompositeOperation = 'source-over'; lg.clearRect(0, 0, 480, 360);
     lg.fillStyle = `rgba(14,10,44,${Math.min(.88, zd * (world ? 1.55 : 1.2))})`; lg.fillRect(0, 0, 480, 360);
@@ -487,8 +487,8 @@ function worldDraw() {
     ctx.globalAlpha = a; const eye = red ? glowSpr('255,90,70', '255,60,40') : glowSpr('240,255,110', '220,255,90'); ctx.drawImage(eye, x - 15, y - 9, 18, 18); ctx.drawImage(eye, x - 3, y - 9, 18, 18); ctx.globalAlpha = 1;
   }
   // the storm: sheets of rain and forked lightning outside, flashes through the windows inside
-  if (world) { ctx.fillStyle = 'rgba(16,24,52,.14)'; ctx.fillRect(0, 0, W, H); drawRain(now, 170, .3 + z.dark * .2); drawStorm(now, 300 + (Storm.seed % 260), z.dark > .4 ? 4000 : 6000, z.dark > .4 ? 9000 : 14000); }
-  else drawStorm(now, H, 9000, 17000, false);
+  if (world && !sunny) { ctx.fillStyle = 'rgba(16,24,52,.14)'; ctx.fillRect(0, 0, W, H); drawRain(now, 170, .3 + z.dark * .2); drawStorm(now, 300 + (Storm.seed % 260), z.dark > .4 ? 4000 : 6000, z.dark > .4 ? 9000 : 14000); }
+  else if (!world && !(typeof Sky !== 'undefined' && Sky.isSky(G.map))) drawStorm(now, H, 9000, 17000, false);
   if (z.dark > .15 && world) { ctx.save(); ctx.globalAlpha = .06 + z.dark * .12; ctx.fillStyle = '#d0dcff'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(((now / (40 + i * 9)) + i * 300) % (W + 600) - 300, 140 + i * 150, 330, 34, 0, 0, 6.3); ctx.fill(); } ctx.restore(); }
   ctx.save();
   for (let ai = 0, an = [46, 24, 0][PERF.lvl]; ai < an; ai++) { const a = AMB[ai];
@@ -1058,7 +1058,7 @@ function step(dt) {
   else if (Scene === 'battle') Battle.draw();
   else worldDraw();
   UI.draw(); drawFx(dt);
-  { const inside = (Scene === 'world' && G && G.map !== 'world') || (Scene === 'battle' && Battle.st && (Battle.st.o.bg === 'indoor' || Battle.st.o.bg === 'manor')); Snd.setRain(inside ? .55 : 1, inside); }
+  { const inside = (Scene === 'world' && G && G.map !== 'world') || (Scene === 'battle' && Battle.st && (Battle.st.o.bg === 'indoor' || Battle.st.o.bg === 'manor')); const dry = G && Scene === 'world' && typeof Sky !== 'undefined' && (Sky.isSky(G.map) || (G.map === 'world' && Sky.clear() && zoneAt('world', G.x, G.y).dark < .4)); Snd.setRain(dry ? 0 : inside ? .55 : 1, inside); }
   updateTouch(Scene === 'world' && !UI.busy && Script.n === 0);
 }
 const boot = () => { script(titleFlow); requestAnimationFrame(frame); };
@@ -1069,11 +1069,13 @@ else boot();
 const DBG = {
   validate() {
     const out = [];
-    const starts = { world: [41, 64], school: [18, 20], mall: [20, 22], hospital: [17, 20], manor: [19, 28] };
+    const starts = Object.assign({ world: [41, 64], school: [18, 20], mall: [20, 22], hospital: [17, 20], manor: [19, 28] }, typeof Sky !== 'undefined' ? Sky.starts : {});
     for (const map in MAPS) {
       const m = MAPS[map].m, seen = new Set(), q = [starts[map]]; seen.add(starts[map].join());
       const solidEnt = new Set(ENT.filter(e => e.map === map && e.solid && !e.if).map(e => e.x + ',' + e.y));
-      while (q.length) { const [x, y] = q.pop(); for (const d in DV) { const nx = x + DV[d][0], ny = y + DV[d][1], k = nx + ',' + ny; if (seen.has(k) || nx < 0 || ny < 0 || nx >= m.w || ny >= m.h || TINFO[m.t[ny][nx]].s || solidEnt.has(k)) continue; seen.add(k); q.push([nx, ny]); } }
+      const links = (typeof Sky !== 'undefined' && Sky.links) || [];   // places joined by something other than walking (GLIDE across water)
+      for (let pass = 0; pass < 3; pass++) { for (const l of links) if (l[0] === map && Object.values(DV).some(([dx, dy]) => seen.has((l[1][0] + dx) + ',' + (l[1][1] + dy))) && !seen.has(l[2].join())) { seen.add(l[2].join()); q.push(l[2]); }
+      while (q.length) { const [x, y] = q.pop(); for (const d in DV) { const nx = x + DV[d][0], ny = y + DV[d][1], k = nx + ',' + ny; if (seen.has(k) || nx < 0 || ny < 0 || nx >= m.w || ny >= m.h || TINFO[m.t[ny][nx]].s || solidEnt.has(k)) continue; seen.add(k); q.push([nx, ny]); } } }
       for (const e of ENT.filter(e => e.map === map && e.solid)) if (!Object.values(DV).some(([dx, dy]) => seen.has((e.x + dx) + ',' + (e.y + dy)))) out.push(`${map} ${e.spr} @${e.x},${e.y} unreachable`);
       for (const k in WARPS) if (k.startsWith(map + ':')) { const [x, y] = k.split(':')[1].split(',').map(Number); if (!Object.values(DV).some(([dx, dy]) => seen.has((x + dx) + ',' + (y + dy)))) out.push('warp unreachable ' + k); }
     }

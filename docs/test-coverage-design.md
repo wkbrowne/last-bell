@@ -331,3 +331,40 @@ uses it. Tapping plain ground still acts on whatever he is facing. Holding a dir
 **Backups.** Options → "Back up or restore progress" (grown-up gate). Back up shares or saves the whole game as one
 line of text beginning `ZZSAVE1:`; restore takes that text pasted back in, shows what it contains, and asks before
 replacing anything. Separately, once a day the previous save is kept as a spare, and a damaged save falls back to it.
+
+## Act 2: Skyreach (v1.29)
+
+`js/sky.js`. After the ferry, a voice on the walkie calls Dex to Radio Hill, where Grandmother Gale (an ancient dragon)
+explains that the storm comes from islands above the clouds and carries him up the first time.
+
+**Islands** (each a small walkable map of cloud over open sky): Roost Rock (Gale, a campfire, a stash), the Gust
+Shrine, the Thunder Forge, the Cloud Library and the Storm Eye. Each has a perch to fly from.
+
+**Getting there.** Gale will always carry him to Roost Rock and the Gust Shrine. The Forge, the Library and the Eye need
+his own grown dragon (the existing rule: master skills to hatch and grow it). The perch menu and the goal line say
+exactly what is missing.
+
+**Flying is a game.** Hold a finger where you want to fly; collect sparks, dodge storm clouds. Two or three times a
+flight a question appears and three Sky Rings carry the answers; flying through one answers it. Questions come from
+the learning engine (short-answer math and English) and are recorded like any other. No flight can be failed.
+
+**Shrine trials** (no hints, one miss allowed): the Wind Trial uses his weakest skills, the Thunder Trial is math, the
+Reading Trial uses three new weather passages (also added to ordinary reading practice). Each gives a gift:
+
+| Gift | Opens back home |
+|---|---|
+| GLIDE | the feather pad on the harbour sand: Gull Island (a stash and a Gloomwing that joins) |
+| ROAR | three rubble piles in tree gaps around town, each hiding a stash |
+| GLOW | the dark grove in Whisperwood, where a Wispkin joins |
+| own dragon | rooftops: Coach Krunk's trophy case (school), Bash's grandma's seeds (mall), and the radio tower, which doubles night-rescue scrap |
+
+Cloudsilk (Gust Shrine) and Thunder Glass (Thunder Forge) let the Night Market make a Sky Tonic and a Thunder Charm
+(Brain Blasts hit 15% harder).
+
+**Finale.** The Thunderhead in the Storm Eye (three waves, sky backdrop). Afterwards the rain stops and the town is
+bright, except the cemetery and Blackwood Grounds, which stay stormy and spooky. There is no day/night clock in the
+game, so "stormy at night" is kept as "stormy in the spooky places" plus the night rescues.
+
+**Tests.** `HUNT.sky()` plays Act 2 by taps with a grown dragon from the end of the story to the storm lifting, then
+tries every home unlock, the rooftops, the shop items and the weather; a second run without a dragon checks the first
+gift can still be earned and the far islands stay shut and say why. The final battle was also played for real once.

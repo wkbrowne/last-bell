@@ -86,7 +86,7 @@ window.HUNT = {
         f = i; for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
         if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits; if (hs && hs.length) { let h = null; if (cur && plan.length) { const w = plan[0]; h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) plan.shift(); } else if (!cur) h = hs[0]; if (h) pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } Input.taps.push(pt); }
         if (G && !top && Scene === 'world' && Script.n === 0) { PL.grace = 99; const hx = G.x, hy = G.y; if (PL.moving) { G.x = PL.tx; G.y = PL.ty; } Guide.key = null; Guide.solve(); const p = Guide.path, t = Guide.tgt, gx = G.x, gy = G.y; G.x = hx; G.y = hy;
-          if (!t) return flag('cleared') ? false : undefined;
+          if (!t || flag('cleared')) return flag('cleared') ? false : undefined;
           const nx = p.length > 1 ? p[1] : [t.x, t.y], dx = nx[0] - gx, dy = nx[1] - gy, dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : dy < 0 ? 'up' : null; if (dir) Input.held[dir] = true; if (p.length <= 1 && i % 6 === 3) Input.presses.push('a'); }
         const fl = G ? Object.keys(G.flags).filter(k => !/^z_|^st_|^comic/.test(k)).join() : ''; if (fl !== lastFlag) { lastFlag = fl; steps.push(i + ':' + fl.split(',').pop()); }
         const s = !G ? Scene : Scene + '|' + UI.stack.length + '|' + G.map + '|' + G.x + ',' + G.y + '|' + G.learn.total + '|' + fl.length + '|' + (cur ? cur.q.slice(0, 20) + plan.length : '');
@@ -188,5 +188,59 @@ window.HUNT = {
     UI.stack.length = 0; Script.n = 0; PlayLog.clear(); return r;
   },
 
-  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
+  // 8. Act 2, Skyreach: from the end of the story to the storm lifting, by taps, with a grown dragon (battles skipped).
+  //    Then the gifts are tried back home, and a second run without a dragon checks the far islands stay shut and say why.
+  async sky(maxFrames) {
+    this.finds = {}; const errs = [], onErr = e => errs.push((e.message || (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)).split('\n').slice(0, 2).join(' | '));
+    addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+    const realRun = Battle.run, realCard = Learn.card, realMenu = menu, mute = Snd.muted; Snd.muted = true; Touch.enabled = true; Battle.run = async () => 'win';
+    let plan = [], cur = null, items = [], steps = [], f = 0, last = '', lastChange = 0, flights = 0;
+    Learn.card = function (q, t, m) { cur = q; const type = q.type || 'mc'; plan = m && m.demo ? [] : type === 'num' ? String(q.ans).replace(/,/g, '').split('').map(c => ({ k: c })).concat([{ k: 'OK' }]) : type === 'multi' ? q.as.map(i => ({ i })).concat([{ i: q.choices.length }]) : [{ i: q.a }]; const p = realCard.call(this, q, t, m); p.then(() => { if (cur === q) cur = null; }); return p; };
+    let itemsTop = null; menu = function (its) { items = its.map(i => typeof i === 'string' ? i : i.label); const p = realMenu.apply(this, arguments); itemsTop = UI.stack[UI.stack.length - 1]; return p; };
+    const setup = dragonToo => { this.fresh(2); for (const s of Guide.steps) if (!Sky.isSky(s[1]) && s[0] !== 'skyFirst') G.flags[s[0]] = true; Object.assign(G.flags, { priya: true, bash: true, wren: true, antenna: true, heardPriya: true });
+      G.party = [makeCritter('scrapup', 40)]; if (dragonToo) G.party.push(makeCritter('ember2', 40)); G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); };
+    const drive = (n, stopFlag) => this.frames(n, i => {
+      f = i; if (flag(stopFlag)) return false; for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
+      if (top && top.answer !== undefined) { if (i % 5 === 0) { const a = top.answer; if (a >= 0) top.tap(0, top.ringAt(a)); } return; }   // in flight: steer to the right ring
+      if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
+        if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+        else if (hs && hs.length && !cur) { const fin = Guide.final(), want = fin ? (fin.map === 'world' ? 'Home' : (Sky.DEST[fin.map] || {}).n) : null; let h = hs[0];
+          if (want && items.length && top === itemsTop) { const k = items.findIndex(l => String(l).startsWith(want)); const hh = hs.find(r => r.i === k); if (hh) h = hh; } pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; }
+        Input.taps.push(pt); }
+      if (G && !top && Scene === 'world' && Script.n === 0) { PL.grace = 99; const hx = G.x, hy = G.y; if (PL.moving) { G.x = PL.tx; G.y = PL.ty; } Guide.key = null; Guide.solve(); const p = Guide.path, t = Guide.tgt, gx = G.x, gy = G.y; G.x = hx; G.y = hy;
+        if (t) { const nx = p.length > 1 ? p[1] : [t.x, t.y], dx = nx[0] - gx, dy = nx[1] - gy, dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : dy < 0 ? 'up' : null; if (dir) Input.held[dir] = true; if (p.length <= 1 && i % 6 === 3) Input.presses.push('a'); } }
+      const fl = Object.keys(G.flags).filter(k => /sky|glide|roar|glow|stormEnd|seen_/.test(k)).join(); if (fl !== steps[steps.length - 1]) steps.push(fl);
+      const s = Scene + '|' + UI.stack.length + '|' + G.map + '|' + G.x + ',' + G.y + '|' + fl + '|' + (cur ? cur.q.slice(0, 16) + plan.length : '');
+      if (s !== last) { last = s; lastChange = i; } else if (i - lastChange > 2400) { this.add('STUCK for 40 seconds', 'at ' + s + ' | goal: ' + G.obj + ' | menu: ' + items.join(' / ')); return false; } });
+    const results = {};
+    try {
+      // with a grown dragon, all the way through
+      setup(true); await drive(maxFrames || 90000, 'stormEnd'); results.finished = flag('stormEnd'); results.flags = Object.keys(G.flags).filter(k => /sky|glide|roar|glow|stormEnd/.test(k));
+      if (!flag('stormEnd')) this.add('Act 2 not finished', 'flags ' + results.flags.join() + ' | goal: ' + G.obj);
+      // the gifts at home
+      const run = async fn => { let done = false; UI.stack.length = 0; Script.n = 0; script(async () => { await fn(); done = true; }); await this.frames(5000, i => { if (done) return false; const top = UI.stack[UI.stack.length - 1]; if (top && top.answer !== undefined) { if (i % 5 === 0 && top.answer >= 0) top.tap(0, top.ringAt(top.answer)); return; } if (i % 6 === 0 && top) { const hs = top.hits; Input.taps.push(hs && hs.length ? { x: hs[0].x + hs[0].w / 2, y: hs[0].y + hs[0].h / 2 } : { x: 480, y: 610 }); } }); return done; };
+      G.map = 'world'; G.x = SKYPLACE.padA[0] - 1; G.y = SKYPLACE.padA[1]; enterWorld(); await run(() => Sky.glidePad('out')); results.glideLanded = G.x === SKYPLACE.padB[0] + 1 && G.y === SKYPLACE.padB[1];
+      if (!results.glideLanded) this.add('GLIDE did not land on Gull Island', G.x + ',' + G.y);
+      await run(() => Sky.friend('gullFriend', 'gloomwing', 'test')); results.friend = flag('gullFriend') && G.party.concat(G.pen).some(c => c.sp === 'gloomwing'); if (!results.friend) this.add('the Gull Island critter did not join');
+      for (const [i, t] of SKYPLACE.rubble.entries()) { await run(() => Sky.rubble('rb' + (i + 1))); if (!flag('rb' + (i + 1))) this.add('ROAR did not clear rubble ' + (i + 1)); }
+      await run(() => Sky.grove()); if (!flag('grove')) this.add('GLOW did not open the grove');
+      for (const k of ['school', 'mall', 'tower']) { await run(() => Sky.roof(k)); if (!flag('roof_' + k)) this.add('rooftop visit failed: ' + k); }
+      results.booster = flag('booster');
+      G.map = 'gust'; await run(() => Sky.chest('silk')); G.map = 'forge'; await run(() => Sky.chest('glass')); G.map = 'world';
+      const brew = SHOPS.brew.stock().find(x => /Sky Tonic/.test(x.n)), magic = SHOPS.magic.stock().find(x => x.n === CHARMS.thunder.n); results.shops = { tonic: brew && !brew.locked, charm: magic && !magic.locked }; if (!results.shops.tonic || !results.shops.charm) this.add('sky items not for sale after finding the ingredients', JSON.stringify(results.shops));
+      const realRain = drawRain; let rain = 0; drawRain = function () { rain++; }; G.map = 'world'; G.x = 56; G.y = 57; enterWorld(); worldDraw(); worldDraw(); results.rainInTown = rain; G.x = 48; G.y = 15; enterWorld(); worldDraw(); results.rainAtCemetery = rain - results.rainInTown; drawRain = realRain;
+      if (results.rainInTown) this.add('it still rains over the town after the storm is broken'); if (!results.rainAtCemetery) this.add('the cemetery lost its storm too');
+      // without a dragon: Gale carries you to the first two islands; the rest stay shut and say why
+      setup(false); steps = []; await drive(30000, 'glide');
+      await this.frames(900, i => { if (!UI.stack.length && !Script.n) return false; const top = UI.stack[UI.stack.length - 1]; if (i % 6 === 0 && top) { const hs = top.hits; Input.taps.push(hs && hs.length ? { x: hs[0].x + hs[0].w / 2, y: hs[0].y + hs[0].h / 2 } : { x: 480, y: 610 }); } });   // let the shrine finish talking results.noDragonGlide = flag('glide'); if (!flag('glide')) this.add('without a dragon, the first gift could not be earned', 'goal: ' + G.obj);
+      results.goalAfterGlide = G.obj; UI.stack.length = 0; Script.n = 0; G.flags.glide = true; G.map = 'gust'; G.x = 15; G.y = 17; enterWorld(); let menuItems = null; menu = function (its) { menuItems = its; return realMenu.apply(this, arguments); };
+      await run(() => Sky.perch('gust')); const forge = (menuItems || []).find(x => /Thunder Forge/.test(x.label)); results.forgeShutWithoutDragon = !!(forge && forge.disabled && /dragon/.test(forge.label)); if (!results.forgeShutWithoutDragon) this.add('Thunder Forge is not shut (or does not say why) without a dragon', JSON.stringify(forge));
+      results.goalSaysWhy = /dragon/i.test(results.goalAfterGlide = results.goalAfterGlide || ''); if (!results.goalSaysWhy) this.add('the goal does not tell him he needs a grown dragon', G.obj);
+    } catch (e) { this.add('sky run threw', (e.stack || e.message).split('\n').slice(0, 3).join(' | ')); }
+    finally { Battle.run = realRun; Learn.card = realCard; menu = realMenu; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; UI.stack.length = 0; Script.n = 0; }
+    for (const e of [...new Set(errs)]) this.add('error during Act 2', e);
+    return { probe: 'sky', frames: f, results, steps, finds: this.out() };
+  },
+
+  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };
