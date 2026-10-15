@@ -242,5 +242,57 @@ window.HUNT = {
     return { probe: 'sky', frames: f, results, steps, finds: this.out() };
   },
 
-  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
+  // 9. The Quest Board: a week of daily quests done by taps (walking with the arrow, battles skipped), brain quests done
+  //    by answering, and the weekly trophy. Also: one rescue played as a real battle.
+  async quests(days) {
+    this.finds = {}; const errs = [], onErr = e => errs.push((e.message || (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)).split('\n').slice(0, 2).join(' | '));
+    addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+    const realRun = Battle.run, realCard = Learn.card, realDay = Learn.day, mute = Snd.muted; Snd.muted = true; Touch.enabled = true; let day = 60000, plan = [], cur = null, done = 0, f = 0, last = '', lastChange = 0, real = null;
+    Learn.day = () => day; Learn.card = function (q, t, m) { cur = q; const type = q.type || 'mc'; plan = m && m.demo ? [] : type === 'num' ? String(q.ans).replace(/,/g, '').split('').map(c => ({ k: c })).concat([{ k: 'OK' }]) : type === 'multi' ? q.as.map(i => ({ i })).concat([{ i: q.choices.length }]) : [{ i: q.a }]; const p = realCard.call(this, q, t, m); p.then(() => { if (cur === q) cur = null; }); return p; };
+    const results = { days: [], trophies: 0 };
+    try {
+      this.fresh(2); for (const s of Guide.steps) if (!Sky.isSky(s[1]) && s[0] !== 'skyFirst') G.flags[s[0]] = true; Object.assign(G.flags, { priya: true, bash: true, wren: true, antenna: true, skyFirst: true, glide: true, roar: true, glow: true, stormEnd: true, skyCall: true, marketLog: true, shop_forge: true, shop_brew: true, shop_magic: true });   // the story is finished, so the arrow belongs to the quests
+      G.party = [makeCritter('scrapup', 30), makeCritter('gloop', 30)]; G.seen = { gloop: 1, boltbug: 1 }; G.map = 'world'; G.x = 41; G.y = 64; enterWorld();
+      for (let dd = 0; dd < (days || 6); dd++) {
+        day = 60000 + dd; Quests.refresh(); const before = Quests.S().done;
+        if (dd === 0 && !Quests.open().some(q => q.kind === 'rescue')) { const q = Quests.make('rescue', new Set(Quests.open().map(x => x.spot).filter(x => x != null))); if (q) Quests.S().list.push(q); }   // make sure one rescue is fought for real
+        // brain quests: answer questions; a Fact Dash quest is met by reporting a score
+        for (let i = 0; i < 30 && Quests.open().some(q => ['right', 'streak'].includes(q.kind)); i++) { const q = Learn.next(); if (!q.noRec) Learn.record(q, true); }
+        for (const q of Quests.open().filter(q => q.kind === 'dash')) Quests.event('dash', q.need);
+        for (const q of Quests.open().filter(q => q.kind === 'master')) { q.base = -1; Quests.event('master'); }
+        for (const q of Quests.open().filter(q => q.kind === 'hunt')) for (let k = q.prog; k < q.need; k++) addCritter(makeCritter(q.sp, 20));
+        for (const q of Quests.open().filter(q => q.kind === 'defeat')) Quests.event('defeat', q.t, q.need);   // (wild battles: the bot keeps encounters off while it walks)
+        // the rest by walking: follow the arrow and tap; one rescue each run is fought for real
+        const wantReal = dd === 0;
+        Battle.run = async function (opt) { if (wantReal && !real && opt && /close in/.test(opt.intro || '')) { real = 'started'; const r = await realRun.apply(this, arguments); real = r; return r; } return 'win'; };
+        Quests.event('zone', '__');   // (patrol quests complete by walking in; the arrow walks him there)
+        await this.frames(16000, i => {
+          f = i; const open = Quests.open().filter(q => Quests.target(q)); if (!open.length && !UI.stack.length && !Script.n) return false;
+          for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
+          if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
+            if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+            else if (hs && hs.length && !cur) { const h = top.close && Scene !== 'battle' && !(Guide.tgt && Guide.tgt.rest) ? null : hs[0]; pt = h ? { x: h.x + h.w / 2, y: h.y + h.h / 2 } : top.close; }   // in battle: always the first choice (FIGHT, then the first move)
+            Input.taps.push(pt); }
+          if (G && !top && Scene === 'world' && Script.n === 0) { PL.grace = 99; if (!Quests.S().track || !Quests.open().some(q => q.id === Quests.S().track && Quests.target(q))) { const q = open[0]; if (q) Quests.S().track = q.id; }
+            const hx = G.x, hy = G.y; if (PL.moving) { G.x = PL.tx; G.y = PL.ty; } Guide.key = null; Guide.solve(); const p = Guide.path, t = Guide.tgt, gx = G.x, gy = G.y; G.x = hx; G.y = hy;
+            if (t) { const nx = p.length > 1 ? p[1] : [t.x, t.y], dx = nx[0] - gx, dy = nx[1] - gy, dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : dy < 0 ? 'up' : null; if (dir) Input.held[dir] = true; if (p.length <= 1 && i % 6 === 3) Input.presses.push('a'); } }
+          const s = Scene + '|' + UI.stack.length + '|' + G.map + '|' + G.x + ',' + G.y + '|' + Quests.S().done + '|' + (cur ? cur.q.slice(0, 16) + plan.length : '');
+          if (s !== last) { last = s; lastChange = i; } else if (i - lastChange > 2400) { this.add('STUCK for 40 seconds on day ' + dd, 'at ' + s + ' | tracked: ' + JSON.stringify(Quests.tracked()).slice(0, 160)); return false; } });
+        const left = Quests.S().list.filter(q => !q.done).map(q => q.kind); if (left.length) this.add('daily quests left unfinished on day ' + dd, left.join(', '));
+        results.days.push(Quests.S().done - before);
+      }
+      results.trophies = Quests.S().trophies.length; results.weekDone = Quests.S().weekDone; results.realRescue = real; results.saved = G.saved.length;
+      if (!results.trophies) this.add('no weekly trophy after a week of quests', 'week done ' + Quests.S().weekDone);
+      if (real !== 'win' && real !== 'lose' && real !== 'run') this.add('the real rescue battle did not run', String(real));
+      // the board itself opens and closes by taps
+      let ok = false; UI.stack.length = 0; Script.n = 0; script(async () => { await Quests.board(); ok = true; }); await this.frames(400, i => { if (ok) return false; const top = UI.stack[UI.stack.length - 1]; if (i % 10 === 0 && top) Input.taps.push(top.close || { x: 480, y: 610 }); }); if (!ok) this.add('the Quest Board did not close by taps');
+      // an old save without quests loads and gets quests
+      const old = JSON.parse(JSON.stringify(G)); delete old.quests; G = Object.assign(newState(), old); Quests.refresh(); if (Quests.S().list.length < 3) this.add('an old save got no quests');
+    } catch (e) { this.add('quest run threw', (e.stack || e.message).split('\n').slice(0, 3).join(' | ')); }
+    finally { Battle.run = realRun; Learn.card = realCard; Learn.day = realDay; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; UI.stack.length = 0; Script.n = 0; }
+    for (const e of [...new Set(errs)]) this.add('error during quests', e);
+    return { probe: 'quests', frames: f, results, finds: this.out() };
+  },
+
+  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };

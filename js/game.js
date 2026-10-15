@@ -674,7 +674,7 @@ async function welcomeBack() {
 }
 async function pauseMenu() {
   while (true) {
-    const opts = [['Team', partyMenu], ['Bag', bagMenu], ['Study Hall', () => Learn.studyHall()], ['Practice & Tests', () => Learn.practiceMenu()], ['Dragons', eggsPage]];
+    const opts = [['Team', partyMenu], ['Bag', bagMenu], ['Quests', () => Quests.board()], ['Study Hall', () => Learn.studyHall()], ['Practice & Tests', () => Learn.practiceMenu()], ['Dragons', eggsPage]];
     if (flag('canFly')) opts.push(['Fly', flyMenu]);
     opts.push(["Dex's Log", journal], ['Badges', badgesPage], ['Crew', crewPage], ['Save', async () => saveGame()], ['Options', optionsMenu], ['Close', null]);
     Sess.pause(true);      // the menu itself is a pause; Study Hall and the rest count as play again once chosen

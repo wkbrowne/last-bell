@@ -368,3 +368,31 @@ game, so "stormy at night" is kept as "stormy in the spooky places" plus the nig
 **Tests.** `HUNT.sky()` plays Act 2 by taps with a grown dragon from the end of the story to the storm lifting, then
 tries every home unlock, the rooftops, the shop items and the weather; a second run without a dragon checks the first
 gift can still be earned and the far islands stay shut and say why. The final battle was also played for real once.
+
+## Quest Board (v1.30)
+
+`js/quests.js`. A board by the Nest (and "Quests" in the menu) posts three new quests every day and one bigger quest
+every week, built from what the game already has, so there is always something to do after the story.
+
+| Kind | What it asks | How it finishes |
+|---|---|---|
+| Rescue | a survivor trapped at one of twelve places in town | win the battle there |
+| Bounty | a named Horde Captain at one of those places | win the boss battle there |
+| Delivery | a parcel left somewhere, wanted by Munch, Old Clank, Nana Newt or Professor Flicker | pick it up, walk it over |
+| Befriend | a critter he has already seen | catch it with a Critter Snack |
+| Defeat | 3–5 critters of one type that lives somewhere he can reach | win battles |
+| Patrol | walk into a part of town | arrive |
+| Brain | 10–20 right answers, 5 in a row, a Fact Dash score near his best, or mastering a new skill | play |
+
+Each day has one action quest, one exploring quest and one brain quest, never two of the same kind. Places are only
+chosen if he can walk to them right now (closed story gates are respected). Quests pay out the moment they are done
+(scrap and items, scaled to his level). Five daily quests in a week earn a trophy, 250 scrap and two Mega Slushes.
+
+**The arrow.** The story keeps the arrow while it has a next step. When the story is finished, or is waiting on a grown
+dragon, the arrow and the goal line follow the tracked quest (the first one with a place, or the one he picks on the
+board). Befriend and Defeat quests point to tall grass where that critter or type lives.
+
+**Tests.** `HUNT.quests()` plays six days by taps (walking with the arrow; battles skipped except one rescue fought for
+real): every daily quest finished each day, the weekly trophy awarded, the board opened and closed, and an old save
+given quests. Thirty simulated days of quests at three stages of the game were checked: every quest with a place has
+one he can reach.
