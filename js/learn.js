@@ -689,6 +689,8 @@ const LESSON_G2 = {
 // Population Pup. This is Last Bell's side of it. A group is one subject at one grade ("math2"), and each record keeps
 // the "skill@grade" key it has always had. Every skill for the grade is in play from the start.
 const GRP = { sub: g => g.replace(/\d+$/, ''), grade: g => +g.replace(/\D+/g, '') };
+// set while an answer too quick to have been read is being recorded, so the engine's answered hook can tell the sittings
+let RUSH_NOW = false;
 const ENG = LearnCore.create({
   state: () => G.learn,
   key: (group, id) => id + '@' + GRP.grade(group),
@@ -698,7 +700,8 @@ const ENG = LearnCore.create({
   kinds: (group, id) => Learn.kinds(id, GRP.grade(group)),
   prereq: (group, id) => ({ group: GRP.sub(group) + (GRP.grade(group) - 1), id }),      // the same skill a grade earlier, where there is one
   harder: (group, id) => ({ group: GRP.sub(group) + (GRP.grade(group) + 1), id }),      // and a grade later, for stretch questions
-  answered: (group, id, ok) => { if (typeof dayTick === 'function') dayTick(id, ok); if (typeof Sess !== 'undefined' && G) Sess.answered(ok); },
+  needs: (group, id) => Learn.needs(id, GRP.grade(group)),                              // sums and differences need a "why" before mastery
+  answered: (group, id, ok) => { if (typeof dayTick === 'function') dayTick(id, ok); if (typeof Sess !== 'undefined' && G) Sess.answered(ok, RUSH_NOW ? { rushed: true } : undefined); },
   config: { newStart: 99, newPerDay: 99, stretch: .35 }
 });
 const Learn = {
@@ -731,6 +734,8 @@ const Learn = {
   // want = a kind to ask again (a retry of something missed). Otherwise prefer kinds this child has not had yet,
   // so that a skill is not "mastered" on its easy kinds alone and English items do not repeat until the bank runs out.
   make(id, gOver, want) {
+    // a "why" kind: a question of the skill, asked as which way of working it out is right
+    if (want === 'why') { const b = this.make(id, gOver, null); return this.toWhy(b) || b; }
     const L = G.learn, g = gOver || L.grade, S = SKILLS[id], k = g > L.grade ? null : this.sk(id, g);
     const one = () => { let c = (S.multi && Math.random() < .25 && S.multi(g)) || null; if (!c || c.choices.length < 5) c = S.gen(g); c.sig = this.sig(c, S.sub); return c; };
     const key = c => c.q + (c.passage ? c.ptitle : '');
@@ -752,6 +757,30 @@ const Learn = {
   // how many different kinds of question a skill has at this grade (counted once by sampling), and how many must be answered right
   kinds(id, gr) { const g = gr || G.learn.grade, key = id + '@' + g, C = this._kinds || (this._kinds = {}); if (!C[key]) { const S = SKILLS[id], set = new Set(); for (let i = 0; i < 150; i++) { const c = (S.multi && i % 4 === 0 && S.multi(g)) || S.gen(g); set.add(this.sig(c, S.sub)); } C[key] = set.size; } return C[key]; },
   breadth(id) { return ENG.breadth(this.grp(id), id); },
+  // WHY. A math skill needs a "why" answered right before mastery when most of its questions are sums or differences
+  // LearnCore.reasons can work out three ways (checked once per skill and grade by sampling).
+  needs(id, gr) {
+    const S = SKILLS[id]; if (!S || S.sub !== 'math') return [];
+    const key = id + '@' + gr, C = this._needs || (this._needs = {});
+    if (!C[key]) { let n = 0; for (let i = 0; i < 20; i++) { try { const c = S.gen(gr); if (LearnCore.reasons(c.q, c.choices[c.a])) n++; } catch (e) {} } C[key] = n >= 10 ? ['why'] : []; }
+    return C[key];
+  },
+  // a "why" question from a question she just answered: three ways of working it out, only one with every step true
+  toWhy(q) {
+    if (!q || !q.choices || q.type === 'multi' || q.partB || q.isWhy) return null;
+    const right = q.choices[q.a], R = LearnCore.reasons(q.q, right); if (!R) return null;
+    const ch = shuffle([R.right, ...R.wrong]);
+    return { skill: q.skill, grp: q.grp, q: q.q.replace('= ?', '= ' + right) + '\nWhich way of working it out is right?', choices: ch, a: ch.indexOf(R.right), sig: 'why', small: true, why: 'Check each step. Only one way has every step true.', isWhy: 1 };
+  },
+  // the first false step ("x + y = z" or "x − y = z") in a way of working it out, or null
+  falseStep(t) {
+    const re = /(\d{1,3}(?:,\d{3})*)\s*([+−-])\s*(\d{1,3}(?:,\d{3})*)\s*=\s*(\d{1,3}(?:,\d{3})*)/g, n = v => +v.replace(/,/g, ''); let m;
+    while ((m = re.exec(String(t || '')))) if ((m[2] === '+' ? n(m[1]) + n(m[3]) : n(m[1]) - n(m[3])) !== n(m[4])) return m[0];
+    return null;
+  },
+  // EFFORT: an answer given faster than the question and its choices could have been read (q._first is stamped by card()
+  // on the first answer, only on ordinary cards). Typed answers are never "too quick": typing takes its own time.
+  tooQuick(q) { return !!q && q._first != null && q.type !== 'num' && LearnCore.rushed(q._first, q.q + ' ' + (q.choices || []).join(' ')); },
   // ADAPTIVE PRACTICE (the rules themselves are in learn-core.js)
   // Each skill sits in a box from 0 (shaky) to 4 (rock solid). A right answer moves it up a box, a miss sends it to box 0.
   //  - A miss comes back three questions later as the SAME KIND of question (at most one question in three is a retry).
@@ -786,13 +815,19 @@ const Learn = {
   record(q, ok) {
     const L = G.learn, grp = q.grp || this.grp(q.skill), k = ENG.rec(grp, q.skill), was = k.m;
     L.total++;
-    { const eg = G.eggs && G.eggs.find(x => !x.hatched); if (ok && eg && SKILLS[q.skill]) { if (SKILLS[q.skill].sub === 'math') eg.wm = Math.min(20, eg.wm + 1); else eg.we = Math.min(20, eg.we + 1); } }
-    if (ok) { L.right++; L.streak++; L.best = Math.max(L.best, L.streak); } else L.streak = 0;
     // one example of what was missed is kept for the grown-up report
     // (Maze Dash records a whole round against a skill, with no question attached)
     const right = !q.choices ? '' : q.type === 'multi' ? q.as.map(i => q.choices[i]).join(', ') : q.type === 'num' ? q.ans : q.choices[q.a];
-    const ex = ok || !q.q ? null : (q.q.includes('\n') && !q.pic ? q.q.split('\n').pop() : q.q).replace(/\s+/g, ' ').slice(0, 70) + '  →  ' + String(right).slice(0, 30);
-    const v = ENG.record(grp, q.skill, ok, { sig: q.sig, ex });
+    const ex = ok || !q.q ? null : (q.isWhy ? q.q.split('\n')[0] + ' (why?)' : q.q.includes('\n') && !q.pic ? q.q.split('\n').pop() : q.q).replace(/\s+/g, ' ').slice(0, 70) + '  →  ' + String(right).slice(0, 30);
+    // EFFORT: a right answer too quick to have been read counts for nothing (the engine says 'rushed', or 'teach' after a run of them)
+    const rushed = this.tooQuick(q), quick = ok && rushed;
+    let v; RUSH_NOW = rushed; try { v = ENG.record(grp, q.skill, ok, { sig: q.sig, ex, fast: rushed }); } finally { RUSH_NOW = false; }
+    q._v = v; q._quick = quick;
+    if (quick) { if (typeof Sess !== 'undefined' && G) Sess.answered(true, { rushed: true, ms: q._first }); }
+    else {
+      { const eg = G.eggs && G.eggs.find(x => !x.hatched); if (ok && eg && SKILLS[q.skill]) { if (SKILLS[q.skill].sub === 'math') eg.wm = Math.min(20, eg.wm + 1); else eg.we = Math.min(20, eg.we + 1); } }
+      if (ok) { L.right++; L.streak++; L.best = Math.max(L.best, L.streak); } else L.streak = 0;
+    }
     if (!was && k.m && grp === this.grp(q.skill)) (L.fresh = L.fresh || []).push(q.skill);
     // the engine says when teaching is called for; the Skill Builder then opens, but not twice within twelve questions
     if ((v === 'teach' || v === 'refresh') && !this.building && L.total - (L.lastBuild == null ? -99 : L.lastBuild) >= 12) L.build = { id: q.skill, sig: q.sig, g: GRP.grade(grp) };
@@ -801,7 +836,9 @@ const Learn = {
   // Presents one item the way the real tests do. Formats: single choice, 'multi' (select all that apply),
   // 'num' (type the answer), and two-part evidence questions (Part A + Part B, both must be right).
   // mode.test = practice-test conditions: no feedback until the end.
+  // Returns whether it was right. Learn.lastRushed says whether a right answer was too quick to have been read (it counts for nothing).
   async ask(q, title, noRecord, mode) {
+    this.lastRushed = false;
     Sess.note('question', title === 'BRAIN LOCK' ? 'gate' : /ONE MORE TRY/i.test(q.tag || '') ? 'retry' : /REVIEW/i.test(q.tag || '') ? 'review' : 'plain');
     let ok = await this.card(q, title, q.partB ? Object.assign({}, mode, { hold: 1, part: 'PART A' }) : mode);
     if (q.partB) {
@@ -809,7 +846,18 @@ const Learn = {
       const ok2 = await this.card(b, title, Object.assign({}, mode, { part: 'PART B', both: ok, aText: q.choices[q.a] }));
       ok = ok && ok2;
     }
-    if (!noRecord && !q.noRec) this.record(q, ok);
+    const rec = !noRecord && !q.noRec, plain = rec && !(mode && mode.test) && !this.hold && !this.building;
+    if (rec) this.record(q, ok);
+    this.lastRushed = !!q._quick;
+    // WHY IS IT RIGHT? Now and then after a right answer on a sum or difference (always once the skill is close to mastery)
+    if (plain && ok && q._v === 'ok' && !q.isWhy && SKILLS[q.skill] && ENG.wantWhy(q.grp || this.grp(q.skill), q.skill)) {
+      const w = this.toWhy(q);
+      if (w) {
+        Sess.note('question', 'why');
+        const ok2 = await this.card(w, 'WHY IS IT RIGHT?', { noHint: 1 }); this.record(w, ok2);
+        if (ok2 && !w._quick) { G.scrap += 5; Snd.sfx('ok'); toast('+5 scrap for checking every step!'); }
+      }
+    }
     if (!noRecord && !q.noRec && !(mode && mode.test) && !this.hold && !this.building && G.learn.build) await this.builder();
     return ok;
   },
@@ -828,6 +876,8 @@ const Learn = {
       if (sayText) Timers.add(350, speakNow);
       const cut = type === 'mc' && n === 4 && !mode.test && G.gear && G.gear.charms.hint ? pick([0, 1, 2, 3].filter(i => i !== q.a)) : -1;
       const marks = new Set();
+      // EFFORT: the time to the first answer, on ordinary cards only (not tests, trials, lessons, two-part items or the Skill Builder)
+      const stamp = () => { if (!quiet && !mode.demo && !mode.noRecord && !mode.part && !Learn.hold && !Learn.building && q._first == null) q._first = t; };
       if (mode.demo) { ok = true; picked = q.a; if (type === 'multi') q.as.forEach(i => marks.add(i)); }
       const finish = () => { Speak.stop(); UI.pop(m); res(ok); };
       const settle = good => {
@@ -837,15 +887,16 @@ const Learn = {
       };
       const choose = i => {
         if (ok !== null) return;
-        if (type === 'multi') { if (i === n) { if (!marks.size) { Snd.sfx('no'); return; } settle(marks.size === q.as.length && q.as.every(x => marks.has(x))); } else { marks.has(i) ? marks.delete(i) : marks.add(i); Snd.sfx('move'); } return; }
+        if (type === 'multi') { if (i === n) { if (!marks.size) { Snd.sfx('no'); return; } stamp(); settle(marks.size === q.as.length && q.as.every(x => marks.has(x))); } else { marks.has(i) ? marks.delete(i) : marks.add(i); Snd.sfx('move'); } return; }
         if (i === cut || struck.has(i)) { Snd.sfx('no'); return; }
+        stamp();
         if (i !== q.a && canHint && !tries) { tries = 1; struck.add(i); hint = Learn.hintFor(q, q.choices[i]); Snd.sfx('wrong'); for (let k = 1; k < n; k++) { const j = (i + k) % n; if (j !== cut) { sel = j; break; } } return; }
         picked = i; late = tries > 0 && i === q.a; settle(i === q.a && !tries);
       };
       const key = k => {
         if (ok !== null) return;
         if (k === '⌫') inp = inp.slice(0, -1);
-        else if (k === 'OK') { if (!inp || inp === '.') { Snd.sfx('no'); return; } const good = Math.abs(parseFloat(inp) - parseFloat(String(q.ans).replace(/,/g, ''))) < 1e-9;
+        else if (k === 'OK') { if (!inp || inp === '.') { Snd.sfx('no'); return; } stamp(); const good = Math.abs(parseFloat(inp) - parseFloat(String(q.ans).replace(/,/g, ''))) < 1e-9;
           if (!good && canHint && !tries) { tries = 1; hint = Learn.hintFor(q, inp); inp = ''; Snd.sfx('wrong'); return; }
           late = tries > 0 && good; settle(good && !tries); return; }
         else if (inp.length < 9 && !(k === '.' && inp.includes('.'))) inp += k;
@@ -898,8 +949,10 @@ const Learn = {
           if (done) {
             const right = type === 'multi' ? q.as.map(i => q.choices[i]).join('   ·   ') : type === 'num' ? q.ans : q.choices[q.a];
             const all = ok && mode.both !== false;
-            head = mode.demo ? 'WATCH: HERE IS HOW IT WORKS' : late ? 'YES! YOU GOT IT ON THE SECOND TRY.' : all ? word : ok ? 'PART B IS RIGHT — BUT CHECK PART A:' : "NOT QUITE — HERE'S THE TRICK:";
-            setFont(24); why = wrap((mode.both === false ? 'Part A answer: ' + mode.aText + '.  ' : '') + (ok || late ? '' : 'Answer: ' + right + '.  ') + q.why, W - 120);
+            head = mode.demo ? 'WATCH: HERE IS HOW IT WORKS' : late ? 'YES! YOU GOT IT ON THE SECOND TRY.' : all ? (Learn.tooQuick(q) ? 'Right, but that was very quick. Read every choice before you tap.' : word) : ok ? 'PART B IS RIGHT — BUT CHECK PART A:' : "NOT QUITE — HERE'S THE TRICK:";
+            // a wrong "why": point at the first step in her choice that is not true
+            const fs = q.isWhy && !ok && picked >= 0 ? Learn.falseStep(q.choices[picked]) : null;
+            setFont(24); why = wrap(fs ? 'Look at ' + fs + '. Is that true?' : (mode.both === false ? 'Part A answer: ' + mode.aText + '.  ' : '') + (ok || late || q.isWhy ? '' : 'Answer: ' + right + '.  ') + q.why, W - 120);
           } else if (hint) { head = 'NOT QUITE. HERE IS A HINT, THEN TRY ONCE MORE:'; setFont(24); why = wrap(hint, W - 120); }
           if (type === 'num') {
             setFont(22); text('Type your answer, then press OK.', 56, y, '#c9a24a'); y += 30;
@@ -912,7 +965,7 @@ const Learn = {
               setFont(i === 12 ? 34 : 36); text(k, r.x + r.w / 2, r.y + r.h / 2 - 16, '#fff', 'center'); hits.push(Object.assign({ k }, r));
             });
             y += 78;
-            if (done || hint) { setFont(18, true); text(done ? head : 'HINT: TRY ONCE MORE', 56, y + 6, ok || late ? '#7fe08a' : '#ffb07a'); setFont(24); wrap(why.join(' '), 400).forEach((l, i) => text(l, 56, y + 36 + i * 25, '#e8e0f4')); }
+            if (done || hint) { setFont(done && head.length > 50 ? 14 : 18, true); text(done ? head : 'HINT: TRY ONCE MORE', 56, y + 6, ok || late ? '#7fe08a' : '#ffb07a'); setFont(24); wrap(why.join(' '), 400).forEach((l, i) => text(l, 56, y + 36 + i * 25, '#e8e0f4')); }
           } else {
             const cs = q.small || n > 4 ? 25 : 30;
             setFont(cs);
@@ -935,7 +988,7 @@ const Learn = {
               y += h + gap;
             });
             if (type === 'multi' && !done) { const r = { x: W / 2 - 130, y: y + 2, w: 260, h: 46, i: n }; rbox(r.x, r.y + 3, r.w, r.h, 23, 'rgba(8,4,20,.35)'); rbox(r.x, r.y, r.w, r.h, 23, marks.size ? '#2f9a54' : '#3a3458', sel === n ? '#ffd76a' : '#7a66d0', 3); setFont(18, true); text('SUBMIT', W / 2, r.y + 10, marks.size ? '#fff' : '#8f86a8', 'center'); hits.push(r); }
-            if (done || hint) { setFont(18, true); text(head, 56, y + 6, (ok && mode.both !== false) || late ? '#7fe08a' : '#ffb07a'); setFont(24); why.forEach((l, i) => text(l, 56, y + 34 + i * 25, '#e8e0f4')); }
+            if (done || hint) { setFont(head.length > 50 ? 14 : 18, true); text(head, 56, y + 6, (ok && mode.both !== false) || late ? '#7fe08a' : '#ffb07a'); setFont(24); why.forEach((l, i) => text(l, 56, y + 34 + i * 25, '#e8e0f4')); }
           }
           if (readText && ok === null) { sayHit = { x: 44, y: H - 70, w: 200, h: 40 }; rbox(sayHit.x, sayHit.y, sayHit.w, sayHit.h, 20, '#2f7ab0', Speak.on ? '#ffffff' : '#9fe0ff', 2.5); setFont(15, true); text(Speak.on ? 'READING...' : 'READ TO ME', sayHit.x + 100, sayHit.y + 10, '#fff', 'center'); }
           if (done && t > 500 && Math.floor(t / 400) % 2) { setFont(24); text('▼', W - 70, H - 54, '#c9a24a'); }
@@ -1040,8 +1093,16 @@ const Learn = {
       }
       for (let round = 0; round < 2; round++) {
         Sess.note('lesson', 'teach/watch');
-        await say(who, round ? 'STEP 1 again: WATCH. Here is another one, already solved.' : 'STEP 1: WATCH. I will do one. Just look at how it works.');
-        await this.card(fresh(), T + '   ·   WATCH', { demo: 1 });
+        // the worked example with its last step left blank for her to finish, where the answer appears in it; otherwise just watch
+        const wq = fresh(), bl = wq.type !== 'multi' && wq.why ? LearnCore.blank(wq.why, String(wq.choices[wq.a])) : null;
+        if (bl) {
+          await say(who, round ? 'STEP 1 again: WATCH. Here is another one. I do the work, you fill in the last step.' : 'STEP 1: WATCH. I will work one out. You fill in the last step.');
+          const got = await this.card(Object.assign({}, wq, { q: wq.q + '\n' + bl + '\nWhat goes in the blank?', small: true }), T + '   ·   WATCH', { noRecord: 1, noHint: 1 });
+          if (got) await say(who, pick(['Yes! You finished it yourself.', 'That is it. You did the last step.']));
+        } else {
+          await say(who, round ? 'STEP 1 again: WATCH. Here is another one, already solved.' : 'STEP 1: WATCH. I will do one. Just look at how it works.');
+          await this.card(wq, T + '   ·   WATCH', { demo: 1 });
+        }
         Sess.note('lesson', 'teach/two');
         await say(who, 'STEP 2: TOGETHER. Your turn, with only two choices. If you miss, we look at why, and then you get it again.');
         await until(this.two(fresh(true)), T + '   ·   TOGETHER');
@@ -1209,6 +1270,7 @@ const Learn = {
       ctx.fillStyle = 'rgba(6,4,14,.9)'; ctx.fillRect(0, 0, W, H); panel(20, 14, W - 40, H - 28);
       setFont(18, true); text('WHEN SHE STOPS', 44, 34, '#ffd76a'); let y = 74;
       setFont(22); text(SL.summary || (SL.rows.length ? 'Each sitting below ends where she put the game down.' : 'No sittings recorded yet. Play a little and come back.'), 44, y, '#c8ffb8'); y += 36;
+      if (SL.quick) { text(SL.quick + '.', 44, y, '#ffb07a'); y += 36; }
       // rows are long; take the biggest size at which the widest one still fits the panel
       let px = 21; for (; px > 14; px--) { setFont(px); if (SL.rows.slice(0, 10).every(r => ctx.measureText(r).width <= W - 88)) break; }
       SL.rows.slice(0, 10).forEach(r => { text(r, 44, y, '#f4eeff'); y += 28; });

@@ -42,7 +42,7 @@ const Battle = {
         const pm = MOVES[act.m], pp = pm.pri || 0, fp = fm.pri || 0;
         const first = pp > fp || (pp === fp && statOf(me, 'spd') >= statOf(foe, 'spd'));
         const order = first ? [[me, foe, pm, true], [foe, me, fm, false]] : [[foe, me, fm, false], [me, foe, pm, true]];
-        for (const [u, t, mv, isP] of order) { if (u.hp <= 0 || t.hp <= 0) continue; await this.doMove(u, t, mv, isP, isP ? act.ok : null); }
+        for (const [u, t, mv, isP] of order) { if (u.hp <= 0 || t.hp <= 0) continue; await this.doMove(u, t, mv, isP, isP ? (act.quick ? 'quick' : act.ok) : null); }
       } else if (foe.hp > 0 && me2.hp > 0) await this.doMove(foe, me2, fm, false, null);
       for (const [c, isP] of [[G.party[st.pi], true], [foe, false]]) {
         if (c.hp > 0 && c.status === 'ick') {
@@ -101,8 +101,10 @@ const Battle = {
         if (mi < 0) continue;
         let ok = await Learn.quiz(st.combo >= 2 ? `BRAIN BLAST!   COMBO ×${st.combo}` : 'BRAIN BLAST!');
         if (!ok && G.gear.charms.retry && !st.used.retry) { st.used.retry = true; await bsay('The Second-Chance Charm glows. Try another one!'); ok = await Learn.quiz('SECOND CHANCE!'); }
-        st.combo = ok ? st.combo + 1 : 0;
-        return { k: 'move', m: me.moves[mi], ok };
+        // right but too quick to have been read: the move lands at normal strength and the combo holds where it is
+        const quick = ok && Learn.lastRushed;
+        st.combo = ok ? (quick ? st.combo : st.combo + 1) : 0;
+        return { k: 'move', m: me.moves[mi], ok, quick };
       }
       if (i === 1) {
         const acts = (G.gear.sword ? ['sword'] : []).concat(G.crew);
@@ -203,7 +205,7 @@ const Battle = {
       if (brain === false) { await bsay('...but it lost focus and fizzled out.'); return; }
       await this.fx(u, t, m, true); return;
     }
-    if (Math.random() * 100 > (m.acc || 100) + (brain ? 15 : 0)) { await bsay('...but it missed!'); return; }
+    if (Math.random() * 100 > (m.acc || 100) + (brain === true ? 15 : 0)) { await bsay('...but it missed!'); return; }
     await tween(st, isP ? 'px' : 'ex', isP ? 60 : -60, 90); tween(st, isP ? 'px' : 'ex', 0, 140);
     if (!isP && st.block) { st.block = false; Snd.sfx('no'); await bsay('Bash blocks it! "Not today, pal."'); return; }
     const eff = typeMult(m.t, SPECIES[t.sp].t), crit = Math.random() < .06;
@@ -218,11 +220,13 @@ const Battle = {
     if (isP && m.t === 'DRAGON' && brain === true) d *= 1 + .08 * Math.min(5, st.combo);
     d = Math.max(1, Math.floor(d));
     t.hp = Math.max(0, t.hp - d);
-    Snd.sfx(eff > 1 || brain ? 'crit' : 'hit'); this.flash(!isP, d, m.t);
+    Snd.sfx(eff > 1 || brain === true ? 'crit' : 'hit'); this.flash(!isP, d, m.t);
     if (brain === true) st.banner = { t0: performance.now(), txt: st.combo >= 3 ? `COMBO ×${st.combo}!` : 'BRAIN BLAST!' };
-    if (brain) { Fx.shake = 8; tween(Fx, 'shake', 0, 250); }
+    if (brain === 'quick') st.banner = { t0: performance.now(), txt: 'TOO QUICK!', sub: 'Read it all next time.', d: 2200 };
+    if (brain === true) { Fx.shake = 8; tween(Fx, 'shake', 0, 250); }
     await tween(t, 'dhp', t.hp, 350);
     if (brain === true) await bsay(st.combo >= 3 ? `BRAIN COMBO ×${st.combo}! A mega-powered hit!` : 'BRAIN BLAST! The attack is supercharged!');
+    if (brain === 'quick') await bsay('TOO QUICK! Read it all next time. The move hits at normal strength.');
     if (brain === false) await bsay('The attack fizzled a little...');
     if (crit) await bsay('A critical hit!');
     if (eff > 1) await bsay("It's super effective!"); else if (eff < 1) await bsay("It's not very effective...");
@@ -360,12 +364,13 @@ const Battle = {
       else { ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(x, y, p.r * (1 - k) * .7, 0, 6.3); ctx.fill(); }
     }
     ctx.globalAlpha = 1;
-    if (st.banner && now - st.banner.t0 < 1100) {
-      const k = (now - st.banner.t0) / 1100, s = k < .15 ? k / .15 : 1, a = k > .75 ? (1 - k) / .25 : 1;
+    if (st.banner && now - st.banner.t0 < (st.banner.d || 1100)) {
+      const k = (now - st.banner.t0) / (st.banner.d || 1100), s = k < .15 ? k / .15 : 1, a = k > .75 ? (1 - k) / .25 : 1;
       ctx.save(); ctx.globalAlpha = a; ctx.translate(W / 2, 230); ctx.rotate(-.06); ctx.scale(s, s);
       ctx.fillStyle = 'rgba(255,220,90,.35)'; for (let i = 0; i < 12; i++) { ctx.beginPath(); const a2 = i * .5236 + now / 900; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a2) * 420, Math.sin(a2) * 420); ctx.lineTo(Math.cos(a2 + .2) * 420, Math.sin(a2 + .2) * 420); ctx.fill(); }
       ctx.font = '96px ' + FONT_T; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
       ctx.strokeStyle = '#2a0a3e'; ctx.lineWidth = 18; ctx.strokeText(st.banner.txt, 0, 0); ctx.fillStyle = '#ff8ac0'; ctx.fillText(st.banner.txt, 0, 0);
+      if (st.banner.sub) { ctx.font = '44px ' + FONT_T; ctx.lineWidth = 10; ctx.strokeText(st.banner.sub, 0, 82); ctx.fillStyle = '#ffffff'; ctx.fillText(st.banner.sub, 0, 82); }
       ctx.restore();
     }
     const box = (c, x, y, w, mine) => {

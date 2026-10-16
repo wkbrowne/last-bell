@@ -229,7 +229,7 @@ const Quests = {
     // the arrow: story first; when the story has nothing waiting, the tracked quest
     { const o = Guide.final.bind(Guide); this._final = o; Guide.final = function () { const base = o(); if (!Quests.storyIdle(base) || !G || !G.quests || !flag('starter')) return base; const t = Quests.target(Quests.tracked()); return t || base; }; }
     // hooks into the game for progress
-    { const o = Learn.record; Learn.record = function (q, ok) { const r = o.apply(this, arguments); if (ok && q && q.q) Quests.event('right'); if (q && q.q) Quests.event('streak', G.learn.streak); if ((G.learn.fresh || []).length) Quests.event('master'); return r; }; }
+    { const o = Learn.record; Learn.record = function (q, ok) { const r = o.apply(this, arguments); if (ok && q && q.q && !q._quick) Quests.event('right'); if (q && q.q) Quests.event('streak', G.learn.streak); if ((G.learn.fresh || []).length) Quests.event('master'); return r; }; }
     { const o = Learn.factDash; Learn.factDash = async function () { const r = await o.apply(this, arguments); const L = G.learn.dash; if (L && L.length) Quests.event('dash', L[L.length - 1].n); await Quests.announce(); return r; }; }
     { const o = addCritter; addCritter = function (c) { const r = o.apply(this, arguments); Quests.event('catch', c.sp); return r; }; }
     { const o = Battle.run; Battle.run = async function (opt) { const r = await o.apply(this, arguments); if (r === 'win' && opt && opt.foes) { const n = {}; for (const f of opt.foes) { const t = SPECIES[f[0]] && SPECIES[f[0]].t; if (t) n[t] = (n[t] || 0) + 1; } for (const t in n) Quests.event('defeat', t, n[t]); } return r; }; }
