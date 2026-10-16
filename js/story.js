@@ -48,7 +48,7 @@ const TALKS = [
     await say('priya', "It was that you didn't say anything. You just... weren't there.");
     const c = await ask('dex', '...', ["I was scared and didn't know how to say it.", 'Our volcano was going to lose anyway.']);
     if (c === 0) { await say('dex', "Mom had just started working nights. I figured if I never counted on anybody, nobody could let me down."); await say('priya', "That is the dumbest smart thing you have ever said."); await say('priya', "...Thanks for telling me."); return 2; }
-    await say('priya', 'It was a WEATHER BALLOON, Dex.'); await say(null, "(She's laughing, though. First time in forty-two days.)"); return 1; } },
+    await say('priya', 'It was a WEATHER BALLOON, @N.'); await say(null, "(She's laughing, though. First time in forty-two days.)"); return 1; } },
   { id: 'b1', who: 'bash', ok: () => true, run: async () => {
     await say('bash', 'That thing with the recycling bin. In sixth grade.'); await say('dex', 'The blue one. For paper. I remember.');
     await say('bash', "My big brother did stuff like that to me. I thought that's what big guys were for.");
@@ -57,11 +57,11 @@ const TALKS = [
     await say('bash', c === 0 ? 'Cool. ...Cool.' : 'Ha! Deal. After we save the town.'); return c === 0 ? 2 : 1; } },
   { id: 'w1', who: 'wren', ok: () => true, run: async () => {
     await say('wren', 'My old group had nine people. We had a van and a plan. Know what happened?'); await say('wren', 'Somebody sneezed.');
-    await say('wren', "I'm fast, Dex. I got out because I didn't wait for anyone.");
+    await say('wren', "I'm fast, @N. I got out because I didn't wait for anyone.");
     const c = await ask('dex', '...', ['You waited for us at the junkyard.', "Being fast isn't a crime."]);
     await say('wren', c === 0 ? "...Yeah. I did. Don't make me regret it." : "No. But it gets lonely out in front."); return c === 0 ? 2 : 1; } },
   { id: 'p2', who: 'priya', ok: () => flag('broadcast'), run: async () => {
-    await say('priya', 'I kept a list. Everyone from homeroom. I check it against... the ones I see walking around.'); await say('priya', "It's a bad list, Dex.");
+    await say('priya', 'I kept a list. Everyone from homeroom. I check it against... the ones I see walking around.'); await say('priya', "It's a bad list, @N.");
     await say('dex', "Then we start a new one. People we FOUND. It's got four names on it already."); await say('priya', 'Five. Tesla the Boltbug counts.'); return 1; } },
   { id: 'b2', who: 'bash', ok: () => flag('wren'), run: async () => {
     await say('bash', "I named all the ferns. Don't tell Wren."); await say('bash', "When this is over, I'm going to grow tomatoes on the roof of the Nest. Real ones. For everybody.");
@@ -131,10 +131,11 @@ const Story = {
     await sleep(400);
     const g = await menu(['Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'], { x: 330, y: 230, w: 300, cancel: false, sel: 0, title: 'What grade are you in?' });
     G.learn.grade = 2 + g; G.readAloud = G.learn.grade <= 3;
+    await Hero.pick(true);
     const n = t => say(null, t);
     await n('Day 42 since the Green Night.');
     await n("That's the night the sky turned the color of lime soda, every grown-up in Wexler Falls got REALLY bitey, and weird little monsters crawled out of the storm drains.");
-    await n("My name is Dex Okafor. I'm fourteen. I live in a water tower.");
+    await n("My name is @N Okafor. I'm fourteen. I live in a water tower.");
     await n("As far as I can tell, I'm the last teenager on Earth.");
     await n('...Which, honestly? Best. Summer. Ever.');
     await fadeOut(400); enterWorld(); await fadeIn(600);
@@ -184,7 +185,7 @@ const Story = {
     if (!(await bossFight({ foes: [['sprinter', 6, 'Hall Monitor'], ['coach', 8]], bg: 'indoor' }))) return;
     setFlag('coach'); await badge('coach');
     await say(null, 'Coach Krunk flops onto a pile of dodgeballs and starts snoring. A little blue Boltbug zips out of the equipment cage.');
-    await say('priya', 'TESLA! You found her!'); await say('priya', '...Dex Okafor. Forty-two days, and you never once checked the SCHOOL?');
+    await say('priya', 'TESLA! You found her!'); await say('priya', '...@N Okafor. Forty-two days, and you never once checked the SCHOOL?');
     await say('dex', "In my defense: it's a school. In summer.");
     const c = await ask('priya', "You ditched me at the science fair. Now you rescue me by accident. What am I supposed to do with that?", ["I'm sorry I bailed on you.", 'Technically, I rescued your beetle.']);
     if (c === 0) { await say('priya', '...Okay. That is a start.'); G.bond.priya = 1; } else await say('priya', 'Unbelievable. (She is almost smiling.)');
@@ -274,10 +275,10 @@ const Story = {
       if (i < 2) { healAll(); await say('wren', 'Quick, patch up. More are coming!'); }
     }
     setFlag('broadcast'); await badge('air'); Snd.play('sad');
-    await say('priya', "It's ready. Dex... you should be the one to say it.");
-    const c = await ask('dex', '(You pick up the microphone.)', ['"This is Dex, Priya, Bash, and Wren. We\'re alive."', '"Uh. Hi. Is this thing on?"']);
-    if (c === 1) await say('priya', '(whispering) Dex!');
-    await say('dex', "This is Dex Okafor, with Priya, Bash, and Wren. We're alive. We're at Wexler Falls. If you can hear this, you are not alone.");
+    await say('priya', "It's ready. @N... you should be the one to say it.");
+    const c = await ask('dex', '(You pick up the microphone.)', ['"This is @N, Priya, Bash, and Wren. We\'re alive."', '"Uh. Hi. Is this thing on?"']);
+    if (c === 1) await say('priya', '(whispering) @N!');
+    await say('dex', "This is @N Okafor, with Priya, Bash, and Wren. We're alive. We're at Wexler Falls. If you can hear this, you are not alone.");
     await say(null, 'Static. A long, long minute of static.');
     await say('radio', '...kzzt... Harbor Colony... we read you... ferry can reach Wexler pier...');
     await say('radio', '...kzzt... a nurse got forty people out of County General that night... name of Okafor...');
@@ -298,11 +299,11 @@ const Story = {
     if (flag('bellTolls')) { await say(null, "Mom's note. You have read it eleven times. Twelve, now."); return; }
     Snd.play('sad');
     await say(null, "The nurses' station. Taped to the desk lamp is an envelope. It says DEX in her handwriting.");
-    await say('mom', 'Dex, if you are reading this, then you are okay, and that is the only thing I need to know.');
+    await say('mom', '@N, if you are reading this, then you are okay, and that is the only thing I need to know.');
     await say('mom', 'I got my patients out to the harbor. I went back for you, baby, but the house was empty. I looked for two days.');
     await say('mom', 'You were always the kid who said "I can do it myself." Do not do this by yourself. Find people. Let them help.');
     await say('mom', 'Then come find me. I will be on the first ferry that can dock. I am so proud of whoever you have become. Love, Mom.');
-    await say('dex', '...'); await say('priya', 'Dex?'); await say('dex', "She's alive. She LOOKED for me."); await say('bash', '(sniff) I got something in my eye. Fern dust.');
+    await say('dex', '...'); await say('priya', '@N?'); await say('dex', "She's alive. She LOOKED for me."); await say('bash', '(sniff) I got something in my eye. Fern dust.');
     await badge('house');
     Snd.stop(); await sleep(400);
     Fx.shake = 14; Snd.sfx('bell'); await sleep(1400); Snd.sfx('bell'); await tween(Fx, 'shake', 0, 1600);
@@ -337,7 +338,7 @@ const Story = {
     await say(null, 'Outside, all across Wexler Falls, a thousand zombies stop walking. One by one, they sit down and fall asleep.');
     await say(null, 'And far beneath the manor, in the dark where the Bell used to reach, something warm rolls over. The eggs are waking up.');
     await badge('bell'); healAll();
-    await say('priya', "The ferry can dock now. Dex... let's go meet your mom.");
+    await say('priya', "The ferry can dock now. @N... let's go meet your mom.");
     setObj('Go to the pier at Wexler Harbor (south of the hospital) and sound the horn.');
     logAdd('We did it. WE did it. The bell is broken, the zombies are napping, and there is a ferry coming. I think I am going to throw up. In a good way.');
     await fadeOut(500); warpTo('world', 19, 15, 'down'); await fadeIn(500);
@@ -357,7 +358,7 @@ const Story = {
     await fadeOut(900); Scene = 'black'; Snd.play('nest'); await fadeIn(400);
     const L = G.learn;
     await say(null, 'Day 49 since the Green Night.');
-    await say(null, 'My name is Dex Okafor. I used to think I was the last teenager on Earth.');
+    await say(null, 'My name is @N Okafor. I used to think I was the last teenager on Earth.');
     await say(null, 'Turns out I just had not looked hard enough.');
     await say(null, "The bell is broken, but its echo still wakes a few sleepers after dark. And every night, the beacon finds another kid. So every night, we go.");
     await say(null, `THE END\n\nBrain Blasts landed: ${L.right} of ${L.total}   ·   Best streak: ${L.best}\nBrain rank: ${brainRank(L.right)}   ·   Skills mastered: ${Object.values(L.sk).filter(k => k.m).length}\nMerit badges: ${G.badges.length} of ${Object.keys(BADGES).length}   ·   Critter friends: ${Object.keys(G.dex).length}`, { col: '#ffd76a' });

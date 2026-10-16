@@ -269,7 +269,7 @@ const Sky = {
   },
   async fly(k) {
     const D = this.DEST[k], rider = this.rider();
-    await say(null, rider === 'gale' ? 'Gale lowers her great head. Dex climbs onto her neck and grabs two fistfuls of soft grey feathers.' : `${cname(rideable())} crouches low. Dex climbs on and holds tight.`);
+    await say(null, rider === 'gale' ? 'Gale lowers her great head. @N climbs onto her neck and grabs two fistfuls of soft grey feathers.' : `${cname(rideable())} crouches low. @N climbs on and holds tight.`);
     const r = await Flight.run({ rider, dest: D.n, n: k === 'home' || k === 'nest' ? 2 : 3 });
     await fadeOut(300);
     if (k === 'home') warpTo('world', SKYPLACE.gale[0], SKYPLACE.gale[1] + 1, 'down'); else if (k === 'nest') warpTo('world', 41, 63, 'down'); else warpTo(k, this.starts[k][0], this.starts[k][1], 'up');
@@ -292,7 +292,7 @@ const Sky = {
   async call() {
     if (flag('skyCall')) return; setFlag('skyCall');
     await say('radio', '...kzzt... Little rider... can you hear me? ...kzzt... The storm over your town is not finished with you...');
-    await say('priya', 'Dex. That signal is not coming from the town. It is coming from ABOVE the clouds.');
+    await say('priya', '@N. That signal is not coming from the town. It is coming from ABOVE the clouds.');
     await say('radio', '...Come to the top of Radio Hill. I will wait for you there. ...kzzt...');
     setObj('A voice from above the clouds is calling. Go to the top of Radio Hill.');
     logAdd('The ferry came and the town is waking up. But the storm never stopped. And tonight a voice called us from ABOVE the clouds. Priya is pretending she is not excited. She is very excited.');
@@ -331,7 +331,7 @@ const Sky = {
     try { for (let i = 0; i < qs.length; i++) { if (!(await Learn.ask(qs[i], `${G2[0]}   ·   ${G2[1]}   ${i + 1} OF ${qs.length}`)) && ++miss > 1) break; } } finally { Learn.hold--; }
     if (miss > 1) { await say(null, 'The statue goes still. "Not yet. Come back when you are ready. I will be here. I am a statue."'); return; }
     setFlag(gift); Snd.sfx('badge'); Fx.flash = .7; tween(Fx, 'flash', 0, 600);
-    const got = { glide: ['GLIDE', 'A cape of woven wind settles on Dex\'s shoulders. With GLIDE you can float across water. Look for feather pads back home.', 'Now the Thunder Forge. That needs your own grown dragon.'], roar: ['ROAR', 'Thunder fills Dex\'s chest. With ROAR you can smash rubble out of the way. There are piles of it back home.', 'Now the Cloud Library.'], glow: ['GLOW', 'A warm light settles in Dex\'s hands. With GLOW you can light up dark places. There is a grove in Whisperwood no one could ever see into.', 'Now the Storm Eye.'] }[gift];
+    const got = { glide: ['GLIDE', 'A cape of woven wind settles on @N\'s shoulders. With GLIDE you can float across water. Look for feather pads back home.', 'Now the Thunder Forge. That needs your own grown dragon.'], roar: ['ROAR', 'Thunder fills Dex\'s chest. With ROAR you can smash rubble out of the way. There are piles of it back home.', 'Now the Cloud Library.'], glow: ['GLOW', 'A warm light settles in Dex\'s hands. With GLOW you can light up dark places. There is a grove in Whisperwood no one could ever see into.', 'Now the Storm Eye.'] }[gift];
     await say(null, `★ GIFT EARNED: ${got[0]} ★\n${got[1]}`, { col: '#ffd76a' });
     if (flag('glide') && flag('roar') && flag('glow')) await badge('gifted');
     setObj(gift === 'glide' ? (rideable() ? 'Try GLIDE at the feather pad on the harbour sand. Then fly to the Thunder Forge.' : 'Try GLIDE at the feather pad on the harbour sand. The Thunder Forge needs your own grown dragon. ' + this.growNote()) : gift === 'roar' ? 'Smash rubble back home with ROAR. Then fly to the Cloud Library.' : 'Light up the dark grove in Whisperwood with GLOW. Then fly to the Storm Eye.');
@@ -345,16 +345,16 @@ const Sky = {
   async glidePad(dir) {
     if (!flag('glide')) { await say(null, 'A white feather is painted on the ground, pointing out across the water. Something that could GLIDE might make it across.'); return; }
     const to = dir === 'out' ? SKYPLACE.padB : SKYPLACE.padA;
-    await say(null, dir === 'out' ? 'Dex spreads the cape of wind and jumps. The breeze catches him and carries him over the waves...' : 'One running jump, and the wind carries Dex back to the harbour.');
+    await say(null, dir === 'out' ? '@N spreads the cape of wind and jumps. The breeze catches @him and carries @him over the waves...' : 'One running jump, and the wind carries @N back to the harbour.');
     Snd.sfx('heal'); await fadeOut(350); warpTo('world', to[0] + (dir === 'out' ? 1 : -1), to[1], dir === 'out' ? 'right' : 'left'); checkZone(dir === 'back'); await fadeIn(350);
   },
   async rubble(id) {
     if (!flag('roar')) { await say(null, 'A heavy pile of rubble blocks a gap in the trees. Something is behind it. You would need a mighty ROAR to clear it.'); return; }
-    Snd.sfx('thunder'); Fx.shake = 14; tween(Fx, 'shake', 0, 600); await say(null, 'Dex takes a deep breath and ROARS. The rubble shakes, cracks, and tumbles away!'); setFlag(id);
+    Snd.sfx('thunder'); Fx.shake = 14; tween(Fx, 'shake', 0, 600); await say(null, '@N takes a deep breath and ROARS. The rubble shakes, cracks, and tumbles away!'); setFlag(id);
   },
   async grove() {
     if (!flag('glow')) { await say(null, 'A wall of darkness blocks the path. Not shadow: DARKNESS. Your flashlight just... stops at it. Only a real GLOW could get through.'); return; }
-    Snd.sfx('heal'); Fx.flash = .8; tween(Fx, 'flash', 0, 700); await say(null, 'Dex holds up his hands. The GLOW spills out, warm and gold, and the darkness peels away like paper.'); setFlag('grove');
+    Snd.sfx('heal'); Fx.flash = .8; tween(Fx, 'flash', 0, 700); await say(null, '@N holds up @his hands. The GLOW spills out, warm and gold, and the darkness peels away like paper.'); setFlag('grove');
   },
   async friend(id, sp, txt) {
     await say(null, txt);
@@ -365,12 +365,12 @@ const Sky = {
   // the rooftops: a short flight, a one-time find, and back where you were
   async roof(k) {
     const back = { map: G.map, x: G.x, y: G.y, dir: G.dir }, n = this.DEST[k].n;
-    await say(null, `${cname(rideable())} crouches low. Dex climbs on and holds tight.`);
+    await say(null, `${cname(rideable())} crouches low. @N climbs on and holds tight.`);
     const r = await Flight.run({ rider: this.rider(), dest: n, n: 2 }); G.scrap += r.sparks * 2 + r.right * 5;
     Scene = 'black';
     if (k === 'school') { await say(null, 'The dragon lands on the flat school roof with a thump. A rusty trophy case sits by the air vents, where Coach Krunk used to hide his snacks.'); give('slush', 3, true); G.scrap += 200; await say(null, '★ Found 3 Freeze Slushies and 200 scrap in Coach Krunk\'s secret trophy case! ★', { col: '#ffd76a' }); setFlag('roof_school'); }
     if (k === 'mall') { await say(null, 'Through the mall skylight you can see the garden shop. On the glass sits a seed packet with a note: "For Bash, if anyone ever finds this. Love, Grandma."'); give('potion', 3, true); await say(null, '★ Found Bash\'s seed packet and 3 Healing Potions! ★', { col: '#ffd76a' }); await say('bash', '...My grandma\'s ferns. These are my grandma\'s fern seeds. (He goes very quiet and very happy.)'); setFlag('roof_mall'); }
-    if (k === 'tower') { await say(null, 'At the very top of the radio tower, Dex bolts Priya\'s spare antenna to the old beacon.'); await say('priya', 'Signal strength just DOUBLED. Every kid we rescue at night will find us faster. Double scrap from night rescues, starting now!'); setFlag('roof_tower'); setFlag('booster'); }
+    if (k === 'tower') { await say(null, 'At the very top of the radio tower, @N bolts Priya\'s spare antenna to the old beacon.'); await say('priya', 'Signal strength just DOUBLED. Every kid we rescue at night will find us faster. Double scrap from night rescues, starting now!'); setFlag('roof_tower'); setFlag('booster'); }
     await fadeOut(250); warpTo(back.map, back.x, back.y, back.dir); Scene = 'world'; checkZone(true); await fadeIn(250);
   },
   // the finale

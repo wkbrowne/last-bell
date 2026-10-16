@@ -165,7 +165,7 @@ function checkZone(quiet) {
 function warpTo(map, x, y, dir) { WAND.length = 0; G.map = map; G.x = x; G.y = y; if (dir) G.dir = dir; PL.px = x * 16; PL.py = y * 16; PL.moving = false; PL.zone = null; }
 async function doWarp(w) { Snd.sfx('door'); await fadeOut(220); warpTo(w[0], w[1], w[2], w[3]); checkZone(); await fadeIn(220); }
 async function blackout() {
-  await say(null, 'Your critters are all tuckered out! Dex scoops them up and dashes to safety.');
+  await say(null, 'Your critters are all tuckered out! @N scoops them up and dashes to safety.');
   await fadeOut(400); healAll(); warpTo(G.rest.map, G.rest.x, G.rest.y, 'down'); checkZone(true); await fadeIn(400);
   await say('dex', pick(['Okay. Deep breath. Everybody gets a snack, and we try again.', "Apocalypse Rule #9: Losing just means you're not done yet.", 'We almost had it. Maybe a little practice in Study Hall first?']));
 }
@@ -676,7 +676,7 @@ async function pauseMenu() {
   while (true) {
     const opts = [['Team', partyMenu], ['Bag', bagMenu], ['Quests', () => Quests.board()], ['Study Hall', () => Learn.studyHall()], ['Practice & Tests', () => Learn.practiceMenu()], ['Dragons', eggsPage]];
     if (flag('canFly')) opts.push(['Fly', flyMenu]);
-    opts.push(["Dex's Log", journal], ['Badges', badgesPage], ['Crew', crewPage], ['Save', async () => saveGame()], ['Options', optionsMenu], ['Close', null]);
+    opts.push([`${HN()}'s Log`, journal], ['Badges', badgesPage], ['Crew', crewPage], ['Save', async () => saveGame()], ['Options', optionsMenu], ['Close', null]);
     Sess.pause(true);      // the menu itself is a pause; Study Hall and the rest count as play again once chosen
     const i = await menu(opts.map(o => o[0]), { x: W - 300, y: 20, w: 280, rows: 12, title: 'MENU' });
     Sess.pause(false);
@@ -770,7 +770,7 @@ async function flyMenu() {
   if (!spots.length) { await say(null, 'Dragons fly between campfires you have rested at. Rest at a few more first.'); return; }
   const i = await menu(spots.map(r => r.n).concat(['Stay here']), { x: 280, y: 160, w: 400, title: `FLY ON ${cname(c).toUpperCase()}` });
   if (i < 0 || i >= spots.length) return;
-  await say(null, `${cname(c)} crouches low. Dex climbs on and holds tight.`);
+  await say(null, `${cname(c)} crouches low. @N climbs on and holds tight.`);
   await fadeOut(300); PL.fly = { t0: performance.now(), sp: c.sp }; Scene = 'fly'; Snd.sfx('thunder'); await fadeIn(250);
   await sleep(2300); await fadeOut(300);
   warpTo('world', spots[i].x, spots[i].y, 'down'); Scene = 'world'; checkZone(true); await fadeIn(350);
@@ -811,7 +811,7 @@ const SHOPS = {
     intro: ["Halt. ...Old habit. I stood guard at Blackwood Manor for a hundred years.", "I watched that Bell switch off every mind in this town. I am done guarding it. Now I make things to break it.", "I do not take scrap, small knight. A blade is only as sharp as the one who swings it. Show me you can THINK, and I will arm you."],
     hello: ['Back for a better blade, small knight?', 'Steel is patient. Are you?', 'A sharp mind first. Then a sharp sword.'],
     stock() { const gates = [null, 'priya', 'bash', 'wren', 'broadcast'], why = ['', 'Old Clank needs Priya to design the grip. Find her first.', 'Too heavy to forge alone. Come back with someone strong.', 'It must be quenched in lightning. Come back with someone fast enough to catch a bolt.', 'It needs a shard of the antenna dish. Send the broadcast first.'];
-      return SWORDS.map((w, i) => ({ n: w.n, d: w.d + ` Your critters hit ${6 * (i + 1)}% harder, and Dex can strike once per battle.`, tier: i + 1, owned: G.gear.sword > i, locked: (G.gear.sword < i && 'Earn the ' + SWORDS[i - 1].n + ' first.') || (gates[i] && !flag(gates[i]) && why[i]), get() { G.gear.sword = i + 1; syncGear(); } })); },
+      return SWORDS.map((w, i) => ({ n: w.n, d: w.d + ` Your critters hit ${6 * (i + 1)}% harder, and ${HN()} can strike once per battle.`, tier: i + 1, owned: G.gear.sword > i, locked: (G.gear.sword < i && 'Earn the ' + SWORDS[i - 1].n + ' first.') || (gates[i] && !flag(gates[i]) && why[i]), get() { G.gear.sword = i + 1; syncGear(); } })); },
     async extra() { if (G.gear.sword >= 1 && !flag('lore_clank')) { setFlag('lore_clank'); await say('clank', 'You carry a blade now, so you should know what I truly guarded. Not the Bell. What sleeps BENEATH it.'); await say('clank', 'Five eggs. Older than the manor. The Blackwoods built that Bell to keep them asleep. The Bellringer turned it on your town instead.'); await say('clank', 'The eggs choose their own keepers, small knight. They care nothing for strength. Only for a mind that is sharp in numbers AND in words.'); } },
     dare: it => `The ${it.n}. Earn it.`, win: ['It suits you. Swing it like you mean it.', 'Well struck, small knight. Even before you swing.'], lose: ['Not yet. The steel can wait. Try again when you are ready.', 'A dull answer. Sharpen it and return.'] },
   brew: { who: 'newt', title: "NANA NEWT'S POTIONS", short: 'POTION',
@@ -822,7 +822,7 @@ const SHOPS = {
     async extra() { const eg = curEgg(); if (eg) await say('newt', eg.wm >= 20 && eg.we >= 20 ? "Ooh, that egg is toasty, dearie! Warm enough. Now it just wants you to MASTER a few more skills. Check your DRAGONS page." : `Let Nana feel that egg. Mm. Math warmth ${eg.wm} of 20, English warmth ${eg.we} of 20. Right answers, dearie. That is the only fire it likes.`); },
     dare: it => `${it.n.replace(/ ×.*/, '')}? Ooh, a tricky recipe. Measure carefully!`, win: ['Perfect measurements! Here you are, dearie.', 'Bubbling beautifully. Don\'t drink it all at once.'], lose: ['Oh dear, it curdled. No matter! We try again.', 'A pinch too much somewhere. Have another go, dearie.'] },
   magic: { who: 'flick', title: "PROFESSOR FLICKER'S SPELL CELLAR", short: 'MAGIC',
-    intro: ["Ah! A living student. How novel. I was librarian at Blackwood Manor, before the Bell. And after, I suppose, in a manner of speaking.", "Here is the secret, young man: the Bell does not make monsters. It switches THINKING off. A mind that is busy working cannot be switched off.", "That is why your critters strike harder when you solve things. Numbers and words are the oldest magic there is. Prove you can wield them, and my scrolls are yours."],
+    intro: ["Ah! A living student. How novel. I was librarian at Blackwood Manor, before the Bell. And after, I suppose, in a manner of speaking.", "Here is the secret, my young friend: the Bell does not make monsters. It switches THINKING off. A mind that is busy working cannot be switched off.", "That is why your critters strike harder when you solve things. Numbers and words are the oldest magic there is. Prove you can wield them, and my scrolls are yours."],
     hello: ['Class is in session.', 'Ah, my favorite living student.', 'Magic is only math wearing a cape. Shall we?'],
     stock() { const sc = (id, tier, qty, gate, why) => ({ n: ITEMS[id].n + (qty > 1 ? ' ×' + qty : ''), d: ITEMS[id].d + ` You have ${G.bag[id] || 0}.`, tier, qty, locked: gate && !flag(gate) && why, get() { give(id, qty, true); } });
       const ch = (id, tier, gate, why) => ({ n: CHARMS[id].n, d: CHARMS[id].d + ' (Permanent.)', tier, owned: !!G.gear.charms[id], locked: gate && !flag(gate) && why, get() { G.gear.charms[id] = 1; } });

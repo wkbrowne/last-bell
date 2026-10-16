@@ -418,3 +418,29 @@ The Quest Board and Skyreach now feed each other instead of running side by side
 check the 🐉 quests appear, the egg warms (or hatches), caps are earned and change Dex, the shelf fills, the weekly
 critter arrives, signals count, and the bot flies between islands from the perch menus and steers through the right
 rings to finish sky quests. A run with a Sky Rings quest forced every day finished it every day.
+
+## Choose your hero (v1.32)
+
+`js/hero.js`. The player can be **Dex** (skater: cap, lightning jacket), **Jo** (soccer star: ponytail, team shirt) or
+**Lulu** (sparkle queen: pigtails, bows, skirt, glitter sneakers). Each has a different skin tone, and Mom matches
+whichever is chosen. A new game asks right after the grade, before "My name is ... Okafor". An older save asks once,
+the first time it is continued; nothing else about the save changes (crew, critters, learning, story, quests).
+There is no way to change it afterwards.
+
+- **One sprite key.** The player is still drawn as `dex`; `HUM.dex` is swapped for the chosen look, keeping the sword.
+  The Quest Board colours go on Dex's cap, Jo's headband or Lulu's bows (and everyone's sneakers); the Wardrobe and
+  the reward lines name them accordingly. A colour already picked in the Wardrobe is kept.
+- **Name and pronouns.** Text about the hero uses tokens: `@N` (name), `@n` (name in lower case), `@he @He @him @his
+  @His @himself`. `say()` fills them in for every dialogue line and choice; `mc()` and `ms()` fill them in for
+  questions, passages, tips and explanations; Maze Dash and the Writing Workshop fill them in when they are picked.
+  A few grammar items that test "himself" or an unclear "he" now use Bash and Mr. Munch, so their answer does not
+  depend on the hero.
+- **Learning history is kept.** A question's kind (`Learn.sig`) is worked out from its wording as written for Dex
+  (`q.canon`), so a child who switches from Dex to Lulu mid-game keeps every "already seen" and "missed before" record.
+- **Report Card.** The sittings page says "When he stops" or "When she stops" to match the hero.
+
+**Tests.** `HUNT.hero()`: an older mid-game save continued for each hero, choosing by taps; the look, name, Mom,
+colours and progress are checked, the hello line uses the new name, and the chooser never comes back. A new game
+picks Lulu by taps and the intro says "My name is Lulu Okafor". Every skill's questions (and Select-all questions),
+grades 2-6, generated from the same dice as Dex and as Lulu: the same kind of question every time, no token left,
+no "Dex" and no stray "he" for Lulu; the writing tasks and mazes likewise.

@@ -7,7 +7,7 @@ window.HUNT = {
   finds: null,
   add(k, ex) { const f = this.finds; (f[k] = f[k] || { n: 0, ex }).n++; },
   out() { return Object.entries(this.finds).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => v.n + 'x ' + k + (v.ex ? ' :: ' + v.ex : '')); },
-  fresh(grade) { UI.stack.length = 0; Script.n = 0; G = newState(); G.learn.grade = grade || 2; G.flags.starter = true; G.party = [makeCritter('scrapup', 5)]; Scene = 'black'; },
+  fresh(grade) { UI.stack.length = 0; Script.n = 0; G = newState(); G.hero = 'dex'; G.learn.grade = grade || 2; G.flags.starter = true; G.party = [makeCritter('scrapup', 5)]; Scene = 'black'; Hero.apply(); },
 
   // 1. Every question card, in every state, must fit on the screen and never cover its own buttons.
   async layout(ms) {
@@ -310,5 +310,63 @@ window.HUNT = {
     return { probe: 'quests', frames: f, results, finds: this.out() };
   },
 
-  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
+  // 10. Heroes: an older save chooses once (by taps) and keeps its progress, a new game chooses before the intro,
+  // and every question reads right for every hero while being counted as the same kind of question.
+  async hero() {
+    this.finds = {}; const errs = [], onErr = e => errs.push((e.message || (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)).split('\n').slice(0, 2).join(' | '));
+    addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+    const mute = Snd.muted, realSay = say, results = {}; Snd.muted = true; Touch.enabled = true; let lines = [];
+    say = function (who, str) { lines.push(heroText(String(str))); return realSay.apply(this, arguments); };
+    // tap through whatever is on top; on the chooser, tap card `want`; on a question, the first choice
+    const drive = (want, until, n) => this.frames(n || 3000, i => { if (until()) return false; const top = UI.stack[UI.stack.length - 1];
+      if (i % 6 === 0 && top) { const hs = top.hits, card = hs && hs.find(h => HEROES[h.k]); let pt = { x: 480, y: 610 };
+        if (card) { const h = hs.find(h => h.k === want); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } else if (hs && hs.length) pt = { x: hs[0].x + hs[0].w / 2, y: hs[0].y + hs[0].h / 2 };
+        Input.taps.push(pt); } });
+    try {
+      // an older save: no hero yet, mid-game, with a cap colour already picked
+      for (const k of ['lulu', 'jo', 'dex']) {
+        this.fresh(2); delete G.hero; G.log = ['Day 42.']; G.flags.priya = true; G.party.push(makeCritter('gloop', 9)); G.cos = { caps: ['red', 'blue'], cap: 'blue' }; G.learn.right = 77; G.learn.placeAsked = true;
+        G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); lines = []; let done = false;
+        script(async () => { await welcomeBack(); done = true; }); await drive(k, () => done);
+        if (!done) this.add('welcome back with no hero did not finish', k);
+        if (G.hero !== k) this.add('chose the wrong hero', k + ' got ' + G.hero);
+        if (HUM.dex.style !== HEROES[k].look.style || HUM.dex.skin !== HEROES[k].look.skin) this.add('the player does not look like the chosen hero', k);
+        if (SPEAKERS.dex.n !== HEROES[k].n) this.add('the player speaks with the wrong name', SPEAKERS.dex.n);
+        if (HUM.mom.skin !== HEROES[k].look.skin) this.add('Mom does not match her kid', k);
+        if (G.cos.cap !== 'blue' || !G.cos.caps.includes(HEROES[k].col0)) this.add('a picked colour was lost, or the hero colour not given', JSON.stringify(G.cos));
+        if (G.learn.right !== 77 || G.party.length !== 2 || !G.flags.priya) this.add('choosing a hero changed progress', k);
+        if (!lines.some(l => l.includes(HEROES[k].n + ' Okafor'))) this.add('no hello from the new hero', k);
+        if (lines.some(l => /@/.test(l))) this.add('a line still has a hero token', lines.find(l => /@/.test(l)));
+        if (k !== 'dex' && lines.some(l => /\bDex\b/.test(l))) this.add('Dex named for another hero', lines.find(l => /\bDex\b/.test(l)));
+        // asked once only
+        G.day = null; let shown = false; done = false; script(async () => { await welcomeBack(); done = true; });
+        await this.frames(1500, i => { const top = UI.stack[UI.stack.length - 1]; if (top && top.hits && top.hits.some(h => HEROES[h.k])) shown = true; if (done) return false; if (i % 6 === 0 && top) Input.taps.push(top.hits && top.hits.length ? { x: top.hits[0].x + 4, y: top.hits[0].y + 4 } : { x: 480, y: 610 }); });
+        if (shown) this.add('the hero chooser came back a second time', k);
+        const back = JSON.parse(JSON.stringify(G)); if (back.hero !== k) this.add('the hero is not in the save', k);
+      }
+      // a new game: grade, then the hero, then the intro in that hero's voice
+      UI.stack.length = 0; Script.n = 0; G = newState(); lines = []; script(() => Story.intro());
+      await drive('lulu', () => lines.some(l => /My name is/.test(l)), 2000);
+      results.intro = lines.find(l => /My name is/.test(l)); if (!results.intro || !/Lulu Okafor/.test(results.intro)) this.add('the intro does not use the chosen hero', results.intro);
+      UI.stack.length = 0; Script.n = 0;
+      // every question, as Dex and as Lulu from the same dice: same kind of question, no tokens left, no Dex, no "he" for her
+      const R0 = Math.random; let seed = 1; const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+      const strs = q => [q.q, q.why, q.passage, q.ptitle, q.say].concat(q.choices || []).concat(q.partB ? [q.partB.q].concat(q.partB.choices) : []).concat(q.tips ? Object.values(q.tips) : []).filter(x => typeof x === 'string');
+      let n = 0, named = 0; G = newState();
+      try { for (const id of Object.keys(SKILLS)) { const S = SKILLS[id]; for (let gr = 2; gr <= 6; gr++) for (let k = 0; k < 30; k++) for (const fn of [S.gen, S.multi]) { if (!fn) continue; const s0 = id.length * 7919 + gr * 1000 + k * 3 + 1; let a, b;
+        try { G.learn.grade = gr; G.hero = 'dex'; seed = s0; Math.random = rnd; a = fn(gr); G.hero = 'lulu'; seed = s0; b = fn(gr); } catch (e) { continue; } finally { Math.random = R0; }
+        if (!a || !b) continue; n++; const bs = strs(b).join(' | '); if (/Lulu/.test(bs)) named++;
+        if (Learn.sig(a, S.sub) !== Learn.sig(b, S.sub)) this.add('a question counts as a different kind for another hero', id + ': ' + b.q.slice(0, 60));
+        if (strs(a).concat(strs(b)).some(x => /@(N|n|he|He|him|his|His)/.test(x))) this.add('a hero token left in a question', id + ': ' + bs.slice(0, 80));
+        if (/\bDex\b/.test(bs)) this.add('Dex named in a question for Lulu', id + ': ' + bs.slice(0, 80));
+        if (/Lulu/.test(bs) && /\b(he|his|him|himself|He|His)\b/.test(bs.replace(/Old Clank folded his|what he does/g, ''))) this.add('"he" for Lulu', id + ': ' + bs.slice(0, 100)); } } } finally { Math.random = R0; }
+      results.questions = n; results.withHeroName = named;
+      for (const w of WRITE.concat(MAZES.map(m => ({ t: m[1] })))) { const t = JSON.stringify(heroItem(w, 'lulu')); if (/@|\bDex\b/.test(t)) this.add('a writing task or maze still says Dex', t.slice(0, 80)); }
+    } catch (e) { this.add('hero probe threw', (e.stack || e.message).split('\n').slice(0, 2).join(' | ')); }
+    finally { say = realSay; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); UI.stack.length = 0; Script.n = 0; }
+    for (const e of [...new Set(errs)]) this.add('error during hero', e);
+    return { probe: 'hero', results, finds: this.out() };
+  },
+
+  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };

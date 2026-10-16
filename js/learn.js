@@ -18,6 +18,9 @@ const valOf = t => { t = String(t).replace(/,/g, '').trim(); let m;
   return /^-?\d+(\.\d+)?$/.test(t) ? +t : null; };
 function mc(q, ans, wrongs, why, extra) {
   ans = String(ans);
+  // the hero's name and pronouns are filled in here; the kind of question is still known by its original wording
+  const canon = /@/.test(q + ans + ((extra && extra.ptitle) || '') + ((extra && extra.say) || '')) ? { q: heroText(q, 'dex'), a: heroText(ans, 'dex'), pt: extra && heroText(extra.ptitle, 'dex'), sy: extra && heroText(extra.say, 'dex') } : null;
+  q = heroText(q); ans = heroText(ans); wrongs = wrongs.map(w => heroText(String(w))); why = heroText(why); if (extra) extra = heroItem(extra);
   const opts = [ans], av = valOf(ans), same = w => { const v = valOf(w); return av !== null && v !== null && Math.abs(v - av) < 1e-9; };
   for (const w of shuffle(wrongs.map(String))) if (!opts.includes(w) && !same(w) && opts.length < 4) opts.push(w);
   const n = Number(ans.replace(/,/g, ''));
@@ -27,10 +30,11 @@ function mc(q, ans, wrongs, why, extra) {
     if (w && !opts.includes(w)) opts.push(w);
   }
   shuffle(opts);
-  return Object.assign({ q, choices: opts, a: opts.indexOf(ans), why }, extra || {});
+  return Object.assign({ q, choices: opts, a: opts.indexOf(ans), why }, extra || {}, canon ? { canon } : {});
 }
 // "Select ALL / Select TWO" items, scored all-or-nothing like the real tests.
 function ms(q, corr, wrong, why) {
+  q = heroText(q); why = heroText(why); corr = corr.map(c => heroText(String(c))); wrong = wrong.map(w => heroText(String(w)));
   corr = [...new Set(corr.map(String))]; wrong = [...new Set(wrong.map(String))].filter(w => !corr.includes(w));
   const opts = shuffle(corr.concat(wrong));
   return { q, choices: opts, as: corr.map(c => opts.indexOf(c)), type: 'multi', why, small: opts.some(o => o.length > 30) };
@@ -63,7 +67,7 @@ const MATH = {
     return mc(q, fmt(s), [s + a, s - a, s + b, s - b, s + 10, a + b].filter(x => x > 0).map(fmt), why);
   } },
   div: { n: 'Division', std: '3.OA.7 · 4.NBT.6 · 5.NBT.6', g: [3, 5], gen(g) {
-    if (g <= 3) { const b = rint(2, 10), q = rint(2, 10), a = b * q; return mc(coin() ? `${a} ÷ ${b} = ?` : `Dex shares ${a} gummy worms equally among ${b} critters. How many does each critter get?`, q, [q + 1, q - 1, q + 2, b, q + b].filter(x => x > 0), `Think: ${b} × ? = ${a}. Since ${b} × ${q} = ${a}, the answer is ${q}.`); }
+    if (g <= 3) { const b = rint(2, 10), q = rint(2, 10), a = b * q; return mc(coin() ? `${a} ÷ ${b} = ?` : `@N shares ${a} gummy worms equally among ${b} critters. How many does each critter get?`, q, [q + 1, q - 1, q + 2, b, q + b].filter(x => x > 0), `Think: ${b} × ? = ${a}. Since ${b} × ${q} = ${a}, the answer is ${q}.`); }
     if (g === 4) { const b = rint(3, 9), q = rint(12, 99), r = rint(0, b - 1), a = b * q + r, A = r ? `${q} R${r}` : `${q}`;
       return mc(`${a} ÷ ${b} = ?`, A, [`${q + 1} R${r}`, `${q - 1} R${r || 1}`, `${q} R${r + 1}`, `${q + 10}`, `${q}`].filter(x => x !== A), `${b} × ${q} = ${b * q}. ${a} − ${b * q} = ${r}, so the answer is ${A}.`); }
     const b = rint(11, 25), q = rint(11, 60), a = b * q; return mc(`${fmt(a)} ÷ ${b} = ?`, q, [q + 1, q - 1, q + 10, q - 10, q + 2], `Check by multiplying: ${b} × ${q} = ${fmt(a)}.`);
@@ -134,14 +138,14 @@ const MATH = {
     const t = rint(0, 2);
     if (g <= 2) {
       const k = rint(0, 4), a = rint(24, 60), b = rint(6, 19), c = rint(3, 9);
-      if (k === 0) return mc(`Dex has ${a} gummy worms. He gives ${b} to his critters. How many gummy worms does he have left?`, a - b, [a + b, a - b + 10, a - b - 1, a - b + 1], `"Gives away" means subtract: ${a} − ${b} = ${a - b}.`, { tips: { [a + b]: 'That is what you get if you ADD. But he gives some away, so he ends up with fewer.' } });
+      if (k === 0) return mc(`@N has ${a} gummy worms. @He gives ${b} to @his critters. How many gummy worms does @he have left?`, a - b, [a + b, a - b + 10, a - b - 1, a - b + 1], `"Gives away" means subtract: ${a} − ${b} = ${a - b}.`, { tips: { [a + b]: 'That is what you get if you ADD. But @he gives some away, so @he ends up with fewer.' } });
       if (k === 1) return mc(`Priya finds ${a} bolts in the morning and ${b} more after lunch. How many bolts does she find in all?`, a + b, [a - b, a + b + 10, a + b - 1, a + b + 1], `"In all" means add: ${a} + ${b} = ${a + b}.`, { tips: { [a - b]: 'That is what you get if you TAKE AWAY. "In all" means put the two amounts together.' } });
       if (k === 2) return mc(`There are ${a} zombies on Elm Street. ${b} more shuffle in. Then ${c} fall asleep. How many zombies are still awake?`, a + b - c, [a + b + c, a + b, a - b - c, a + b - c + 1].filter(x => x > 0), `First add the new ones: ${a} + ${b} = ${a + b}. Then subtract the sleepers: ${a + b} − ${c} = ${a + b - c}.`);
       if (k === 3) return mc(`Bash has ${a} ferns. Wren has ${b} ferns. How many MORE ferns does Bash have than Wren?`, a - b, [a + b, a, a - b + 1, a - b - 10].filter(x => x > 0), `"How many more" means find the difference: ${a} − ${b} = ${a - b}.`, { tips: { [a + b]: 'That is how many they have TOGETHER. "How many more" asks how far apart the two numbers are.', [a]: 'That is just how many Bash has. How many MORE does he have than Wren?' } });
-      return mc(`A rope is ${a} feet long. Dex cuts off ${b} feet. How long is the rope now?`, `${a - b} feet`, [a + b, a - b + 10, b, a - b - 2].filter(x => x > 0).map(x => x + ' feet'), `Cutting off a piece makes it shorter, so subtract: ${a} − ${b} = ${a - b} feet.`, { tips: { [`${a + b} feet`]: 'Cutting a piece off makes the rope SHORTER, not longer.', [`${b} feet`]: 'That is the piece he cut off. How long is the rope that is LEFT?' } });
+      return mc(`A rope is ${a} feet long. @N cuts off ${b} feet. How long is the rope now?`, `${a - b} feet`, [a + b, a - b + 10, b, a - b - 2].filter(x => x > 0).map(x => x + ' feet'), `Cutting off a piece makes it shorter, so subtract: ${a} − ${b} = ${a - b} feet.`, { tips: { [`${a + b} feet`]: 'Cutting a piece off makes the rope SHORTER, not longer.', [`${b} feet`]: 'That is the piece @he cut off. How long is the rope that is LEFT?' } });
     }
     if (g <= 3) {
-      if (t === 0) { const p = rint(3, 9), n = rint(3, 8), paid = Math.ceil((p * n + 1) / 10) * 10 + pick([0, 10]); return mc(`Munch sells Critter Snacks for ${p} scrap each. Dex buys ${n} snacks and pays with ${paid} scrap. How much change does he get?`, paid - p * n, [p * n, paid - p - n, paid + p * n, paid - p * n + 10, paid - p * n - 1].filter(x => x >= 0), `First find the cost: ${n} × ${p} = ${p * n}. Then subtract from what he paid: ${paid} − ${p * n} = ${paid - p * n}.`); }
+      if (t === 0) { const p = rint(3, 9), n = rint(3, 8), paid = Math.ceil((p * n + 1) / 10) * 10 + pick([0, 10]); return mc(`Munch sells Critter Snacks for ${p} scrap each. @N buys ${n} snacks and pays with ${paid} scrap. How much change does @he get?`, paid - p * n, [p * n, paid - p - n, paid + p * n, paid - p * n + 10, paid - p * n - 1].filter(x => x >= 0), `First find the cost: ${n} × ${p} = ${p * n}. Then subtract from what @he paid: ${paid} − ${p * n} = ${paid - p * n}.`); }
       if (t === 1) { const r = rint(3, 9), c = rint(4, 9), k = rint(2, 9); return mc(`Zombies stand in ${r} rows of ${c} on the football field. Then ${k} wander off. How many zombies are still on the field?`, r * c - k, [r * c, r * c + k, r + c - k, r * c - k - 1, r + c + k].filter(x => x > 0), `First multiply: ${r} × ${c} = ${r * c}. Then subtract the ones who left: ${r * c} − ${k} = ${r * c - k}.`); }
       const a = rint(12, 40), b = rint(12, 40), e = rint(2, 6), tot = (a + b) - (a + b) % e || e; const a2 = tot - b > 0 ? tot - b : a;
       return mc(`Bash picks ${a2} tomatoes on Monday and ${tot - a2} on Tuesday. He packs them into bags of ${e}. How many bags does he fill?`, tot / e, [tot, tot / e + 1, tot / e - 1, tot - e, a2 / 1 | 0].filter(x => x > 0), `Add first: ${a2} + ${tot - a2} = ${tot}. Then divide into bags: ${tot} ÷ ${e} = ${tot / e}.`);
@@ -192,7 +196,7 @@ const MATH = {
   } },
   time: { n: 'Telling Time', std: '2.MD.7 · 3.MD.1', g: [2, 3], gen(g) {
     if (g <= 2 && Math.random() < .2) { const [what, A, ws] = pick([['eating breakfast before school', '7:00 a.m.', ['7:00 p.m.', '12:00 midnight', '3:00 p.m.']], ['watching the sun go down', '7:00 p.m.', ['7:00 a.m.', '12:00 noon', '3:00 a.m.']], ['getting into bed for the night', '8:30 p.m.', ['8:30 a.m.', '12:00 noon', '3:00 p.m.']], ['waking up for school', '6:30 a.m.', ['6:30 p.m.', '12:00 noon', '11:00 p.m.']], ['eating dinner', '6:00 p.m.', ['6:00 a.m.', '10:00 a.m.', '3:00 a.m.']], ['eating lunch at school', '12:00 noon', ['12:00 midnight', '6:00 a.m.', '9:00 p.m.']]]);
-      return mc(`Dex is ${what}. What time is it most likely to be?`, A, ws, 'a.m. is the morning, from midnight until noon. p.m. is the afternoon and evening, from noon until midnight.'); }
+      return mc(`@N is ${what}. What time is it most likely to be?`, A, ws, 'a.m. is the morning, from midnight until noon. p.m. is the afternoon and evening, from noon until midnight.'); }
     if (g <= 2) {
       const hr = rint(1, 11);
       if (coin()) { const nn = rint(1, 11), mm = String(nn * 5).padStart(2, '0'), A = `${hr}:${mm}`; return mc(`On a clock, the short hand is between ${hr} and ${hr + 1}. The long hand points at the ${nn}. What time is it?`, A, [`${hr + 1}:${mm}`, `${hr}:${String(nn).padStart(2, '0')}`, `${nn}:${String(hr * 5).padStart(2, '0')}`, `${hr}:${String((nn * 5 + 5) % 60).padStart(2, '0')}`], `The short hand tells the hour: ${hr}. For the long hand, count by 5s around the clock. The ${nn} means ${nn * 5} minutes. So it is ${A}.`); }
@@ -217,11 +221,11 @@ const MATH = {
     const A = Array(r).fill(c).join(' + '); return mc(`There are ${r} rows of snacks with ${c} snacks in each row. Which addition shows how many snacks?`, A, [`${r} + ${c}`, Array(r + 1).fill(c).join(' + '), Array(r).fill(c + 1).join(' + '), Array(Math.max(1, r - 1)).fill(c).join(' + ') + ` + ${r}`].filter(x => x !== A), `Each row has ${c}, and there are ${r} rows. So add ${c} a total of ${r} times.`);
   } },
   money: { n: 'Counting Money', std: '2.MD.8', g: [2, 2], gen() {
-    if (Math.random() < .3) { const d = rint(1, 4), q = rint(1, 3), n = rint(0, 3), c = d * 100 + q * 25 + n * 5, f = x => '$' + (x / 100).toFixed(2); return mc(`Dex has ${d} one-dollar bill${d > 1 ? 's' : ''}, ${q} quarter${q > 1 ? 's' : ''}${n ? ` and ${n} nickel${n > 1 ? 's' : ''}` : ''}. How much money is that?`, f(c), [f(c + 25), f(c - 25 > 0 ? c - 25 : c + 50), f(d * 100 + q + n), f((d + q + n) * 100), f(c + 100)].filter(x => x !== f(c)), `Dollars first: ${f(d * 100)}. Quarters: ${q} × 25¢ = ${q * 25}¢.${n ? ` Nickels: ${n * 5}¢.` : ''} Altogether ${f(c)}.`); }
-    if (coin()) { const cost = rint(4, 17) * 5, paid = pick([50, 75, 100].filter(x => x > cost)); return mc(`A Critter Snack costs ${cost}¢. Dex pays with ${paid === 100 ? 'a dollar (100¢)' : paid + '¢'}. How much change does he get back?`, `${paid - cost}¢`, [paid - cost + 10, paid - cost - 5, paid + cost, paid - cost + 5].filter(x => x > 0).map(x => x + '¢'), `Change is what is left over: ${paid} − ${cost} = ${paid - cost}¢.`); }
+    if (Math.random() < .3) { const d = rint(1, 4), q = rint(1, 3), n = rint(0, 3), c = d * 100 + q * 25 + n * 5, f = x => '$' + (x / 100).toFixed(2); return mc(`@N has ${d} one-dollar bill${d > 1 ? 's' : ''}, ${q} quarter${q > 1 ? 's' : ''}${n ? ` and ${n} nickel${n > 1 ? 's' : ''}` : ''}. How much money is that?`, f(c), [f(c + 25), f(c - 25 > 0 ? c - 25 : c + 50), f(d * 100 + q + n), f((d + q + n) * 100), f(c + 100)].filter(x => x !== f(c)), `Dollars first: ${f(d * 100)}. Quarters: ${q} × 25¢ = ${q * 25}¢.${n ? ` Nickels: ${n * 5}¢.` : ''} Altogether ${f(c)}.`); }
+    if (coin()) { const cost = rint(4, 17) * 5, paid = pick([50, 75, 100].filter(x => x > cost)); return mc(`A Critter Snack costs ${cost}¢. @N pays with ${paid === 100 ? 'a dollar (100¢)' : paid + '¢'}. How much change does @he get back?`, `${paid - cost}¢`, [paid - cost + 10, paid - cost - 5, paid + cost, paid - cost + 5].filter(x => x > 0).map(x => x + '¢'), `Change is what is left over: ${paid} − ${cost} = ${paid - cost}¢.`); }
     let q, d, n, p, v; do { q = rint(0, 2); d = rint(0, 3); n = rint(0, 3); p = rint(0, 4); v = q * 25 + d * 10 + n * 5 + p; } while (v >= 100 || [q, d, n, p].filter(x => x).length < 2);
     const parts = [[q, 'quarter'], [d, 'dime'], [n, 'nickel'], [p, 'penny']].filter(x => x[0]).map(([k, w]) => `${k} ${k > 1 ? (w === 'penny' ? 'pennies' : w + 's') : w}`);
-    return mc(`Dex finds ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}. How much money is that?`, `${v}¢`, [q + d + n + p, v + 5, v - 5, v + 10, v + 1].filter(x => x > 0 && x !== v).map(x => x + '¢'), `Quarters are 25¢, dimes 10¢, nickels 5¢, pennies 1¢. Start with the biggest coins and count up: ${[q && q * 25, d && d * 10, n && n * 5, p && p].filter(x => x).join(' + ')} = ${v}¢.`, { tips: { [`${q + d + n + p}¢`]: 'That is how many COINS there are. The question asks what they are WORTH.' } });
+    return mc(`@N finds ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}. How much money is that?`, `${v}¢`, [q + d + n + p, v + 5, v - 5, v + 10, v + 1].filter(x => x > 0 && x !== v).map(x => x + '¢'), `Quarters are 25¢, dimes 10¢, nickels 5¢, pennies 1¢. Start with the biggest coins and count up: ${[q && q * 25, d && d * 10, n && n * 5, p && p].filter(x => x).join(' + ')} = ${v}¢.`, { tips: { [`${q + d + n + p}¢`]: 'That is how many COINS there are. The question asks what they are WORTH.' } });
   } },
   shapes: { n: 'Shapes & Equal Parts', std: '2.G.1 · 2.G.2 · 2.G.3', g: [2, 2], gen() {
     if (Math.random() < .25) { const r = rint(2, 5), c = rint(2, 5); return mc(`A rectangle is split into ${r} rows and ${c} columns of same-size squares. How many squares are there?`, r * c, [r + c, r * c + r, r * c - 1, 2 * (r + c)].filter(x => x !== r * c), `Count ${c} squares in each row, ${r} times: ${Array(r).fill(c).join(' + ')} = ${r * c}.`); }
@@ -255,11 +259,11 @@ const MATH = {
       ? mc(`Priya measured 8 pencils. Their lengths in inches were:\n${v.join(',  ')}\nHow many pencils were ${x} inches long?`, cnt, [cnt + 1, cnt - 1, x, 8].filter(y => y > 0 && y !== cnt), `Count every ${x} in the list. There ${cnt === 1 ? 'is' : 'are'} ${cnt}.`)
       : mc(`Priya measured 8 pencils. Their lengths in inches were:\n${v.join(',  ')}\nHow much longer is the longest pencil than the shortest?`, Math.max(...v) - Math.min(...v) + ' inches', [Math.max(...v), Math.min(...v), Math.max(...v) + Math.min(...v), Math.max(...v) - Math.min(...v) + 1].map(y => y + ' inches').filter(y => y !== Math.max(...v) - Math.min(...v) + ' inches'), `Longest is ${Math.max(...v)}, shortest is ${Math.min(...v)}. ${Math.max(...v)} − ${Math.min(...v)} = ${Math.max(...v) - Math.min(...v)}.`); }
     const names = shuffle(['Gloops', 'Boltbugs', 'Gnawbies', 'Zaprats', 'Murdles']).slice(0, 3), v = shuffle([...Array(g <= 2 ? 9 : 14)].map((_, i) => i + 2)).slice(0, 3);
-    const chart = `Dex made a chart of the critters he saw.\n${names[0]}: ${v[0]}      ${names[1]}: ${v[1]}      ${names[2]}: ${v[2]}\n`, t = rint(0, 3), hi = v.indexOf(Math.max(...v)), lo = v.indexOf(Math.min(...v));
-    if (t === 0) return mc(chart + `How many MORE ${names[hi]} than ${names[lo]} did he see?`, v[hi] - v[lo], [v[hi] + v[lo], v[hi], v[lo], v[hi] - v[lo] + 1], `Subtract to compare: ${v[hi]} − ${v[lo]} = ${v[hi] - v[lo]}.`, { tips: { [v[hi] + v[lo]]: 'That is how many there are ALTOGETHER. "How many more" asks for the difference.' } });
-    if (t === 1) return mc(chart + 'How many critters did he see in all?', v[0] + v[1] + v[2], [v[0] + v[1], v[0] + v[1] + v[2] + 1, v[0] + v[1] + v[2] - 2, Math.max(...v)], `Add all three: ${v[0]} + ${v[1]} + ${v[2]} = ${v[0] + v[1] + v[2]}.`);
-    if (t === 2) return mc(chart + 'Which critter did he see the MOST?', names[hi], names.filter((_, i) => i !== hi).concat(['They are all the same']), `${v[hi]} is the biggest number on the chart, so the answer is ${names[hi]}.`);
-    return mc(chart + `How many ${names[0]} and ${names[1]} did he see altogether?`, v[0] + v[1], [v[0] + v[1] + v[2], Math.abs(v[0] - v[1]) || 1, v[0] + v[1] + 1, v[1] + v[2]], `"Altogether" means add: ${v[0]} + ${v[1]} = ${v[0] + v[1]}.`);
+    const chart = `@N made a chart of the critters @he saw.\n${names[0]}: ${v[0]}      ${names[1]}: ${v[1]}      ${names[2]}: ${v[2]}\n`, t = rint(0, 3), hi = v.indexOf(Math.max(...v)), lo = v.indexOf(Math.min(...v));
+    if (t === 0) return mc(chart + `How many MORE ${names[hi]} than ${names[lo]} did @he see?`, v[hi] - v[lo], [v[hi] + v[lo], v[hi], v[lo], v[hi] - v[lo] + 1], `Subtract to compare: ${v[hi]} − ${v[lo]} = ${v[hi] - v[lo]}.`, { tips: { [v[hi] + v[lo]]: 'That is how many there are ALTOGETHER. "How many more" asks for the difference.' } });
+    if (t === 1) return mc(chart + 'How many critters did @he see in all?', v[0] + v[1] + v[2], [v[0] + v[1], v[0] + v[1] + v[2] + 1, v[0] + v[1] + v[2] - 2, Math.max(...v)], `Add all three: ${v[0]} + ${v[1]} + ${v[2]} = ${v[0] + v[1] + v[2]}.`);
+    if (t === 2) return mc(chart + 'Which critter did @he see the MOST?', names[hi], names.filter((_, i) => i !== hi).concat(['They are all the same']), `${v[hi]} is the biggest number on the chart, so the answer is ${names[hi]}.`);
+    return mc(chart + `How many ${names[0]} and ${names[1]} did @he see altogether?`, v[0] + v[1], [v[0] + v[1] + v[2], Math.abs(v[0] - v[1]) || 1, v[0] + v[1] + 1, v[1] + v[2]], `"Altogether" means add: ${v[0]} + ${v[1]} = ${v[0] + v[1]}.`);
   } },
   factors: { n: 'Factors & Multiples', std: '4.OA.4', g: [4, 5], gen() {
     const t = rint(0, 2);
@@ -303,7 +307,7 @@ const I = (g, q, a, w, why) => ({ g, q, a, w, why });
 const SVA = [
   I(2, 'The critter ___ fast.', 'runs', ['run', 'running', 'runned'], 'One critter runs. Add -s to the action word when there is just one.'),
   I(2, 'The zombies ___ slow.', 'are', ['is', 'am', 'be'], 'More than one zombie: they are.'),
-  I(2, 'Dex ___ a red cap.', 'has', ['have', 'having', 'haves'], 'One person has. More than one have.'),
+  I(2, '@N ___ a big backpack.', 'has', ['have', 'having', 'haves'], 'One person has. More than one have.'),
   I(2, 'We ___ happy today.', 'are', ['is', 'am', 'be'], 'Use "are" with we, you, and they.'),
   I(2, 'She ___ to school yesterday.', 'walked', ['walk', 'walks', 'walking'], '"Yesterday" means it already happened, so add -ed: walked.'),
   I(2, 'The dogs ___ loudly.', 'bark', ['barks', 'barking', 'barkes'], 'More than one dog: they bark. No -s on the action word.'),
@@ -326,7 +330,7 @@ const SVA = [
   I(4, 'Munch ___ not eat kids.', 'does', ['do', 'doing', "don't"], '"Munch" is singular, so use "does."'),
   I(5, 'Each of the critters ___ a snack.', 'wants', ['want', 'wanting', 'are want'], '"Each" is always singular. Each one wants.'),
   I(5, 'The box of snacks ___ on the top shelf.', 'is', ['are', 'be', 'were'], 'The subject is "box" (one box), not "snacks." The box is.'),
-  I(5, 'Neither Dex nor Priya ___ afraid.', 'is', ['are', 'am', 'be'], 'With "neither...nor," the verb matches the closer subject. Priya is.'),
+  I(5, 'Neither @N nor Priya ___ afraid.', 'is', ['are', 'am', 'be'], 'With "neither...nor," the verb matches the closer subject. Priya is.'),
   I(5, 'The team ___ ready for the boss fight.', 'is', ['are', 'be', 'were being'], 'A team is one group acting together, so it takes a singular verb: the team is.')
 ];
 const HOMO = [
@@ -334,7 +338,7 @@ const HOMO = [
   I(2, 'The ___ is hot today.', 'sun', ['son', 'sunn', 'sone'], 'The SUN is in the sky. A SON is a boy.'),
   I(2, 'I ___ a snack for lunch.', 'ate', ['eight', 'aet', 'ait'], 'ATE means you already ate it. EIGHT is the number 8.'),
   I(2, 'Come over ___!', 'here', ['hear', 'heer', 'hir'], 'HERE is a place. You HEAR with your EAR.'),
-  I(2, 'Dex has ___ critters.', 'two', ['to', 'too', 'tow'], 'TWO is the number 2.'),
+  I(2, '@N has ___ critters.', 'two', ['to', 'too', 'tow'], 'TWO is the number 2.'),
   I(2, 'I got a ___ bike for my birthday.', 'new', ['knew', 'nue', 'noo'], 'NEW means not old. KNEW means you already knew it.'),
   I(2, 'Please ___ your name on the paper.', 'write', ['right', 'rite', 'wright'], 'You WRITE with a pencil. RIGHT is the opposite of left or wrong.'),
   I(2, 'Turn ___ at the corner.', 'right', ['write', 'rite', 'wright'], 'RIGHT is a direction. You WRITE with a pencil.'),
@@ -346,7 +350,7 @@ const HOMO = [
   I(3, 'The zombies left ___ shoes behind.', 'their', ['there', "they're", 'thier'], '"Their" shows something belongs to them.'),
   I(3, '___ going to need a bigger net.', "They're", ['Their', 'There', 'Theyre'], '"They\'re" is short for "they are."'),
   I(3, 'Put the snack over ___.', 'there', ['their', "they're", 'thare'], '"There" names a place.'),
-  I(3, 'Dex ate ___ many gummy worms.', 'too', ['to', 'two', 'tew'], '"Too" means "more than enough" or "also."'),
+  I(3, '@N ate ___ many gummy worms.', 'too', ['to', 'two', 'tew'], '"Too" means "more than enough" or "also."'),
   I(3, 'Wren ran ___ the junkyard.', 'to', ['too', 'two', 'toe'], '"To" shows direction: where she went.'),
   I(3, 'We found ___ comics today.', 'two', ['to', 'too', 'tow'], '"Two" is the number 2.'),
   I(3, 'I can\'t ___ the bell from here.', 'hear', ['here', 'hare', 'heer'], 'You HEAR with your EAR.'),
@@ -356,7 +360,7 @@ const HOMO = [
   I(4, '___ the bravest kid I know.', "You're", ['Your', 'Yore', 'Youre'], '"You\'re" is short for "you are."'),
   I(4, 'The Gloop wiggled ___ tail.', 'its', ["it's", "its'", 'it is'], '"Its" (no apostrophe) shows ownership. "It\'s" always means "it is."'),
   I(4, '___ time to rest at the campfire.', "It's", ['Its', "Its'", 'Is'], '"It\'s" is short for "it is."'),
-  I(4, 'Bash is taller ___ Dex.', 'than', ['then', 'them', 'that'], '"Than" compares two things. "Then" is about time.'),
+  I(4, 'Bash is taller ___ @N.', 'than', ['then', 'them', 'that'], '"Than" compares two things. "Then" is about time.'),
   I(4, 'First we eat, ___ we explore.', 'then', ['than', 'them', 'when'], '"Then" tells what happens next in time.'),
   I(4, '___ backpack is this?', 'Whose', ["Who's", 'Whos', 'Who'], '"Whose" asks who owns something. "Who\'s" means "who is."'),
   I(5, 'Wren walked ___ the school.', 'past', ['passed', 'pass', 'paste'], '"Past" tells where she walked (by it). "Passed" is a verb.'),
@@ -365,16 +369,16 @@ const HOMO = [
   I(5, 'Take a deep ___.', 'breath', ['breathe', 'breth', 'breeth'], '"Breath" is the noun (a thing). "Breathe" is the verb (an action).'),
   I(6, 'The cold weather will ___ how fast zombies move.', 'affect', ['effect', 'afect', 'effact'], '"Affect" is usually a verb (an Action). "Effect" is usually a noun.'),
   I(6, 'The bell had a strange ___ on the town.', 'effect', ['affect', 'efect', 'affekt'], '"Effect" is the noun: the result of something.'),
-  I(6, 'Priya gave Dex some good ___.', 'advice', ['advise', 'advize', 'addvice'], '"Advice" is the noun (a thing you give). "Advise" is the verb.'),
+  I(6, 'Priya gave @N some good ___.', 'advice', ['advise', 'advize', 'addvice'], '"Advice" is the noun (a thing you give). "Advise" is the verb.'),
   I(6, 'Everyone came ___ Bash, who stayed with the ferns.', 'except', ['accept', 'expect', 'exept'], '"Except" means "leaving out." "Accept" means to receive.')
 ];
 const PUNCT = [
   I(2, null, 'My dog is named Max.', ['my dog is named Max.', 'My dog is named max.', 'My dog is named Max'], 'Start with a capital letter, capitalize names, and end with a period.'),
   I(2, null, 'Do you like pizza?', ['Do you like pizza.', 'do you like pizza?', 'Do you like pizza'], 'A question ends with a question mark.'),
   I(2, null, "I can't find my hat.", ['I cant find my hat.', "I ca'nt find my hat.", "i can't find my hat."], 'In "can\'t," the apostrophe stands in for the missing letters of "cannot."'),
-  I(2, null, 'We saw Dex on Monday.', ['We saw dex on Monday.', 'We saw Dex on monday.', 'we saw Dex on Monday.'], 'Names of people and days of the week start with capital letters.'),
+  I(2, null, 'We saw @N on Monday.', ['We saw @n on Monday.', 'We saw @N on monday.', 'we saw @N on Monday.'], 'Names of people and days of the week start with capital letters.'),
   I(2, null, 'Watch out for the zombie!', ['watch out for the zombie!', 'Watch out for the zombie', 'Watch out for the Zombie!'], 'An excited sentence ends with an exclamation point. Only names need capitals in the middle.'),
-  I(3, null, 'Dex, Priya, and Bash ran home.', ['Dex Priya and Bash ran home.', 'Dex, Priya and, Bash ran home.', 'dex, Priya, and Bash ran home.'], 'Use commas between items in a list, and capitalize names.'),
+  I(3, null, '@N, Priya, and Bash ran home.', ['@N Priya and Bash ran home.', '@N, Priya and, Bash ran home.', '@n, Priya, and Bash ran home.'], 'Use commas between items in a list, and capitalize names.'),
   I(3, null, 'We live in Wexler Falls, California.', ['We live in wexler falls, California.', 'We live in Wexler Falls California.', 'we live in Wexler Falls, California'], 'Capitalize city and state names, and put a comma between them.'),
   I(3, null, "The critter's tail is fluffy.", ['The critters tail is fluffy.', "The critters' tail is fluffy.", "The critter,s tail is fluffy."], 'One critter owns the tail, so add apostrophe + s.'),
   I(3, null, 'Is that a zombie?', ['Is that a zombie.', 'is that a zombie?', 'Is that a zombie'], 'A question starts with a capital letter and ends with a question mark.'),
@@ -410,7 +414,7 @@ const AFFIX = [[2, 'redo', 're-', 'again'], [2, 'unkind', 'un-', 'not'], [2, 'ca
 ].map(r => ({ g: r[0], word: r[1], part: r[2], m: r[3] }));
 const CONTEXT = [
   I(2, 'The puppy was so TINY that it fit in my hand.', 'very small', ['very loud', 'very old', 'very fast'], 'Something that fits in your hand is very small.'),
-  I(2, 'Dex was EXHAUSTED after running all day, so he fell asleep fast.', 'very tired', ['very hungry', 'very happy', 'very cold'], 'He ran all day and fell asleep fast. He was very tired.'),
+  I(2, '@N was EXHAUSTED after running all day, so @he fell asleep fast.', 'very tired', ['very hungry', 'very happy', 'very cold'], '@He ran all day and fell asleep fast. @He was very tired.'),
   I(2, 'The soup was SCORCHING, so I blew on it to cool it down.', 'very hot', ['very cold', 'very sweet', 'very thick'], 'You blow on food to cool it when it is very hot.'),
   I(2, 'She was DELIGHTED and could not stop smiling.', 'very happy', ['very sleepy', 'very angry', 'very lost'], 'Someone who cannot stop smiling is very happy.'),
   I(2, 'The room was SILENT. Nobody made a sound.', 'very quiet', ['very dark', 'very big', 'very messy'], '"Nobody made a sound" tells you silent means very quiet.'),
@@ -418,11 +422,11 @@ const CONTEXT = [
   I(2, 'The box was ENORMOUS. It was bigger than a car.', 'very big', ['very small', 'very old', 'very light'], '"Bigger than a car" tells you enormous means very big.'),
   I(2, 'Wren felt DROWSY, so she yawned and closed her eyes.', 'sleepy', ['hungry', 'angry', 'silly'], 'Yawning and closing your eyes are clues for sleepy.'),
   I(2, 'The path was NARROW, so we had to walk one at a time.', 'not wide', ['not safe', 'not long', 'not clean'], 'If only one person fits at a time, the path is not wide.'),
-  I(2, 'Dex was STARVING, so he ate two whole pizzas.', 'very hungry', ['very tired', 'very cold', 'very scared'], 'Someone who eats two whole pizzas is very hungry.'),
+  I(2, '@N was STARVING, so @he ate two whole pizzas.', 'very hungry', ['very tired', 'very cold', 'very scared'], 'Someone who eats two whole pizzas is very hungry.'),
   I(3, 'The zombie was so SLUGGISH that a snail passed it.', 'slow', ['fast', 'angry', 'shiny'], 'The clue is that a snail passed it. Snails are slow!'),
   I(3, 'Bash was FAMISHED after skipping lunch, so he ate three sandwiches.', 'very hungry', ['very sleepy', 'very lost', 'very cold'], 'He skipped lunch and ate three sandwiches. Those clues point to hungry.'),
-  I(3, 'The basement was so DIM that Dex needed his Boltbug to see.', 'dark', ['bright', 'wet', 'loud'], 'He needed a light to see, so it must have been dark.'),
-  I(3, 'Dex let out an ENORMOUS yawn, the biggest one ever.', 'huge', ['quiet', 'quick', 'small'], '"The biggest one ever" tells you enormous means huge.'),
+  I(3, 'The basement was so DIM that @N needed @his Boltbug to see.', 'dark', ['bright', 'wet', 'loud'], '@He needed a light to see, so it must have been dark.'),
+  I(3, '@N let out an ENORMOUS yawn, the biggest one ever.', 'huge', ['quiet', 'quick', 'small'], '"The biggest one ever" tells you enormous means huge.'),
   I(4, 'Priya EXAMINED the gadget, turning it over and checking every wire.', 'looked at carefully', ['broke into pieces', 'hid it in a safe place', 'sold it right away'], 'Turning it over and checking every wire is what careful looking sounds like.'),
   I(4, 'The streets were DESERTED; not a single person was in sight.', 'empty', ['crowded', 'noisy', 'narrow'], '"Not a single person was in sight" means empty.'),
   I(4, 'Wren was RELUCTANT to join, dragging her feet and sighing.', 'not wanting to', ['excited', 'in a hurry', 'proud'], 'Dragging feet and sighing are clues that she did not want to.'),
@@ -447,7 +451,7 @@ const FIGUR = [
   I(5, '"I\'m so hungry I could eat a horse" is an example of…', 'hyperbole', ['simile', 'alliteration', 'onomatopoeia'], 'Hyperbole is a huge exaggeration used to make a point.'),
   I(5, '"Buzz," "clang," and "splat" are examples of…', 'onomatopoeia', ['hyperbole', 'metaphor', 'idiom'], 'Onomatopoeia words sound like the noise they describe.'),
   I(5, '"Don\'t spill the beans" means…', "don't tell the secret", ["don't drop your lunch", "don't run inside", "don't cook dinner"], '"Spill the beans" is an idiom for telling a secret.'),
-  I(5, 'If Dex is "feeling under the weather," he is…', 'feeling sick', ['standing in the rain', 'feeling brave', 'watching the sky'], '"Under the weather" is an idiom for feeling sick.'),
+  I(5, 'If @N is "feeling under the weather," @he is…', 'feeling sick', ['standing in the rain', 'feeling brave', 'watching the sky'], '"Under the weather" is an idiom for feeling sick.'),
   I(6, '"The bell\'s toll was a cold hand on my neck." This metaphor suggests the sound was…', 'frightening', ['funny', 'comforting', 'too quiet to hear'], 'A cold hand on your neck is creepy. The author wants you to feel a chill.'),
   I(6, '"The Nest was a lighthouse in a sea of darkness." The author is suggesting that the Nest…', 'gives hope and guidance', ['is next to the ocean', 'is very tall', 'has broken lights'], 'A lighthouse guides people to safety, so the metaphor shows the Nest brings hope.')
 ];
@@ -472,13 +476,13 @@ const POS = [
   I(4, 'Bash carefully watered the green ferns.|ADVERB', 'carefully', ['watered', 'green', 'ferns'], '"Carefully" tells how he watered.'),
   I(4, 'The critter hid under the porch.|PREPOSITION', 'under', ['critter', 'hid', 'porch'], 'A preposition shows position or direction: under, over, in, on, behind.'),
   I(4, 'The horde moved slowly toward the school.|ADVERB', 'slowly', ['horde', 'moved', 'school'], '"Slowly" tells how the horde moved.'),
-  I(5, 'Dex wanted to rest, but the bell rang.|CONJUNCTION', 'but', ['wanted', 'rest', 'rang'], 'A conjunction joins words or sentences: and, but, or, so, because.'),
+  I(5, '@N wanted to rest, but the bell rang.|CONJUNCTION', 'but', ['wanted', 'rest', 'rang'], 'A conjunction joins words or sentences: and, but, or, so, because.'),
   I(5, 'Wow! That critter is huge.|INTERJECTION', 'Wow', ['That', 'critter', 'huge'], 'An interjection shows sudden feeling: Wow! Ouch! Yikes!'),
   I(5, 'Neither Wren nor Priya saw the map.|CORRELATIVE CONJUNCTIONS', 'Neither / nor', ['Wren / Priya', 'saw / map', 'the / the'], 'Correlative conjunctions come in pairs: either/or, neither/nor, both/and.')
 ];
 const SENT = [
   I(4, 'Which is a COMPLETE sentence?', 'The zombie tripped on a skateboard.', ['Tripped on a skateboard.', 'The zombie on a skateboard.', 'Because the zombie tripped.'], 'A complete sentence needs a subject (who) and a verb (did what), and it must make sense on its own.'),
-  I(4, 'Which is a RUN-ON sentence?', 'Dex ran home he forgot his bag.', ['Dex ran home.', 'Dex ran home, but he forgot his bag.', 'Dex ran home because he forgot his bag.'], 'A run-on jams two sentences together with no punctuation or joining word.'),
+  I(4, 'Which is a RUN-ON sentence?', '@N ran home @he forgot @his bag.', ['@N ran home.', '@N ran home, but @he forgot @his bag.', '@N ran home because @he forgot @his bag.'], 'A run-on jams two sentences together with no punctuation or joining word.'),
   I(4, 'Choose the best joining word:  "I wanted to explore, ___ it was getting dark."', 'but', ['so', 'or', 'because'], '"But" shows a contrast: wanting to explore versus it getting dark.'),
   I(4, 'Choose the best joining word:  "Bash was tired, ___ he took a nap."', 'so', ['but', 'or', 'yet'], '"So" shows a result. Being tired caused the nap.'),
   I(4, 'Which is a sentence FRAGMENT?', 'After the bell rang.', ['The bell rang.', 'We hid after the bell rang.', 'After the bell rang, we hid.'], 'A fragment is missing something. "After the bell rang"... then what happened?'),
@@ -486,10 +490,10 @@ const SENT = [
   I(4, 'Which phrase puts the describing words in the right order?', 'a small red wagon', ['a red small wagon', 'a wagon small red', 'small a red wagon'], 'In English, size comes before color: small red wagon.'),
   I(5, 'Which sentence uses the correct verb tense?', 'By the time we arrived, the horde had left.', ['By the time we arrived, the horde has leave.', 'By the time we arrive, the horde had leaving.', 'By the time we arrived, the horde will left.'], '"Had left" shows that the leaving happened before the arriving.'),
   I(5, 'What is the best way to combine these?  "Priya is smart. Priya is brave."', 'Priya is smart and brave.', ['Priya is smart, Priya is brave.', 'Priya is smart brave.', 'Priya smart and is brave.'], 'Join the two describing words with "and" so you do not repeat "Priya is."'),
-  I(5, 'Which sentence keeps the same tense all the way through?', 'Dex opened the stash and found a comic.', ['Dex opened the stash and finds a comic.', 'Dex opens the stash and found a comic.', 'Dex will open the stash and found a comic.'], 'Both verbs should be in the same tense: opened and found.'),
+  I(5, 'Which sentence keeps the same tense all the way through?', '@N opened the stash and found a comic.', ['@N opened the stash and finds a comic.', '@N opens the stash and found a comic.', '@N will open the stash and found a comic.'], 'Both verbs should be in the same tense: opened and found.'),
   I(6, 'Choose the right word:  "Wren and ___ fixed the tower."', 'I', ['me', 'myself', 'mine'], 'Take Wren out to test it: "I fixed the tower" sounds right. "Me fixed" does not.'),
   I(6, 'Choose the right word:  "The snack was for Bash and ___."', 'me', ['I', 'myself', 'mine'], 'Take Bash out to test it: "The snack was for me" sounds right.'),
-  I(6, 'Which sentence has a clear pronoun?', 'When Dex called Bash, Bash was asleep.', ['When Dex called Bash, he was asleep.', 'When he called him, he was asleep.', 'Dex called Bash when he was him.'], 'In the other choices, "he" could mean Dex or Bash. A clear sentence leaves no doubt.')
+  I(6, 'Which sentence has a clear pronoun?', 'When Mr. Munch called Bash, Bash was asleep.', ['When Mr. Munch called Bash, he was asleep.', 'When he called him, he was asleep.', 'Mr. Munch called Bash when he was him.'], 'In the other choices, "he" could mean Mr. Munch or Bash. A clear sentence leaves no doubt.')
 ];
 const PHONICS = [
   I(2, 'Which word has the same vowel sound as "rain"?', 'cake', ['ran', 'car', 'rag'], 'The "ai" in rain says long A, just like the a_e in cake.'),
@@ -520,13 +524,13 @@ const PHONICS = [
 ];
 const MAZE = [
   I(2, 'The Gloop was hungry, so it ___ a snack.', 'ate', ['ran', 'blue', 'under'], 'Only "ate" makes sense. Hungry critters eat!'),
-  I(2, 'Dex put on his cap and went ___.', 'outside', ['purple', 'sleepy', 'eat'], 'You can go outside. The other words do not fit.'),
+  I(2, '@N put on @his shoes and went ___.', 'outside', ['purple', 'sleepy', 'eat'], 'You can go outside. The other words do not fit.'),
   I(2, 'The rain made the street very ___.', 'wet', ['tall', 'hungry', 'seven'], 'Rain makes things wet.'),
   I(2, 'Priya used a wrench to ___ the radio.', 'fix', ['swim', 'eat', 'green'], 'A wrench is a tool for fixing things.'),
   I(2, 'The zombies walk slowly ___ they are sleepy.', 'because', ['under', 'quickly', 'table'], '"Because" tells the reason why.'),
   I(2, 'Bash watered the ferns ___ morning.', 'every', ['jump', 'blue', 'fast'], '"Every morning" tells when he does it.'),
   I(2, 'Wren can run ___ than anyone.', 'faster', ['fastest', 'table', 'jump'], 'Use "faster" with "than" when you compare two things.'),
-  I(2, 'It was dark, so Dex turned on his ___.', 'flashlight', ['sandwich', 'river', 'shoe'], 'You turn on a flashlight when it is dark.'),
+  I(2, 'It was dark, so @N turned on @his ___.', 'flashlight', ['sandwich', 'river', 'shoe'], 'You turn on a flashlight when it is dark.'),
   I(2, 'The critter hid ___ the porch.', 'under', ['happy', 'jump', 'because'], '"Under" tells where it hid.'),
   I(2, 'After the storm, a ___ came out in the sky.', 'rainbow', ['pencil', 'chair', 'sock'], 'Rainbows show up in the sky after rain.'),
   I(2, 'Munch counted his scrap and ___ went to sleep.', 'then', ['blue', 'under', 'sing'], '"Then" tells what happened next.'),
@@ -535,10 +539,10 @@ const MAZE = [
   I(3, 'Priya was proud ___ her beacon finally worked.', 'because', ['although', 'unless', 'or'], '"Because" gives the reason she was proud.')
 ];
 const PASSAGES = [
-  { g: [2, 2], title: 'Dex and the Gloop', text: 'Dex found a little green Gloop by the pond. It was cold and wet. Dex gave it a snack. The Gloop wiggled and made a happy sound. Now the Gloop follows Dex everywhere. They are best friends.', qs: [
-    ['Where did Dex find the Gloop?', 'by the pond', ['in a tree', 'at school', 'under his bed'], 'The first sentence says he found it by the pond.'],
-    ['Why did the Gloop wiggle?', 'It was happy about the snack.', ['It was very scared of Dex.', 'It was too sleepy to stand up.', 'It wanted to swim in the pond.'], 'It wiggled and made a happy sound right after Dex gave it a snack.'],
-    ['What is this story MOSTLY about?', 'how Dex and a Gloop became friends', ['how to swim across a big pond', 'what kind of snack a Gloop likes best', 'why the pond is so cold and wet'], 'The whole story tells how they met and became best friends.', ['They are best friends.', ['It was cold and wet.', 'Dex gave it a snack.', 'Dex found a little green Gloop by the pond.']]]] },
+  { g: [2, 2], title: '@N and the Gloop', text: '@N found a little green Gloop by the pond. It was cold and wet. @N gave it a snack. The Gloop wiggled and made a happy sound. Now the Gloop follows @N everywhere. They are best friends.', qs: [
+    ['Where did @N find the Gloop?', 'by the pond', ['in a tree', 'at school', 'under @his bed'], 'The first sentence says @he found it by the pond.'],
+    ['Why did the Gloop wiggle?', 'It was happy about the snack.', ['It was very scared of @N.', 'It was too sleepy to stand up.', 'It wanted to swim in the pond.'], 'It wiggled and made a happy sound right after @N gave it a snack.'],
+    ['What is this story MOSTLY about?', 'how @N and a Gloop became friends', ['how to swim across a big pond', 'what kind of snack a Gloop likes best', 'why the pond is so cold and wet'], 'The whole story tells how they met and became best friends.', ['They are best friends.', ['It was cold and wet.', '@N gave it a snack.', '@N found a little green Gloop by the pond.']]]] },
   { g: [2, 2], title: 'Rules of the Nest', text: 'The Nest is a clubhouse in an old water tower. There are three rules. First, wipe your feet. Second, share your snacks. Third, never wake a sleeping critter. Bash broke the third rule once. A grumpy Gnawbie chased him around the tower two times!', qs: [
     ['How many rules does the Nest have?', 'three', ['two', 'four', 'five'], 'The passage says, "There are three rules."'],
     ['Which rule did Bash break?', 'Never wake a sleeping critter.', ['Always wipe your feet first.', 'Share your snacks with everyone.', 'Do not climb up the old tower.'], 'He broke the third rule, which is about sleeping critters.'],
@@ -555,9 +559,9 @@ const PASSAGES = [
     ['What does Bash do every morning?', 'waters the ferns', ['goes to the mall to shop', 'bullies other kids', 'names a new fern'], 'The second sentence says he waters them every morning.'],
     ['What changed Bash?', 'taking care of plants', ['moving to a new town', 'a fern named Frank bit him', 'the mall closing'], 'The passage says, "plants changed him."', ['Bash used to be a bully, but plants changed him.', ['He even gives each fern a name.', 'His favorite is a big one called Frank.', 'Bash grows ferns in the mall garden shop.']]],
     ['What lesson does Bash share?', 'It is important to be dependable.', ['Ferns are the best plants.', 'Malls are good places to live.', 'Bullies never change.'], 'Showing up every day means being someone others can count on.']] },
-  { g: [4, 5], title: 'The Nest', text: 'Dex built the Nest inside an old water tower. At first, he liked living alone. Nobody told him when to go to bed, and he ate gummy worms for breakfast. But the nights were long and quiet. Sometimes he talked into his walkie-talkie, even though nobody answered. When a voice finally crackled back, Dex nearly fell out of his chair.', qs: [
-    ["How did Dex's feelings about living alone change?", 'He liked it at first, but then he became lonely.', ['He hated it at first, but then he grew to love it.', 'He was always afraid of living in the old tower.', 'His feelings about living alone never changed at all.'], '"At first" and "But" are signal words that show a change.', ['But the nights were long and quiet.', ['Dex built the Nest inside an old water tower.', 'Nobody told him when to go to bed, and he ate gummy worms for breakfast.', 'When a voice finally crackled back, Dex nearly fell out of his chair.']]],
-    ['Which detail BEST shows that Dex was lonely?', 'He talked into his walkie-talkie even though nobody answered.', ['He ate gummy worms for breakfast every single morning.', 'He built the Nest inside an old, empty water tower.', 'Nobody ever told him when he had to go to bed, so he stayed up late.'], 'Talking when no one answers is strong evidence of loneliness.'],
+  { g: [4, 5], title: 'The Nest', text: '@N built the Nest inside an old water tower. At first, @he liked living alone. Nobody told @him when to go to bed, and @he ate gummy worms for breakfast. But the nights were long and quiet. Sometimes @he talked into @his walkie-talkie, even though nobody answered. When a voice finally crackled back, @N nearly fell out of @his chair.', qs: [
+    ["How did @N's feelings about living alone change?", '@He liked it at first, but then @he became lonely.', ['@He hated it at first, but then @he grew to love it.', '@He was always afraid of living in the old tower.', '@His feelings about living alone never changed at all.'], '"At first" and "But" are signal words that show a change.', ['But the nights were long and quiet.', ['@N built the Nest inside an old water tower.', 'Nobody told @him when to go to bed, and @he ate gummy worms for breakfast.', 'When a voice finally crackled back, @N nearly fell out of @his chair.']]],
+    ['Which detail BEST shows that @N was lonely?', '@He talked into @his walkie-talkie even though nobody answered.', ['@He ate gummy worms for breakfast every single morning.', '@He built the Nest inside an old, empty water tower.', 'Nobody ever told @him when @he had to go to bed, so @he stayed up late.'], 'Talking when no one answers is strong evidence of loneliness.'],
     ['The word "crackled" most likely describes…', 'a rough, broken sound', ['a bright light', 'a sweet smell', 'a very loud shout'], 'A walkie-talkie makes a scratchy, broken sound.']] },
   { g: [5, 6], title: 'Why Shamblers Are Slow', text: 'Priya has a theory about Shamblers. She noticed that they move more slowly on cold mornings than on warm afternoons. To test her idea, she timed ten Shamblers crossing the football field at different times of day. The afternoon zombies were almost twice as fast. Priya concluded that temperature affects how quickly a Shambler can move.', qs: [
     ["What is Priya's conclusion?", 'Temperature affects how fast Shamblers move.', ['Shamblers are afraid of football fields.', 'Shamblers are always slow.', 'Ten Shamblers is too many to test.'], 'The last sentence states her conclusion.'],
@@ -567,10 +571,10 @@ const PASSAGES = [
     ['The phrase "leaned like a tired old man" is a…', 'simile showing the tower is old and weak', ['metaphor showing the tower is alive and awake', 'fact about how old towers were built long ago', 'hyperbole about a man who is very, very tall'], 'It uses "like" to compare the tower to a tired old man.'],
     ['What is the MOOD of this passage?', 'eerie and tense', ['cheerful and silly', 'calm and sleepy', 'proud and excited'], 'Howling dogs, rattling windows, and whispering all build a creepy feeling.'],
     ['Why is the ringing bell so surprising?', 'It had not rung in a hundred years and its rope had rotted.', ['It rings every single night at midnight, and the dogs hate it.', 'Wren rang it herself to warn the town that something was wrong.', 'The dogs in Wexler Falls were already howling before it rang.'], 'The first two sentences explain why nobody expected it to ring.', ['The bell at Blackwood Manor had not rung in a hundred years.', ['Windows rattled.', 'Wren stopped running.', '"That," she whispered, "is not supposed to happen."']]]] },
-  { g: [6, 6], title: 'Stay or Go?', text: 'Some of the crew think they should leave Wexler Falls on the ferry. They argue that the colony has food, doctors, and walls. Dex disagrees. He points out that other kids may still be hiding in town, and the Nest\'s beacon is the only signal that could reach them. "If we leave," he asks, "who turns on the light?"', qs: [
-    ["What is Dex's claim?", 'The crew should stay in Wexler Falls.', ['The colony does not have enough food.', 'The ferry is too unsafe to ride on.', 'The beacon at the Nest is broken.'], 'A claim is what someone is arguing for. Dex argues for staying.'],
-    ['Which reason supports the OTHER side of the argument?', 'The colony has food, doctors, and walls.', ['Other kids may still be hiding in town.', 'The beacon is the only signal left.', 'Dex disagrees with the rest of the crew.'], 'That is the reason given by those who want to leave.'],
-    ["Dex's question at the end is meant to…", 'persuade the crew by making them think', ['show the crew that he is confused and lost', 'ask the crew for directions to the ferry', 'change the subject away from the ferry'], 'A question like this is not asking for an answer. It makes the listener think.']] }
+  { g: [6, 6], title: 'Stay or Go?', text: 'Some of the crew think they should leave Wexler Falls on the ferry. They argue that the colony has food, doctors, and walls. @N disagrees. @He points out that other kids may still be hiding in town, and the Nest\'s beacon is the only signal that could reach them. "If we leave," @he asks, "who turns on the light?"', qs: [
+    ["What is @N's claim?", 'The crew should stay in Wexler Falls.', ['The colony does not have enough food.', 'The ferry is too unsafe to ride on.', 'The beacon at the Nest is broken.'], 'A claim is what someone is arguing for. @N argues for staying.'],
+    ['Which reason supports the OTHER side of the argument?', 'The colony has food, doctors, and walls.', ['Other kids may still be hiding in town.', 'The beacon is the only signal left.', '@N disagrees with the rest of the crew.'], 'That is the reason given by those who want to leave.'],
+    ["@N's question at the end is meant to…", 'persuade the crew by making them think', ['show the crew that @he is confused and lost', 'ask the crew for directions to the ferry', 'change the subject away from the ferry'], 'A question like this is not asking for an answer. It makes the listener think.']] }
 ];
 
 const pluralQ = () => { const [w, a] = pick(PLURALS); const ws = [...new Set([w + 's', w + 'es', w.slice(0, -1) + 'ies', a + 's', w.slice(0, -1) + 'ves', w + 'en'])].filter(x => x !== a); return mc(`One ${w}, two ___.  Which word is the correct plural of "${w}"?`, a, ws, `The plural of "${w}" is "${a}." Some plurals do not just add -s. You have to learn them by heart!`, w + 's' !== a ? { tips: { [w + 's']: `Most words just add -s. But "${w}" is one of the rule-breakers.` } } : undefined); };
@@ -664,7 +668,7 @@ const LESSONS = {
   past: ['Most verbs add -ed to show the past: walk, walked. Jump, jumped.', 'But irregular verbs break the rule. We do not say "runned," we say RAN. Not "eated," but ATE. Not "bringed," but BROUGHT.', 'There is no trick for these. You learn them by reading and listening. Say the sentence out loud: "Yesterday I ___." Your ear often knows!'],
   sva: ['The subject and the verb have to match. One zombie WALKS. Two zombies WALK. It feels backwards, but the -s goes on the verb when there is just ONE.', 'Watch out for sneaky words in the middle. "The box of snacks IS heavy." The subject is the box, not the snacks.', 'Each, every, and one are always singular: "Each of the critters WANTS a snack."'],
   homophone: ['Homophones sound the same but are spelled differently. Their = belongs to them. There = a place. They\'re = they are.', 'To / too / two: "Two" is the number. "Too" means also or too much (it has too many o\'s!). "To" is for everything else.', 'Its vs. it\'s: try saying "it is." If the sentence still works, use IT\'S. If not, use ITS. The same trick works for you\'re (you are) and who\'s (who is).'],
-  punct: ['Every sentence starts with a capital and ends with a period, question mark, or exclamation point. Names of people and places get capitals too.', 'Commas separate items in a list: "Dex, Priya, and Bash." A comma also goes before and, but, or so when it joins two full sentences.', 'Quotation marks hug the exact words someone says: Priya said, "It works!" An apostrophe shows ownership: the critter\'s tail.'],
+  punct: ['Every sentence starts with a capital and ends with a period, question mark, or exclamation point. Names of people and places get capitals too.', 'Commas separate items in a list: "Priya, Bash, and Wren." A comma also goes before and, but, or so when it joins two full sentences.', 'Quotation marks hug the exact words someone says: Priya said, "It works!" An apostrophe shows ownership: the critter\'s tail.'],
   spelling: ['Good spellers look for the tricky part of a word and make up a way to remember it. FRI-END: you are friends to the END.', 'Say the word the silly way, sounding out every letter: "Wed-NES-day." "Feb-RU-ary." "Be-A-U-tiful."', 'Remember: "i before e, except after c." BelIEve, but recEIve. (WEIRD is weird and breaks the rule!)'],
   synant: ['SYNONYMS are words that mean almost the Same. Big, large, huge, and enormous are synonyms.', 'ANTONYMS are opposites. Hot and cold. Brave and scared. Ancient and modern.', 'Tip: put your answer into a sentence in place of the word. For a synonym, the sentence should mean the same thing. For an antonym, it should flip.'],
   affix: ['Many words are built from parts, like LEGO bricks. A PREFIX snaps onto the front: un- means not, so UNhappy means not happy. Re- means again, so REbuild means build again.', 'A SUFFIX snaps onto the end: -less means without, so fearLESS means without fear. -ful means full of.', 'ROOTS are the middle bricks. "Aqua" means water (aquarium). "Tele" means far (telescope). Knowing parts lets you crack words you have never seen before.'],
@@ -722,13 +726,13 @@ const Learn = {
   // The KIND of question, ignoring the particular numbers: "47 + 28 = ?" and "35 + 49 = ?" are the same kind,
   // "7 + 8 = ?" and "346 + 278 = ?" are not. English items and passage questions are each their own kind.
   sig(q, sub) {
-    let t = (q.type === 'multi' ? 'M|' : '') + (q.ptitle || '') + '|' + q.q;
+    const C = q.canon || {}; let t = (q.type === 'multi' ? 'M|' : '') + ((C.pt != null ? C.pt : q.ptitle) || '') + '|' + (C.q || q.q);
     if (sub === 'math') {
       // bare sums keep the SIZE of their numbers (1, 2 or 3 digits); in longer questions any number is just "a number"
       t = t.replace(/\d+/g, d => t.length <= 24 ? '#'.repeat(Math.min(3, d.length)) : '#').replace(/Gloops|Boltbugs|Gnawbies|Zaprats|Murdles/g, 'X')
         .replace(/\b(one|two|three|four|five|six|seven|eight|nine|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b/g, 'N')
         .replace(/# (one-dollar bills?|quarters?|dimes?|nickels?|penn(y|ies))/g, 'C').replace(/C((,| and) C)+/g, 'C').replace(/[ap]\.m\./g, 'm');
-    } else if (q.type !== 'multi') t += '|' + q.choices[q.a] + (q.say || '');
+    } else if (q.type !== 'multi') t += '|' + (C.a != null ? C.a : q.choices[q.a]) + ((C.sy != null ? C.sy : q.say) || '');
     let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36);
   },
   // want = a kind to ask again (a retry of something missed). Otherwise prefer kinds this child has not had yet,
@@ -1268,8 +1272,8 @@ const Learn = {
     const SL = Sess.lines(when, 7);
     await page(() => {
       ctx.fillStyle = 'rgba(6,4,14,.9)'; ctx.fillRect(0, 0, W, H); panel(20, 14, W - 40, H - 28);
-      setFont(18, true); text('WHEN SHE STOPS', 44, 34, '#ffd76a'); let y = 74;
-      setFont(22); text(SL.summary || (SL.rows.length ? 'Each sitting below ends where she put the game down.' : 'No sittings recorded yet. Play a little and come back.'), 44, y, '#c8ffb8'); y += 36;
+      setFont(18, true); text(heroText('WHEN @he STOPS').toUpperCase(), 44, 34, '#ffd76a'); let y = 74;
+      setFont(22); text(SL.summary || (SL.rows.length ? heroText('Each sitting below ends where @he put the game down.') : 'No sittings recorded yet. Play a little and come back.'), 44, y, '#c8ffb8'); y += 36;
       if (SL.quick) { text(SL.quick + '.', 44, y, '#ffb07a'); y += 36; }
       // rows are long; take the biggest size at which the widest one still fits the panel
       let px = 21; for (; px > 14; px--) { setFont(px); if (SL.rows.slice(0, 10).every(r => ctx.measureText(r).width <= W - 88)) break; }

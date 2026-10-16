@@ -108,7 +108,7 @@ const Battle = {
       }
       if (i === 1) {
         const acts = (G.gear.sword ? ['sword'] : []).concat(G.crew);
-        const ci = await menu(acts.map(id => id === 'sword' ? { label: `Dex: ${SWORDS[G.gear.sword - 1].n}`, disabled: st.used.sword, col: '#ffd76a' } : { label: `${CREW[id].n}: ${CREW[id].ab}`, disabled: st.used[id] }), { x: 12, by: H - 12, w: 640, onDraw: s => { panel(664, BOX_Y + 2, 284, BOX_H - 4); setFont(24); wrap((acts[s] === 'sword' ? 'Dex jumps in with his blade! Answer a question to strike at full power.' : CREW[acts[s]].abd) + ' (Once per battle. Free!)', 244).forEach((l, k) => text(l, 684, BOX_Y + 22 + k * 26, '#e8e0f4')); } });
+        const ci = await menu(acts.map(id => id === 'sword' ? { label: `${HN()}: ${SWORDS[G.gear.sword - 1].n}`, disabled: st.used.sword, col: '#ffd76a' } : { label: `${CREW[id].n}: ${CREW[id].ab}`, disabled: st.used[id] }), { x: 12, by: H - 12, w: 640, onDraw: s => { panel(664, BOX_Y + 2, 284, BOX_H - 4); setFont(24); wrap((acts[s] === 'sword' ? 'Dex jumps in with his blade! Answer a question to strike at full power.' : CREW[acts[s]].abd) + ' (Once per battle. Free!)', 244).forEach((l, k) => text(l, 684, BOX_Y + 22 + k * 26, '#e8e0f4')); } });
         if (ci < 0) continue;
         if (acts[ci] === 'sword') { await this.strike(); if (foe.hp <= 0) return { k: 'item' }; } else await this.crew(acts[ci]);
         continue;
@@ -169,7 +169,7 @@ const Battle = {
   },
   async useOnFoe(id) {
     const st = this.st, foe = st.foes[st.fi], it = ITEMS[id], mh = maxHp(foe); G.bag[id]--;
-    await bsay(`Dex ${it.foe === 'venom' ? 'throws' : 'unrolls'} the ${it.n}!`);
+    await bsay(`${HN()} ${it.foe === 'venom' ? 'throws' : 'unrolls'} the ${it.n}!`);
     let d = 0;
     if (it.foe === 'venom') { d = Math.floor(mh * .12); foe.status = 'ick'; }
     if (it.foe === 'bolt') d = Math.floor(mh * .22 * typeMult('SPARK', SPECIES[foe.sp].t));
@@ -253,8 +253,8 @@ const Battle = {
   async snack(brain) {
     const st = this.st, foe = st.foes[st.fi], sp = SPECIES[foe.sp];
     G.bag.snack--;
-    await bsay('Dex tosses a Critter Snack!');
-    if (brain) await bsay('Dex says something really smart and soothing. The critter is impressed!');
+    await bsay('@N tosses a Critter Snack!');
+    if (brain) await bsay('@N says something really smart and soothing. The critter is impressed!');
     for (let i = 0; i < 3; i++) { await tween(st, 'ey', -18, 120); await tween(st, 'ey', 0, 120); await sleep(180); }
     const p = sp.rate * (1 - .65 * foe.hp / maxHp(foe)) + (foe.status ? .12 : 0) + (brain ? .25 : 0) + (G.gear.charms.luck ? .2 : 0);
     if (Math.random() < p) {

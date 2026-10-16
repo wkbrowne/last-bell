@@ -14,7 +14,7 @@ OB.parcel = function () { glow(50, 66, 34, '#fff59a', .35); rr(24, 50, 52, 38, 4
 // the trophy shelf by the Nest shows one cup for each weekly trophy (up to six)
 for (let n = 0; n <= 6; n++) OB['tshelf' + n] = function () { rr(10, 40, 80, 8, 2, '#8a5f3a'); rr(10, 72, 80, 8, 2, '#8a5f3a'); rr(10, 40, 6, 56, 1, '#7a5230'); rr(84, 40, 6, 56, 1, '#7a5230');
   for (let i = 0; i < n; i++) { const x = 24 + (i % 3) * 26, y = i < 3 ? 40 : 72; glow(x, y - 12, 14, '#ffe36a', .3); pol([x - 8, y - 26, x + 8, y - 26, x + 5, y - 12, x - 5, y - 12], '#ffcb3d'); rr(x - 2, y - 12, 4, 6, 1, '#d99a1e'); rr(x - 6, y - 6, 12, 5, 1, '#d99a1e'); } };
-// caps Dex can earn from quests (the first is the one he starts with)
+// colours the hero can earn from quests: Dex's cap, Jo's headband, Lulu's bows (and everyone's sneakers)
 const QCAPS = [['red', '#e5483d'], ['blue', '#3f7ee8'], ['gold', '#f2c14e'], ['green', '#3fae5a'], ['purple', '#8e6be8'], ['black', '#2a2636'], ['pink', '#e07aa0'], ['white', '#f4f4fa']];
 SPEAKERS.board = { n: 'Quest Board', spr: 'board', human: false, col: '#ffd76a' };
 BADGES.quester = ['Quester', 'Finished a quest from the Quest Board.'];
@@ -140,7 +140,7 @@ const Quests = {
     if (q.done) return; q.done = true; const Q = this.S(), R = q.reward; G.scrap += R.scrap; if (R.item) give(R.item, R.qty, true); Q.done++;
     const eg = curEgg(); if (eg) { eg.wm = Math.min(20, eg.wm + 3); eg.we = Math.min(20, eg.we + 3); q.warmed = 1; }   // every quest warms a dragon egg a little
     if (R.critter && SPECIES[R.critter]) { addCritter(makeCritter(R.critter, clamp(this.top() - 2, 5, 50))); q.gotCritter = R.critter; }
-    G.cos = G.cos || { caps: ['red'], cap: 'red' }; if (Q.done % 3 === 0) { const next = QCAPS.find(c => !G.cos.caps.includes(c[0])); if (next) { G.cos.caps.push(next[0]); q.gotCap = next[0]; } }
+    G.cos = G.cos || { caps: [hero().col0], cap: hero().col0 }; if (Q.done % 3 === 0) { const next = QCAPS.find(c => !G.cos.caps.includes(c[0])); if (next) { G.cos.caps.push(next[0]); q.gotCap = next[0]; } }
     if (!q.weekly) Q.weekDone++;
     (this.pending = this.pending || []).push(q);
     if (typeof PlayLog !== 'undefined') PlayLog.add('quest', { kind: q.kind, weekly: !!q.weekly });
@@ -151,7 +151,7 @@ const Quests = {
       const q = this.pending.shift(), R = q.reward, Q = this.S(); Snd.sfx('badge'); Fx.flash = .4; tween(Fx, 'flash', 0, 400);
       await say('board', `★ QUEST COMPLETE: ${q.title} ★\n+${R.scrap} scrap${R.item ? `, ${R.qty} ${ITEMS[R.item].n}${R.qty > 1 ? 's' : ''}` : ''}${q.warmed ? '\nYour dragon egg feels a little warmer.' : ''}`, { col: '#ffd76a' });
       if (q.gotCritter) await say('board', `★ A ${SPECIES[q.gotCritter].n} heard about you and wants to join your team! ★`, { col: '#ffd76a' });
-      if (q.gotCap) { await say('board', `★ NEW CAP: ${q.gotCap.toUpperCase()} ★\nChange caps on the Quest Board under Wardrobe.`, { col: '#ffd76a' }); }
+      if (q.gotCap) { await say('board', `★ NEW ${capWord().toUpperCase()}: ${q.gotCap.toUpperCase()} ★\nChange ${capWord()}s on the Quest Board under Wardrobe.`, { col: '#ffd76a' }); }
       if (typeof dragonCheck === 'function') await dragonCheck();   // a warm egg may hatch, and a mastered skill may grow a dragon
       await badge('quester');
       if (!q.weekly && Q.weekDone >= 5 && !Q.trophies.includes(Q.week)) { Q.trophies.push(Q.week); G.scrap += 250; give('slush', 2, true); Snd.sfx('levelup');
@@ -209,7 +209,7 @@ const Quests = {
     this.refresh(); this._new = false; const Q = this.S();
     while (true) {
       const list = this.all(), label = q => (q.done ? '✔ ' : q.id === Q.track ? '▶ ' : '· ') + (q.weekly ? 'WEEKLY: ' : '') + q.title, right = q => q.done ? 'DONE' : q.need > 1 ? `${q.prog}/${q.need}` : (q.kind === 'errand' && q.got ? 'carrying' : '');
-      const cos = G.cos || { caps: ['red'], cap: 'red' }, i = await menu(list.map(q => ({ label: label(q) + (q.dragon && !q.done ? '  🐉' : ''), right: right(q), col: q.done ? '#a8ffb8' : q.weekly ? '#ffd76a' : null })).concat([{ label: `Wardrobe  (${cos.caps.length} cap${cos.caps.length === 1 ? '' : 's'})` }, { label: 'Close' }]), { x: 70, y: 70, w: W - 140, rows: 7, title: `QUEST BOARD   ·   this week ${Math.min(5, Q.weekDone)}/5 for a trophy   ·   trophies: ${Q.trophies.length}` });
+      const cos = G.cos || { caps: [hero().col0], cap: hero().col0 }, i = await menu(list.map(q => ({ label: label(q) + (q.dragon && !q.done ? '  🐉' : ''), right: right(q), col: q.done ? '#a8ffb8' : q.weekly ? '#ffd76a' : null })).concat([{ label: `Wardrobe  (${cos.caps.length} ${capWord()}${cos.caps.length === 1 ? '' : 's'})` }, { label: 'Close' }]), { x: 70, y: 70, w: W - 140, rows: 7, title: `QUEST BOARD   ·   this week ${Math.min(5, Q.weekDone)}/5 for a trophy   ·   trophies: ${Q.trophies.length}` });
       if (i === list.length) { await this.wardrobe(); continue; }
       if (i < 0 || i >= list.length) return;
       const q = list[i], R = q.reward;
@@ -219,11 +219,11 @@ const Quests = {
     }
   },
   async wardrobe() {
-    const cos = G.cos = G.cos || { caps: ['red'], cap: 'red' }, have = QCAPS.filter(c => cos.caps.includes(c[0]));
-    const i = await menu(have.map(c => ({ label: (c[0] === cos.cap ? '● ' : '○ ') + c[0][0].toUpperCase() + c[0].slice(1) + ' cap', col: c[1] })).concat([{ label: `(${QCAPS.length - have.length} more to earn: one every three quests)`, disabled: true }, { label: 'Done' }]), { x: 280, y: 160, w: 400, title: 'WARDROBE' });
-    if (i >= 0 && i < have.length) { cos.cap = have[i][0]; this.applyLook(); Snd.sfx('ok'); await say('dex', 'Looking good.'); }
+    const cos = G.cos = G.cos || { caps: [hero().col0], cap: hero().col0 }, have = QCAPS.filter(c => cos.caps.includes(c[0]));
+    const i = await menu(have.map(c => ({ label: (c[0] === cos.cap ? '● ' : '○ ') + c[0][0].toUpperCase() + c[0].slice(1) + ' ' + capWord(), col: c[1] })).concat([{ label: `(${QCAPS.length - have.length} more to earn: one every three quests)`, disabled: true }, { label: 'Done' }]), { x: 280, y: 160, w: 400, title: 'WARDROBE' });
+    if (i >= 0 && i < have.length) { cos.cap = have[i][0]; cos.chosen = 1; this.applyLook(); Snd.sfx('ok'); await say('dex', 'Looking good.'); }
   },
-  applyLook() { const c = G && G.cos && QCAPS.find(x => x[0] === G.cos.cap); const col = c ? c[1] : '#e5483d'; if (HUM.dex.cap !== col) { HUM.dex.cap = col; HUM.dex.scarf = col; HUM.dex.shoes = col; for (const k in Art.cache) if (k.startsWith('h:dex') || k.startsWith('s:dex')) delete Art.cache[k]; } },
+  applyLook() { if (!G) return; const H = hero(), c = G.cos && QCAPS.find(x => x[0] === G.cos.cap); if (HUM.dex.style !== H.look.style || (c && HUM.dex[H.acc[0]] !== c[1])) Hero.apply(); },
   async shelf() { const T = (G.quests && G.quests.trophies) || []; await say(null, T.length ? `THE TROPHY SHELF\n${T.length} weekly trophy${T.length > 1 ? 's' : ''}. One for every week you finished five quests from the Quest Board.` : 'THE TROPHY SHELF\nIt is empty. Finish five Quest Board quests in one week to win the first trophy!'); },
   init() {
     // the arrow: story first; when the story has nothing waiting, the tracked quest
