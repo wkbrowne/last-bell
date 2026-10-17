@@ -76,11 +76,11 @@ const Quests = {
       return { id, kind, spot: s.i, to, what, title: `Delivery for ${N[0]}`, text: `${N[0]} needs ${what}. It was left at ${s[0]}. Pick it up and bring it over.`, need: 1, prog: 0, got: false, reward: rw(60, 'snack', 3) }; }
     if (kind === 'hunt') { const seen = Object.keys(G.seen || {}).concat(Object.keys(G.dex || {})).filter(sp => SPECIES[sp] && !SPECIES[sp].z && SPECIES[sp].rate > 0 && !SPECIES[sp].dragon), sp = seen.length ? pick(seen) : 'gloop';
       const hp = this.habitat(e => e === sp);
-      return { id, kind, sp, x: hp && hp[0], y: hp && hp[1], title: big ? `Befriend 2 ${SPECIES[sp].n}s` : `Befriend a ${SPECIES[sp].n}`, text: `Make friends with ${big ? 'two' : 'a'} ${SPECIES[sp].n}${big ? 's' : ''}: weaken it in battle, then use a Critter Snack.`, need: big ? 2 : 1, prog: 0, reward: rw(80, 'snack', 2) }; }
+      return { id, kind, sp, x: hp && hp[0], y: hp && hp[1], v2: 1, title: big ? `Befriend 2 ${SPECIES[sp].n}s` : `Befriend a ${SPECIES[sp].n}`, text: `Make friends with ${big ? 'two' : 'a'} ${SPECIES[sp].n}${big ? 's' : ''}: weaken it in battle, then use a Critter Snack. Follow the arrow, then walk around in the tall grass there.`, need: big ? 2 : 1, prog: 0, reward: rw(80, 'snack', 2) }; }
     if (kind === 'defeat') { // a type he can actually find: one that lives in a part of town he can walk to
       const R = this.reach(), w = MAPS.world.m.w, near = MAPS.world.zones.filter(z => { for (let y = z.r[1]; y < z.r[1] + z.r[3]; y += 2) for (let x = z.r[0]; x < z.r[0] + z.r[2]; x += 2) if (R.has(x + y * w)) return true; return false; }), ts = [].concat(...near.map(z => (z.enc || []).map(e => SPECIES[e[0]] && SPECIES[e[0]].t))).filter(Boolean);
       const t = ts.length ? pick(ts) : 'ROT', n = big ? 15 : rint(3, 5), hp = this.habitat(e => SPECIES[e] && SPECIES[e].t === t);
-      return { id, kind, t, x: hp && hp[0], y: hp && hp[1], title: `Defeat ${n} ${t} critters`, text: `Win battles against ${n} ${t}-type critters or zombies. (Zombies are ROT.)`, need: n, prog: 0, reward: rw(70, 'juice', 2) }; }
+      return { id, kind, t, x: hp && hp[0], y: hp && hp[1], v2: 1, title: `Defeat ${n} ${t} critters`, text: `Win battles against ${n} ${t}-type critters or zombies. (Zombies are ROT.) Follow the arrow, then walk around in the tall grass there.`, need: n, prog: 0, reward: rw(70, 'juice', 2) }; }
     if (kind === 'patrol') {   // a zone he can walk into, and the reachable spot nearest its middle for the arrow
       const R = this.reach(), w = MAPS.world.m.w, spot = z => { const cx = z.r[0] + (z.r[2] >> 1), cy = z.r[1] + (z.r[3] >> 1); let best = null, bd = 1e9; for (let y = z.r[1]; y < z.r[1] + z.r[3]; y++) for (let x = z.r[0]; x < z.r[0] + z.r[2]; x++) if (R.has(x + y * w) && zoneAt('world', x, y).id === z.id) { const d = Math.abs(x - cx) + Math.abs(y - cy); if (d < bd) { bd = d; best = [x, y]; } } return best; };
       const zs = MAPS.world.zones.filter(z => z.id !== 'gull' && z.id !== PL.zone).map(z => [z, spot(z)]).filter(a => a[1]); if (!zs.length) return null; const [z, p] = pick(zs);
@@ -95,10 +95,27 @@ const Quests = {
   },
   // where to look for a critter or a type: a reachable patch of tall grass in a part of town where it lives
   habitat(match) {
-    const R = this.reach(), M = MAPS.world.m, w = M.w, zs = MAPS.world.zones.filter(z => (z.enc || []).some(e => match(e[0]))); let best = null, bd = 1e9;
-    for (const z of zs) for (let y = z.r[1]; y < z.r[1] + z.r[3]; y++) for (let x = z.r[0]; x < z.r[0] + z.r[2]; x++) { if (!R.has(x + y * w) || !TINFO[M.t[y][x]].enc || zoneAt('world', x, y).id !== z.id) continue; const d = Math.abs(x - 41) + Math.abs(y - 64) + (Math.random() * 30 | 0); if (d < bd) { bd = d; best = [x, y]; } }
+    // the part of town where the critter is COMMON (not just possible), then a patch of tall grass there not far from the Nest
+    const R = this.reach(), M = MAPS.world.m, w = M.w, zs = MAPS.world.zones.filter(z => (z.enc || []).some(e => match(e[0]))); let best = null, bs = -1e9;
+    for (const z of zs) {
+      const all = z.enc.reduce((a, e) => a + e[3], 0), share = z.enc.filter(e => match(e[0])).reduce((a, e) => a + e[3], 0) / all; let tile = null, bd = 1e9;
+      for (let y = z.r[1]; y < z.r[1] + z.r[3]; y++) for (let x = z.r[0]; x < z.r[0] + z.r[2]; x++) { if (!R.has(x + y * w) || !TINFO[M.t[y][x]].enc || zoneAt('world', x, y).id !== z.id) continue; const d = Math.abs(x - 41) + Math.abs(y - 64) + (Math.random() * 30 | 0); if (d < bd && this.patch(x, y, z.id) >= 8) { bd = d; tile = [x, y]; } }
+      if (tile && share * 60 - bd * .15 > bs) { bs = share * 60 - bd * .15; best = tile; }
+    }
     return best;
   },
+  // how many tiles of tall grass are joined to this one (up to 12): a patch big enough to walk around in
+  patch(x0, y0, zid) { const M = MAPS.world.m, seen = new Set([x0 + ',' + y0]), todo = [[x0, y0]]; while (todo.length && seen.size < 12) { const [x, y] = todo.pop(); for (const k in DV) { const nx = x + DV[k][0], ny = y + DV[k][1], key = nx + ',' + ny; if (seen.has(key) || nx < 0 || ny < 0 || nx >= M.w || ny >= M.h || !TINFO[M.t[ny][nx]].enc || zoneAt('world', nx, ny).id !== zid) continue; seen.add(key); todo.push([nx, ny]); } } return seen.size; },
+  // standing in a patch of tall grass big enough to walk around in (cached per tile)
+  inPatch() { if (G.map !== 'world' || !TINFO[tileAt(G.map, G.x, G.y)].enc) return false; const k = G.x + ',' + G.y, C = this._pc || (this._pc = {}); if (C[k] == null) C[k] = this.patch(G.x, G.y, zoneAt('world', G.x, G.y).id) >= 8; return C[k]; },
+  // hunting grounds: the open Befriend and Defeat quests whose patch of grass is in the part of town he is in now
+  inGround() {
+    const qs = this.ground(), onGrass = TINFO[tileAt(G.map, G.x, G.y)].enc; if (!qs.length || !onGrass) return;
+    const q = qs.find(x => !x.told); if (q && this.inPatch()) { q.told = 1; const what = q.kind === 'hunt' ? SPECIES[q.sp].n + 's' : q.t + '-type critters'; script(() => say('board', `This is the place! ${what} live in this tall grass. Keep walking around in it and they will jump out.`)); return; }
+    if (PL.grace <= 0 && G.party.length && Math.random() < .15) { const z = zoneAt(G.map, G.x, G.y); script(() => wild(z)); }   // on top of the usual 1 in 10
+  },
+  matches(q, sp) { return q.kind === 'hunt' ? sp === q.sp : !!(SPECIES[sp] && SPECIES[sp].t === q.t); },
+  ground() { if (!G || !G.quests || G.map !== 'world' || !PL.zone) return []; return this.open().filter(q => (q.kind === 'defeat' || q.kind === 'hunt') && q.x != null && zoneAt('world', q.x, q.y).id === PL.zone); },
   // three a day, one of them a brain quest; one bigger one a week
   // a dragon that is hatched but not big enough to ride, or an egg still being kept warm
   growing() { return !!(G && (curEgg() || (dragonsOwned().length && !rideable()))); },
@@ -109,6 +126,8 @@ const Quests = {
       const sky = flag('skyFirst') && !flag('_noSky'), explore = ['hunt', 'defeat', 'patrol', 'rescue', 'errand'].concat(sky ? ['rings', 'skyvisit', 'skycarry', 'skycarry'] : []), brain = this.growing() ? [curEgg() ? 'right' : 'master'] : ['right', 'streak', 'dash', 'right'];
       for (const kinds of [['rescue', 'bounty', 'errand'], explore, brain]) { const left = kinds.filter(k => !list.some(q => q.kind === k)); let q = null; for (let t = 0; t < 6 && !q; t++) q = this.make(pick(left.length ? left : kinds), taken); if (q) list.push(q); }   // never the same kind twice in a day
       Q.list = list; fresh = true; }
+    // quests made before v1.32 could point at grass where the critter is rare, or at a single tile: move them once
+    for (const q of this.open()) if ((q.kind === 'defeat' || q.kind === 'hunt') && !q.v2) { q.v2 = 1; const hp = this.habitat(q.kind === 'hunt' ? e => e === q.sp : e => SPECIES[e] && SPECIES[e].t === q.t); if (hp) { q.x = hp[0]; q.y = hp[1]; fresh = true; } }
     if (fresh) { this._new = true; this.sync(); }
     return fresh;
   },
@@ -227,7 +246,7 @@ const Quests = {
   async shelf() { const T = (G.quests && G.quests.trophies) || []; await say(null, T.length ? `THE TROPHY SHELF\n${T.length} weekly trophy${T.length > 1 ? 's' : ''}. One for every week you finished five quests from the Quest Board.` : 'THE TROPHY SHELF\nIt is empty. Finish five Quest Board quests in one week to win the first trophy!'); },
   init() {
     // the arrow: story first; when the story has nothing waiting, the tracked quest
-    { const o = Guide.final.bind(Guide); this._final = o; Guide.final = function () { const base = o(); if (!Quests.storyIdle(base) || !G || !G.quests || !flag('starter')) return base; const t = Quests.target(Quests.tracked()); return t || base; }; }
+    { const o = Guide.final.bind(Guide); this._final = o; Guide.final = function () { const base = o(); if (!Quests.storyIdle(base) || !G || !G.quests || !flag('starter')) return base; const q = Quests.tracked(); if (q && Quests.ground().includes(q) && Quests.inPatch()) return null;   /* standing in the quest's grass: no arrow, just walk around */ const t = Quests.target(q); return t || base; }; }
     // hooks into the game for progress
     { const o = Learn.record; Learn.record = function (q, ok) { const r = o.apply(this, arguments); if (ok && q && q.q && !q._quick) Quests.event('right'); if (q && q.q) Quests.event('streak', G.learn.streak); if ((G.learn.fresh || []).length) Quests.event('master'); return r; }; }
     { const o = Learn.factDash; Learn.factDash = async function () { const r = await o.apply(this, arguments); const L = G.learn.dash; if (L && L.length) Quests.event('dash', L[L.length - 1].n); await Quests.announce(); return r; }; }
@@ -241,10 +260,11 @@ const Quests = {
     { const o = loadGame; loadGame = function () { const r = o.apply(this, arguments); if (r) Quests.applyLook(); return r; }; }
     { const o = munchShop; munchShop = async function () { await Quests.deliver('munch'); return o.apply(this, arguments); }; }
     { const o = nightShop; nightShop = async function (id) { await Quests.deliver(id); return o.apply(this, arguments); }; }
+    { const o = wild; wild = async function (z) { const qs = Quests.ground(); if (qs.length && Math.random() < .7) { const tb = (z.enc || []).filter(e => qs.some(q => Quests.matches(q, e[0]))); if (tb.length) z = Object.assign({}, z, { enc: tb }); } return o.call(this, z); }; }
     { const o = afterBattle; afterBattle = async function () { await o.apply(this, arguments); await Quests.announce(); }; }
     // new quests each day: checked when play resumes and whenever Dex arrives somewhere
     { const o = welcomeBack; welcomeBack = async function () { await o.apply(this, arguments); if (G && flag('starter') && Quests.refresh()) await say('board', 'New quests are up on the Quest Board by the Nest!'); }; }
-    { const o = arrive; arrive = function () { const r = o.apply(this, arguments); if (G && flag('starter')) { if (G.map === 'world' && PL.zone) Quests.event('zone', PL.zone); /* a patrol counts even if he was already there */ if (Quests.refresh()) toast('New quests on the Quest Board!'); if (Quests.pending && Quests.pending.length && !Script.n) script(() => Quests.announce()); } return r; }; }
+    { const o = arrive; arrive = function () { const r = o.apply(this, arguments); if (G && flag('starter')) { if (G.map === 'world' && PL.zone) Quests.event('zone', PL.zone); /* a patrol counts even if he was already there */ if (!Script.n) Quests.inGround(); if (Quests.refresh()) toast('New quests on the Quest Board!'); if (Quests.pending && Quests.pending.length && !Script.n) script(() => Quests.announce()); } return r; }; }
   }
 };
 document.addEventListener('DOMContentLoaded', () => { try { Quests.init(); } catch (e) { console.error('Quest Board wiring', e); } });

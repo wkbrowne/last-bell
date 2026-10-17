@@ -444,3 +444,24 @@ colours and progress are checked, the hello line uses the new name, and the choo
 picks Lulu by taps and the intro says "My name is Lulu Okafor". Every skill's questions (and Select-all questions),
 grades 2-6, generated from the same dice as Dex and as Lulu: the same kind of question every time, no token left,
 no "Dex" and no stray "he" for Lulu; the writing tasks and mazes likewise.
+
+## Defeat and Befriend quests that work (v1.33)
+
+Reported: "Defeat 4 GHOST critters": he followed the arrow, and nothing happened. The arrow led to one tile of tall
+grass near the Nest, in a part of town where only about 1 critter in 5 is a ghost, and standing on it does nothing;
+wild critters only appear while walking in grass (1 step in 10). Four ghosts took ~200 grass steps, with no word on
+what to do.
+
+- **The right place.** `Quests.habitat()` now picks the part of town where the critter or type is most common (the
+  share of its encounter table, a little against distance), and a tile in a patch of at least 8 joined grass tiles.
+  Open quests made before this version are moved once (`q.v2`).
+- **Hunting grounds.** In the quest's part of town (`Quests.ground()`), wild critters jump out more often (an extra
+  15% a grass step on top of the usual 10%) and 70% of them are the kind the quest wants.
+- **Saying what to do.** Stepping into a real patch there says once: "This is the place! GHOST-type critters live in
+  this tall grass. Keep walking around in it and they will jump out." The arrow goes away while he is in such a patch
+  (it comes back if he wanders off), and the quest text says "Follow the arrow, then walk around in the tall grass".
+
+**Tests.** `HUNT.ground()` plays it like a child: follow the arrow, then wander in the grass, with real battles won by
+taps. A GHOST quest: the cemetery (60% ghosts), done in about 35-45 grass steps and 5 battles. An old quest that
+pointed at the Night Market: moved to the cemetery, done the same way. A Befriend quest: the critter turns up twice
+within about a dozen grass steps (catching it is not part of this check).

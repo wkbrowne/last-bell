@@ -368,5 +368,52 @@ window.HUNT = {
     return { probe: 'hero', results, finds: this.out() };
   },
 
-  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
+  // 11. A Defeat quest (or a Befriend quest) played the way a child plays it: follow the arrow, then wander in the
+  // tall grass. It must say what to do on arrival and finish in a sensible number of steps, with real battles.
+  async ground(kind, early) {
+    this.finds = {}; const errs = [], onErr = e => errs.push((e.message || (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)).split('\n').slice(0, 2).join(' | '));
+    addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+    const realCard = Learn.card, mute = Snd.muted, realSay = say, results = {}; Snd.muted = true; Touch.enabled = true; let lines = [], plan = [], cur = null;
+    say = function (who, str) { lines.push(heroText(String(str))); return realSay.apply(this, arguments); };
+    Learn.card = function (q, t, m) { cur = q; const type = q.type || 'mc'; plan = m && m.demo ? [] : type === 'num' ? String(q.ans).replace(/,/g, '').split('').map(c => ({ k: c })).concat([{ k: 'OK' }]) : type === 'multi' ? q.as.map(i => ({ i })).concat([{ i: q.choices.length }]) : [{ i: q.a }]; const p = realCard.call(this, q, t, m); p.then(() => { if (cur === q) cur = null; }); return p; };
+    try {
+      this.fresh(2); if (early !== true) { for (const st of Guide.steps) if (!Sky.isSky(st[1]) && st[0] !== 'skyFirst') G.flags[st[0]] = true; Object.assign(G.flags, { priya: true, bash: true, wren: true, antenna: true, skyFirst: true, glide: true, roar: true, glow: true, stormEnd: true, skyCall: true, marketLog: true }); }
+      G.party = [makeCritter('scrapup', early === true ? 14 : 40), makeCritter('gloop', early === true ? 12 : 38)]; G.bag.snack = 30; G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); Quests.refresh();
+      const q = kind === 'hunt' ? Quests.make('hunt', new Set()) : (() => { let x = null; for (let i = 0; i < 40 && !(x && x.t === 'GHOST'); i++) x = Quests.make('defeat', new Set()); return x; })();
+      if (!q) { this.add('could not make the quest'); return { probe: 'ground', finds: this.out() }; }
+      if (kind !== 'hunt') { q.t = 'GHOST'; q.title = 'Defeat 4 GHOST critters'; const hp = early === 'old' ? (() => { const M = MAPS.world.m; let b = null, bd = 1e9; for (let y = 0; y < M.h; y++) for (let x = 0; x < M.w; x++) if (TINFO[M.t[y][x]].enc && zoneAt('world', x, y).enc && zoneAt('world', x, y).enc.some(e => e[0] === 'dustmoth') && Math.abs(x - 41) + Math.abs(y - 64) < bd) { bd = Math.abs(x - 41) + Math.abs(y - 64); b = [x, y]; } return b; })() : Quests.habitat(e => SPECIES[e] && SPECIES[e].t === 'GHOST'); q.x = hp[0]; q.y = hp[1]; }   // 'old': a quest made before v1.32 pointed at the vacant lot, where ghosts are rare
+      q.need = kind === 'hunt' ? 1 : 4; Quests.S().list = [q]; Quests.S().weekly = null; Quests.S().track = q.id; if (early === 'old') { delete q.v2; results.oldSpot = zoneAt('world', q.x, q.y).n; Quests.refresh(); } Quests.sync();
+      results.quest = q.title; results.zone = zoneAt('world', q.x, q.y).n; const z = zoneAt('world', q.x, q.y), all = z.enc.reduce((a, e) => a + e[3], 0);
+      results.share = Math.round(100 * z.enc.filter(e => Quests.matches(q, e[0])).reduce((a, e) => a + e[3], 0) / all) + '%';
+      let steps = 0, grass = 0, battles = 0, arrived = null, lastPos = '', f = 0, still = 0; const W0 = MAPS.world.m;
+      const realWild = wild, realRun = Battle.run; let met = 0; wild = async function () { battles++; return realWild.apply(this, arguments); };
+      if (kind === 'hunt') Battle.run = async function (opt) { if (opt && opt.foes && opt.foes.some(f => f[0] === q.sp || evolved(q.sp, f[1]) === f[0])) met++; return 'win'; };   // (catching is not what is tested here: meeting the critter is)
+      try {
+        await this.frames(40000, i => {
+          f = i; if ((q.done || (kind === 'hunt' && met >= 2)) && !UI.stack.length && !Script.n) return false;
+          for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
+          if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
+            if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+            else if (hs && hs.length && !cur) { const snack = kind === 'hunt' && Scene === 'battle' && hs.find(h => /SNACK|ITEM|BAG/i.test(String(h.label || ''))); const h = snack || hs[0]; pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; }
+            Input.taps.push(pt); }
+          if (G && !top && Scene === 'world' && Script.n === 0 && !PL.moving) {
+            const pos = G.x + ',' + G.y; if (pos !== lastPos) { lastPos = pos; steps++; still = 0; if (TINFO[W0.t[G.y][G.x]].enc) grass++; } else if (++still > 40) { const d = ['left', 'right', 'up', 'down'][(i / 20 | 0) % 4]; Input.held[d] = true; if (still > 60) still = 0; return; }   // something in the way (a wandering survivor): sidestep
+            Guide.key = null; Guide.solve(); const p = Guide.path, t = Guide.tgt;
+            if (t) { const nx = p.length > 1 ? p[1] : [t.x, t.y], dx = nx[0] - G.x, dy = nx[1] - G.y, dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : dy < 0 ? 'up' : null; if (dir) Input.held[dir] = true; }   // (next to the marker: step onto it)
+            else { if (arrived == null) arrived = steps;   // no arrow: wander to a neighbouring patch of grass, like a child would
+              const opts = Object.keys(DV).filter(d => { const nx = G.x + DV[d][0], ny = G.y + DV[d][1]; return TINFO[W0.t[ny][nx]].enc && zoneAt('world', nx, ny).id === PL.zone && !entsOn('world').some(e => e.solid && e.x === nx && e.y === ny); });
+              const d = opts.length ? opts[(i / 7 | 0) % opts.length] : 'down'; Input.held[d] = true; } } });
+      } finally { wild = realWild; Battle.run = realRun; }
+      if (kind === 'hunt') results.met = met;
+      Object.assign(results, { done: kind === 'hunt' ? met >= 2 : !!q.done, prog: q.prog + '/' + q.need, steps, arrivedAfter: arrived, grassSteps: grass, battles, frames: f });
+      if (!results.done) this.add('the quest was not finished by wandering in its grass', JSON.stringify(results));
+      if (!lines.some(l => /This is the place/.test(l))) this.add('no "this is the place" line on arrival');
+      if (results.done && grass > (kind === 'hunt' ? 60 : 120)) this.add('too many steps in the grass to finish', grass + ' grass steps');
+    } catch (e) { this.add('ground probe threw', (e.stack || e.message).split('\n').slice(0, 2).join(' | ')); }
+    finally { say = realSay; Learn.card = realCard; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); UI.stack.length = 0; Script.n = 0; }
+    for (const e of [...new Set(errs)]) this.add('error during ground', e);
+    return { probe: 'ground', results, finds: this.out() };
+  },
+
+  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero', 'ground']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };
