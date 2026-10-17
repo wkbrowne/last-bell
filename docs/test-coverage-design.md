@@ -465,3 +465,23 @@ what to do.
 taps. A GHOST quest: the cemetery (60% ghosts), done in about 35-45 grass steps and 5 battles. An old quest that
 pointed at the Night Market: moved to the cemetery, done the same way. A Befriend quest: the critter turns up twice
 within about a dozen grass steps (catching it is not part of this check).
+
+## Sky Rings that wait (v1.34)
+
+Reported: the rings came too fast; the child got discouraged (and a grown-up found it hard too). A question
+appeared about 4.8 seconds before its rings reached the dragon: that was the time to read, think AND steer.
+
+- **The rings wait.** They fly in and hover, bobbing, in front of the dragon until he picks. No timer.
+- **Picking.** Tap anywhere in a ring's row, or drag the dragon there and let go (or up/down and A). The dragon lines
+  up and swoops through. A tap is applied on the next frame unless the finger turned out to be dragging, so the
+  row where a drag starts is not picked by mistake.
+- **The row he is in glows**, and its answer turns yellow, so he can see what he is about to pick.
+- **One more try.** A wrong ring pops and the other two fly back in: "Not that one! Try again." A right second try is
+  1 spark (a first try is 3). Only the first try is recorded for learning.
+- **Calm while thinking.** No sparks or storm clouds while a question is up. After 15 seconds: "Tap the ring with the
+  answer!" (read aloud again for young readers).
+
+**Tests.** `HUNT.rings()`: the rings are still there after 20 seconds of waiting, all three can be tapped, a wrong tap
+pops that ring and leaves two, the right one then finishes it; the next question is right first time; 2 of 2 right,
+learning recorded twice (once per question), 4 sparks. Tried by hand in the browser too: tap, drag and let go, a miss
+and second try.

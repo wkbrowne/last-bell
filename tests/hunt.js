@@ -415,5 +415,31 @@ window.HUNT = {
     return { probe: 'ground', results, finds: this.out() };
   },
 
-  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero', 'ground']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
+  // 12. Sky Rings: the rings wait while he thinks (20 seconds here), a miss pops that ring and gives one more try,
+  // and only the first try is recorded for learning.
+  async rings() {
+    this.finds = {}; const errs = [], onErr = e => errs.push((e.message || (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)).split('\n').slice(0, 2).join(' | '));
+    addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+    const realRec = Learn.record, mute = Snd.muted, results = {}; Snd.muted = true; let recs = 0;
+    try {
+      this.fresh(2); G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); Learn.record = function () { recs++; return realRec.apply(this, arguments); };
+      let r = null; Flight.run({ rider: 'gale', dest: 'Roost Rock', n: 2 }).then(x => r = x); const top = () => UI.stack[UI.stack.length - 1];
+      // 1st question: wait 20 s, then a wrong ring, then the right one
+      await this.frames(600, () => top().answer < 0); const fl = top(), a = fl.answer, wrong = (a + 1) % 3;
+      await this.frames(1200); if (fl.answer !== a) this.add('the rings did not wait while he was thinking');
+      results.waitingHits = fl.hits.length; if (fl.hits.length !== 3) this.add('waiting rings cannot all be tapped', fl.hits.length);
+      fl.tap(0, Flight.Y[wrong]); await this.frames(200, () => !(fl.hits.length === 2 && fl.answer === a));
+      if (fl.hits.length !== 2 || fl.hits.some(h => h.i === wrong)) this.add('a wrong ring did not pop for a second try', JSON.stringify(fl.hits.map(h => h.i)));
+      await this.frames(120); fl.tap(0, Flight.Y[a]); await this.frames(400, () => fl.answer === a);
+      // 2nd question: right the first time
+      await this.frames(600, () => fl.answer < 0); fl.tap(0, Flight.Y[fl.answer]); await this.frames(3000, () => !r);
+      Object.assign(results, r || {}, { recorded: recs });
+      if (!r) this.add('the flight did not end'); else { if (r.right !== 2 || r.asked !== 2) this.add('rings right/asked are wrong', JSON.stringify(r)); if (recs !== 2) this.add('learning was recorded more than once a question', recs); if (r.sparks < 4) this.add('too few sparks for 1 second-try and 1 first-try ring', r.sparks); }
+    } catch (e) { this.add('rings probe threw', (e.stack || e.message).split('\n').slice(0, 2).join(' | ')); }
+    finally { Learn.record = realRec; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); UI.stack.length = 0; Script.n = 0; }
+    for (const e of [...new Set(errs)]) this.add('error during rings', e);
+    return { probe: 'rings', results, finds: this.out() };
+  },
+
+  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero', 'ground', 'rings']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };

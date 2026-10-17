@@ -178,32 +178,44 @@ const Flight = {
   run(o) {
     return new Promise(res => {
       const qs = []; for (let i = 0; i < (o.n || 3); i++) { const q = this.question(i); if (q) qs.push(q); }
-      const DX = 230, speed = .3, T = 9000 + qs.length * 7600, st = { t: 0, y: 375, ty: 375, sparks: 0, right: 0, asked: 0, objs: [], set: null, next: 2600, qi: 0, msg: '', msgT: 0, hurt: 0, spark: 700, cloud: 1600, wing: 0 };
+      const DX = 230, HOLD = 600, speed = .3, T = 9000 + qs.length * 7600, st = { t: 0, y: 375, ty: 375, sparks: 0, right: 0, asked: 0, objs: [], set: null, next: 2600, qi: 0, msg: '', msgT: 0, hurt: 0, spark: 700, cloud: 1600, wing: 0 };
       const toY = e => { const r = cv.getBoundingClientRect(); return clamp((e.clientY - r.top) * H / r.height, 130, 640); };
-      let down = false; const pd = e => { down = true; st.ty = toY(e); }, pm = e => { if (down) st.ty = toY(e); }, pu = () => { down = false; };
+      let down = false; const pd = e => { down = true; st.ty = toY(e); }, pm = e => { if (down) st.ty = toY(e); }, pu = () => { if (down && st.set) choose(lane(st.ty)); down = false; };
+      const lane = y => y < 295 ? 0 : y < 455 ? 1 : 2;
+      // pick a ring: the dragon lines up with it and the rings rush in (a popped ring cannot be picked again)
+      const choose = i => { const s = st.set; if (!s || s.go || s.out.includes(i)) return; s.go = true; s.pick = i; st.ty = Flight.Y[i]; Snd.sfx('ok'); };
       cv.addEventListener('pointerdown', pd); cv.addEventListener('pointermove', pm); addEventListener('pointerup', pu); addEventListener('pointercancel', pu);
       const end = () => { cv.removeEventListener('pointerdown', pd); cv.removeEventListener('pointermove', pm); removeEventListener('pointerup', pu); removeEventListener('pointercancel', pu); Speak.stop(); UI.pop(m); res({ sparks: st.sparks, right: st.right, asked: st.asked }); };
       const m = {
         get answer() { return st.set ? st.set.a : -1; },   // which ring is right: used by the automated checks only
         ringAt(i) { return Flight.Y[i]; },
-        get hits() { const s = st.set; return s && s.x < W ? s.opts.map((t, i) => ({ x: s.x - 70, y: this.ringY(i) - 70, w: 140, h: 140, i })) : []; },
+        get hits() { const s = st.set; return s && s.x < W ? s.opts.map((t, i) => ({ x: s.x - 70, y: this.ringY(i) - 70, w: 140, h: 140, i })).filter(h => !s.out.includes(h.i)) : []; },
         ringY(i) { return Flight.Y[i]; },
-        tap(x, y) { st.ty = clamp(y, 130, 640); },
-        update(dt) {
+        tap(x, y) { st.ty = clamp(y, 130, 640); if (st.set) st.tapLane = lane(st.ty); },   // a plain tap picks (on the next frame, unless the finger turned out to be dragging: then letting go picks)
+        update(dt, pr) {
+          for (const k of pr || []) if (k === 'a' && st.set) choose(lane(st.ty));
+          if (st.tapLane != null) { if (!down) choose(st.tapLane); st.tapLane = null; }
           st.t += dt; st.wing += dt; if (st.msgT > 0) st.msgT -= dt; if (st.hurt > 0) st.hurt -= dt;
           if (Input.held.up) st.ty = Math.max(130, st.ty - dt * .55); if (Input.held.down) st.ty = Math.min(640, st.ty + dt * .55);
           st.y += (st.ty - st.y) * Math.min(1, dt / 140);
           // sparks to collect and storm clouds to dodge, never while a set of rings is crossing
-          if ((st.spark -= dt) <= 0) { st.spark = 650 + Math.random() * 500; st.objs.push({ k: 'spark', x: W + 40, y: 150 + Math.random() * 470 }); }
+          if ((st.spark -= dt) <= 0) { st.spark = 650 + Math.random() * 500; if (!st.set) st.objs.push({ k: 'spark', x: W + 40, y: 150 + Math.random() * 470 }); }
           if ((st.cloud -= dt) <= 0) { st.cloud = 1700 + Math.random() * 1400; if (!st.set) st.objs.push({ k: 'cloud', x: W + 90, y: 160 + Math.random() * 440 }); }
           for (const ob of st.objs) { ob.x -= dt * speed * (ob.k === 'cloud' ? 1.15 : 1); if (ob.gone || Math.abs(ob.x - DX) > 60 || Math.abs(ob.y - st.y) > (ob.k === 'cloud' ? 62 : 48)) continue;
             ob.gone = true; if (ob.k === 'spark') { st.sparks++; Snd.sfx('blip'); } else if (st.hurt <= 0) { st.sparks = Math.max(0, st.sparks - 2); st.hurt = 900; Snd.sfx('hit'); } }
           st.objs = st.objs.filter(ob => !ob.gone && ob.x > -120);
           // the rings: the question shows first, then three rings fly in; whichever height Dex is at when they pass is his answer
-          if (!st.set && st.qi < qs.length && st.t >= st.next) { const q = qs[st.qi++]; st.set = Object.assign({ x: W + 130 + speed * 1900 }, q); st.objs = st.objs.filter(ob => ob.k !== 'cloud'); if (G.readAloud && Speak.can()) Speak.say(q.text + ' ... ' + q.opts.join(', or ')); }
-          if (st.set) { const s = st.set; s.x -= dt * speed;
-            if (s.x <= DX) { const pick = st.y < 295 ? 0 : st.y < 455 ? 1 : 2, ok = pick === s.a; st.asked++; if (ok) { st.right++; st.sparks += 3; Snd.sfx('right'); st.msg = pick3(['RIGHT! +3 sparks', 'NAILED IT! +3 sparks', 'BIG BRAIN! +3 sparks']); } else { Snd.sfx('wrong'); st.msg = 'The answer was ' + s.opts[s.a] + '.'; }
-              st.msgT = 1800; try { Learn.record(s.q, ok); } catch (e) {} st.set = null; st.next = st.t + 2600; } }
+          // the rings: they fly in and WAIT in front of the dragon until a ring is picked (tap its row, or fly there
+          // and let go), then rush through. A wrong ring pops and the other two come back for one more try.
+          if (!st.set && st.qi < qs.length && st.t >= st.next) { const q = qs[st.qi++]; st.set = Object.assign({ x: W + 130, out: [], tries: 0, wait: 0 }, q); st.objs = st.objs.filter(ob => ob.k === 'spark' && ob.x < DX + 40); if (G.readAloud && Speak.can()) Speak.say(q.text + ' ... ' + q.opts.join(', or ')); }
+          if (st.set) { const s = st.set;
+            if (s.go) s.x -= dt * .6; else if (s.x > HOLD) s.x = Math.max(HOLD, s.x - dt * .45);
+            else { s.wait += dt; if (s.wait > 15000 && !s.nudged) { s.nudged = true; st.msg = 'Tap the ring with the answer!'; st.msgT = 2600; if (G.readAloud && Speak.can()) Speak.say(s.text + ' ... ' + s.opts.filter((o, i) => !s.out.includes(i)).join(', or ')); } }
+            if (s.go && s.x <= DX) { const pick = s.pick, ok = pick === s.a;
+              if (!s.tries) { st.asked++; try { Learn.record(s.q, ok); } catch (e) {} }
+              if (ok) { st.right++; const k = s.tries ? 1 : 3; st.sparks += k; Snd.sfx('right'); st.msg = s.tries ? 'YOU GOT IT! +1 spark' : pick3(['RIGHT! +3 sparks', 'NAILED IT! +3 sparks', 'BIG BRAIN! +3 sparks']); st.msgT = 1800; st.set = null; st.next = st.t + 2200; }
+              else if (!s.tries) { Snd.sfx('wrong'); s.tries = 1; s.out.push(pick); s.go = false; s.x = W + 60; s.wait = 0; st.msg = 'Not that one! Try again.'; st.msgT = 1800; }
+              else { Snd.sfx('wrong'); st.msg = 'The answer was ' + s.opts[s.a] + '.'; st.msgT = 2200; st.set = null; st.next = st.t + 2600; } } }
           if (st.t >= T && !st.set && st.qi >= qs.length) end();
         },
         draw() {
@@ -213,12 +225,16 @@ const Flight = {
           ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(80,70,140,.35)'; ctx.fillRect(0, H - 70, W, 70); for (let x = -((st.t * .4) % 120); x < W; x += 120) { ctx.beginPath(); ctx.arc(x, H - 60, 60, Math.PI, 0); ctx.fillStyle = 'rgba(120,108,180,.5)'; ctx.fill(); }
           for (const ob of st.objs) { if (ob.k === 'spark') { ctx.drawImage(glowSpr('255,226,90', '255,250,200'), ob.x - 24, ob.y - 24, 48, 48); ctx.fillStyle = '#fff6b0'; ctx.beginPath(); ctx.arc(ob.x, ob.y, 7, 0, 6.3); ctx.fill(); }
             else { ctx.fillStyle = '#4a3e78'; for (const [dx, dy, r] of [[0, 0, 38], [34, 8, 28], [-32, 8, 28]]) { ctx.beginPath(); ctx.arc(ob.x + dx, ob.y + dy, r, 0, 6.3); ctx.fill(); } ctx.strokeStyle = '#ffe36a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(ob.x - 6, ob.y + 30); ctx.lineTo(ob.x - 14, ob.y + 50); ctx.lineTo(ob.x, ob.y + 48); ctx.lineTo(ob.x - 8, ob.y + 70); ctx.stroke(); } }
-          if (st.set) { const s = st.set; s.opts.forEach((t, i) => { const y = Flight.Y[i]; ctx.lineWidth = 14; ctx.strokeStyle = '#2a1840'; ctx.beginPath(); ctx.ellipse(s.x, y, 36, 66, 0, 0, 6.3); ctx.stroke(); ctx.lineWidth = 9; ctx.strokeStyle = '#ffd24a'; ctx.stroke();
-            ctx.font = '700 34px ' + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 7; ctx.strokeStyle = '#2a1840'; ctx.strokeText(t, s.x + 74 + t.length * 8, y); ctx.fillStyle = '#fff'; ctx.fillText(t, s.x + 74 + t.length * 8, y); }); }
+          if (st.set) { const s = st.set, here = lane(st.y);
+            s.opts.forEach((t, i) => { if (s.out.includes(i)) return; const y = Flight.Y[i] + (s.go ? 0 : Math.sin(now / 300 + i) * 6);
+              if (i === here && !s.go) { ctx.fillStyle = 'rgba(255,226,90,.26)'; ctx.fillRect(0, Flight.Y[i] - 76, W, 152); ctx.fillStyle = 'rgba(255,226,90,.7)'; ctx.fillRect(0, Flight.Y[i] - 78, W, 3); ctx.fillRect(0, Flight.Y[i] + 75, W, 3); }
+              if (i === s.pick && s.go) ctx.drawImage(glowSpr('255,226,90', '255,250,200'), s.x - 90, y - 90, 180, 180);
+              ctx.lineWidth = 14; ctx.strokeStyle = '#2a1840'; ctx.beginPath(); ctx.ellipse(s.x, y, 36, 66, 0, 0, 6.3); ctx.stroke(); ctx.lineWidth = 9; ctx.strokeStyle = '#ffd24a'; ctx.stroke();
+            ctx.font = '700 34px ' + FONT_B; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 7; ctx.strokeStyle = '#2a1840'; ctx.strokeText(t, s.x + 74 + t.length * 8, y); ctx.fillStyle = i === here && !s.go ? '#ffe36a' : '#fff'; ctx.fillText(t, s.x + 74 + t.length * 8, y); }); }
           const bob = Math.sin(now / 220) * 6, fl = 1 + Math.sin(st.wing / 110) * .05; ctx.save(); ctx.translate(DX, st.y + bob); ctx.rotate((st.ty - st.y) / 900); if (st.hurt > 0 && Math.floor(now / 90) % 2) ctx.globalAlpha = .45;
           ctx.drawImage(Art.sprite(o.rider), -120, -130 * fl, 240, 240 * fl); ctx.drawImage(Art.human('dex', 'right', 1), -38, -150, 80, 80); ctx.restore();
           rbox(14, 12, W - 28, 92, 20, 'rgba(26,14,58,.86)', '#f2c14e', 2.5);
-          if (st.set) { setFont(26, true); text(st.set.text, W / 2, 26, '#ffffff', 'center'); setFont(21); text('Fly through the right answer!', W / 2, 70, '#c8ffb8', 'center'); }
+          if (st.set) { setFont(26, true); text(st.set.text, W / 2, 26, '#ffffff', 'center'); setFont(21); text(st.set.go ? 'Here we go!' : st.set.tries ? 'One more try! Tap the right answer.' : 'Take your time. Tap the right answer!', W / 2, 70, '#c8ffb8', 'center'); }
           else { setFont(22, true); text('FLYING TO ' + String(o.dest).toUpperCase(), W / 2, 28, '#ffd76a', 'center'); setFont(21); text('Hold your finger where you want to fly. Grab the sparks, dodge the storm clouds.', W / 2, 66, '#e8e0f4', 'center'); }
           setFont(24); text(`✨ ${st.sparks}`, 30, 118, '#fff6b0'); bar(W - 250, 124, 220, 10, Math.min(1, st.t / T), '#7fe0d8');
           if (st.msgT > 0) { setFont(30, true); text(st.msg, W / 2, H - 120, st.msg.startsWith('The') ? '#ffb07a' : '#a8ffb8', 'center'); }
