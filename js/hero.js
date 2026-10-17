@@ -32,8 +32,8 @@ const Hero = {
     const H = hero(), old = HUM.dex || {};
     HUM.dex = Object.assign({}, H.look, { sword: old.sword || 0 });
     const c = typeof QCAPS !== 'undefined' && G && G.cos && QCAPS.find(x => x[0] === G.cos.cap); if (c) for (const a of H.acc) HUM.dex[a] = c[1];
-    HUM.mom.skin = H.look.skin;   // Mom looks like her kid
-    for (const k in Art.cache) if (/^[hs]:(dex|mom)/.test(k)) delete Art.cache[k];
+    HUM.mom.skin = H.look.skin; if (HUM.granny) HUM.granny.skin = H.look.skin;   // Mom and Granny Dot look like their kid
+    for (const k in Art.cache) if (/^[hs]:(dex|mom|granny)/.test(k)) delete Art.cache[k];
   },
   set(k) {
     G.hero = k; const H = HEROES[k];

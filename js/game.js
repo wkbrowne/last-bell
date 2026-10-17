@@ -271,7 +271,7 @@ function worldUpdate(dt, pr) {
   wandUpdate(dt);
   if (Script.n > 0 || Battle.on) { PL.auto = null; return; }
   if (PL.moving) {
-    PL.t += dt / (Input.held.run ? 80 : 130);
+    PL.t += dt / (Input.held.run ? 80 : flag('shoesDone') ? 100 : 130);   // (Wren's racing sneakers)
     if (PL.t >= 1) { PL.moving = false; G.x = PL.tx; G.y = PL.ty; PL.px = G.x * 16; PL.py = G.y * 16; arrive(); }
     else { PL.px = (PL.fx + (PL.tx - PL.fx) * PL.t) * 16; PL.py = (PL.fy + (PL.ty - PL.fy) * PL.t) * 16; }
     if (PL.moving || Script.n > 0) return;
@@ -694,6 +694,7 @@ async function restMenu(nest) {
     }]];
     if (flag('priya')) opts.push([`Answer a signal  (Night ${G.night + 1})`, () => Story.signal()]);
     if (flag('canFly') && G.map === 'world') opts.push(['Fly by dragon', () => flyMenu()]);
+    if (flag('galeWhistle') && G.map === 'world') opts.push(['Whistle for Gale', () => Sky.perch('world')]);
     opts.push([`Study Hall  ★ ${pm}/${pn}`, () => Learn.studyHall()]);
     opts.push(['Practice & Tests', () => Learn.practiceMenu()]);
     opts.push([talk ? `Talk with ${CREW[talk.who].n}  ♥` : 'Sit by the fire', async () => {

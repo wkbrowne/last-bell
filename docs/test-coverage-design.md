@@ -505,3 +505,36 @@ nothing: a wrong answer still landed at 60% and finished a weak enemy anyway.
 **Tests.** `HUNT.calm()`: a Lv 6 critter against a Lv 25 team is scared off for scrap; in a fair fight two instant
 wrong answers both miss, the slow-down line appears, read-first cards follow (an instant tap on one is refused),
 and the fight is then won by answering normally. The other bots now wait while a card says `locked`.
+
+## Crew stories and Granny Dot (v1.36)
+
+`js/crew.js`. The daily quests are endless but all stand-alone errands. Five short story lines now sit on top of them
+on the Quest Board (marked ★, in blue), one at a time, in this order as each opens:
+
+| Story | Opens | Steps | Lasting reward |
+|---|---|---|---|
+| Granny Dot's Kitchen | at once | the harbor reunion, recipe math (15 right), flour from downtown, 3 battles, she moves in | **Granny Dot lives by the Nest**: 2 Critter Snacks and a kind word once a day |
+| Grandma's Garden (Bash) | Bash joins | seed tin at the Lost Lot, befriend a Thornpup, 15 right, 3 battles, first bloom | **A garden by the Nest**: heals the team and gives a Potion once a day |
+| The Big Antenna (Priya) | Priya joins | wire from the junkyard, 3 SPARK battles, 20 right, Radio Hill, a night signal | **Radar**: a 4th daily quest ("Priya's pick") |
+| Wren's Big Race | Wren joins | school yard, warm-up lap in Pembry Park, 5 in a row, 3 battles, race day on Elm Street | **Racing sneakers**: walking is 30% faster |
+| Gale's Lost Feathers | first flight with Gale | Gust Shrine, 6 Sky Rings, 15 right, Radio Hill, Roost Rock | **Gale's Whistle**: "Whistle for Gale" at any campfire |
+
+**Granny Dot** is the hero's own grandma (Mom's mum): her skin follows the chosen hero, like Mom's. White bun, glasses,
+cardigan, and a plain smile (the toothy grin belongs to the disguised zombies).
+
+- **One step a day.** The crew member calls on the walkie when the next step is up (on arriving anywhere, or on
+  welcome back), and the board says so. After each step: "<name> will call tomorrow with the next part".
+- **Steps are ordinary quests** (`q.story`, `q.step`): a new kind `visit` (the crew member waits at one of the board's
+  town spots; tapping them plays the scene), plus befriend, defeat, right answers, a streak, a signal, Sky Rings and
+  island visits, all counted the usual way. A story's spot is kept free of daily quests, and the story quest comes
+  first if they share one.
+- **Safe to close the app.** The story moves on, and a finished story's reward is given, the moment the step is
+  done (`Crew.advance`); the words follow when the QUEST COMPLETE line is shown.
+- State: `G.quests.side` (`line`, `step`, `wait` = the day of the last step, `done`, `q`). Flags: grannyHome,
+  gardenDone, radarDone, shoesDone, galeWhistle. Badge: Good Friend.
+
+**Tests.** `HUNT.crew()` plays all five stories, one step a simulated day: every call heard, visits walked to with the
+arrow and tapped, the other steps met through the game's events, the next step never on the same day. Then: all five
+flags set, 4 daily quests, the garden heals and gives exactly one Potion a day, Granny Dot gives 2 snacks, "Whistle
+for Gale" at a campfire, walking 0.167 of a tile a frame (0.128 without the sneakers), and a step finished with the
+app closed before its words still moves the story on.

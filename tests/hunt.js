@@ -475,5 +475,63 @@ window.HUNT = {
     return { probe: 'calm', results, finds: this.out() };
   },
 
-  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero', 'ground', 'rings', 'calm']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
+  // 14. Crew stories: all five lines played through, one step a day. Visits are walked to with the arrow and tapped;
+  // other steps are met through the game's own events. Each finale's lasting reward is checked.
+  async crew() {
+    this.finds = {}; const errs = [], onErr = e => errs.push((e.message || (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)).split('\n').slice(0, 2).join(' | '));
+    addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+    const realRun = Battle.run, realDay = Learn.day, realSay = say, mute = Snd.muted, results = { steps: [], lines: [] }; Snd.muted = true; Touch.enabled = true; let day = 70000, lines = [];
+    say = function (who, str) { lines.push((who || '') + ': ' + heroText(String(str))); return realSay.apply(this, arguments); };
+    Learn.day = () => day; Battle.run = async () => 'win';
+    const drive = (until, n) => this.frames(n || 6000, i => { if (until()) return false; for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
+      if (i % 6 === 0 && (top || Script.n > 0)) { const hs = top && top.hits; Input.taps.push(hs && hs.length ? { x: hs[0].x + hs[0].w / 2, y: hs[0].y + hs[0].h / 2 } : { x: 480, y: 610 }); return; }
+      if (!top && Scene === 'world' && Script.n === 0) { PL.grace = 99; const hx = G.x, hy = G.y; if (PL.moving) { G.x = PL.tx; G.y = PL.ty; } Guide.key = null; Guide.solve(); const p = Guide.path, t = Guide.tgt, gx = G.x, gy = G.y; G.x = hx; G.y = hy;
+        if (t) { const nx = p.length > 1 ? p[1] : [t.x, t.y], dx = nx[0] - gx, dy = nx[1] - gy, dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : dy < 0 ? 'up' : null; if (dir) Input.held[dir] = true; if (p.length <= 1 && i % 6 === 3) Input.presses.push('a'); } } });
+    try {
+      this.fresh(2); for (const st of Guide.steps) if (!Sky.isSky(st[1]) && st[0] !== 'skyFirst') G.flags[st[0]] = true; Object.assign(G.flags, { priya: true, bash: true, wren: true, antenna: true, skyFirst: true, glide: true, roar: true, glow: true, stormEnd: true, skyCall: true, marketLog: true });
+      G.party = [makeCritter('scrapup', 30)]; G.map = 'world'; G.x = 41; G.y = 64; G.goal = 9999; enterWorld();   // (no "great place to stop" in the middle)
+      for (let dd = 0; dd < 40; dd++) {
+        day = 70000 + dd; UI.stack.length = 0; Script.n = 0; G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); Quests.refresh(); const S = Crew.S(), q = Crew.q();
+        if (!q) { if (S.done.length === 5) break; this.add('no crew step on day ' + dd, JSON.stringify(S).slice(0, 120)); continue; }
+        Quests.S().track = q.id; lines = [];
+        { let ok = false; script(async () => { await Crew.intro(); ok = true; }); await drive(() => ok, 1500); }
+        if (!lines.some(l => l.startsWith(SIDE[q.story].who))) this.add('no call from the crew member for a step', q.title);
+        const before = S.step, line = q.story;
+        if (q.kind === 'visit') await drive(() => q.done && !UI.stack.length && !Script.n, 8000);
+        else { let ok = false; script(async () => {
+            if (q.kind === 'right' || q.kind === 'streak') for (let k = 0; k < 25 && !q.done; k++) { const x = Learn.make('addsub'); Learn.record(x, true); }
+            else if (q.kind === 'hunt') addCritter(makeCritter(q.sp, 10));
+            else if (q.kind === 'defeat') Quests.event('defeat', q.t, q.need);
+            else if (q.kind === 'signals') Quests.event('signal');
+            else if (q.kind === 'rings') Quests.event('rings', q.need);
+            else if (q.kind === 'skyvisit') Quests.event('land', q.isle);
+            await Quests.announce(); ok = true; }); await drive(() => ok && !UI.stack.length, 4000); }
+        results.steps.push(line + ':' + q.kind + (q.done ? '✓' : '✗'));
+        if (!q.done) { const at = q.spot != null ? Quests.at(q.spot) : null; this.add('a crew step was not finished', q.title + ' (' + q.kind + ') at-spot: ' + (at && at.kind) + ' told ' + q.told + ' lines ' + lines.slice(0, 3).join(' / ').slice(0, 160) + ' | at ' + [G.map, G.x, G.y, Scene, UI.stack.length]); continue; }
+        if (S.step === before && S.line === line) this.add('a crew story did not move on', q.title);
+        if (S.done.includes(line) && !results.lines.includes(line)) results.lines.push(line);
+        // the next step waits for tomorrow
+        Quests.refresh(); if (Crew.q() && !Crew.q().done) this.add('the next crew step came the same day', Crew.q().title);
+      }
+      results.done = Crew.S().done.join(',');
+      // finishing a step and closing the app before the words: the story still moves on
+      { const S = Crew.S(); delete G.flags.galeWhistle; S.done = S.done.filter(k => k !== 'gale'); S.line = 'gale'; S.step = 4; S.wait = -99; S.q = null; Crew.ensure(); const q = Crew.q(); Quests.event('land', q.isle); Crew.after_ = [];
+        if (!(S.done.includes('gale') && !S.q && flag('galeWhistle'))) this.add('a finished step did not move the story on before its words', JSON.stringify({ line: S.line, step: S.step, done: S.done })); }
+      for (const k of SIDE_ORDER) if (!Crew.S().done.includes(k)) this.add('a crew story was not finished', k);
+      // the lasting rewards
+      for (const f of ['grannyHome', 'gardenDone', 'radarDone', 'shoesDone', 'galeWhistle']) if (!flag(f)) this.add('a finale did not set its reward', f);
+      day++; Quests.refresh(); results.dailyQuests = Quests.S().list.length; if (Quests.S().list.length !== 4) this.add("Priya's radar did not add a 4th daily quest", Quests.S().list.length);
+      { G.party[0].hp = 1; const s0 = G.bag.snack || 0, p0 = G.bag.potion || 0; let ok = false; script(async () => { await Crew.garden(); await Crew.granny(); await Crew.garden(); ok = true; }); await drive(() => ok, 2000);
+        if (G.party[0].hp !== maxHp(G.party[0])) this.add('the garden did not heal the team'); if ((G.bag.potion || 0) !== p0 + 1) this.add('the garden did not give exactly one potion a day', (G.bag.potion || 0) - p0); if ((G.bag.snack || 0) !== s0 + 2) this.add('Granny Dot did not give 2 snacks', (G.bag.snack || 0) - s0); }
+      { let items = null; const rm = menu; menu = function (its) { items = its.map(x => typeof x === 'string' ? x : x.label); return Promise.resolve(-1); }; try { await restMenu(false); } catch (e) {} menu = rm; results.campfire = items; if (!items || !items.some(l => /Whistle for Gale/.test(l))) this.add("no 'Whistle for Gale' at a campfire", JSON.stringify(items)); }
+      { G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); Script.n = 0; UI.stack.length = 0; Input.held.right = true; let t0 = null; await this.frames(200, () => { if (PL.moving && PL.t > 0 && t0 == null) { t0 = PL.t; return; } if (t0 != null) { results.stepPerFrame = +(PL.t - t0).toFixed(3); return false; } }); Input.held.right = false;
+        if (!(results.stepPerFrame > .15)) this.add("Wren's sneakers did not speed up walking", results.stepPerFrame + ' of a tile a frame (plain walking is about 0.128)'); }
+      results.granny = lines.filter(l => /^granny/.test(l)).length;
+    } catch (e) { this.add('crew probe threw', (e.stack || e.message).split('\n').slice(0, 2).join(' | ')); }
+    finally { say = realSay; Battle.run = realRun; Learn.day = realDay; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); UI.stack.length = 0; Script.n = 0; }
+    for (const e of [...new Set(errs)]) this.add('error during crew', e);
+    return { probe: 'crew', results, finds: this.out() };
+  },
+
+  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero', 'ground', 'rings', 'calm', 'crew']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };

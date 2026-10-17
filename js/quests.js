@@ -30,8 +30,8 @@ const QSPOTS = [['the junkyard office', 110, 80], ['Elm Street', 60, 61], ['Pemb
   QSPOTS.forEach((s, i) => { const [x, y] = free(s[1], s[2]); s.x = x; s.y = y; s.i = i;
     // one character per spot; what it looks like and does depends on today's quest there
     const e = E({ map: 'world', x, y, spr: 'sign', if: () => !!Quests.at(i), act: () => Quests.spotAct(i) });
-    Object.defineProperty(e, 'spr', { get() { const q = Quests.at(i); return !q ? 'sign' : q.kind === 'rescue' ? q.look : q.kind === 'bounty' ? q.sp : 'parcel'; } });
-    Object.defineProperty(e, 'human', { get() { const q = Quests.at(i); return !!(q && q.kind === 'rescue'); } }); });
+    Object.defineProperty(e, 'spr', { get() { const q = Quests.at(i); return !q ? 'sign' : q.kind === 'rescue' ? q.look : q.kind === 'bounty' ? q.sp : q.kind === 'visit' ? q.who : 'parcel'; } });
+    Object.defineProperty(e, 'human', { get() { const q = Quests.at(i); return !!(q && (q.kind === 'rescue' || (q.kind === 'visit' && HUM[q.who]))); } }); });
 }
 // parcels for sky deliveries, one spot on each of three islands
 const QSKY = { gust: [21, 16], forge: [11, 14], library: [20, 13] };
@@ -122,7 +122,7 @@ const Quests = {
   refresh() {
     const Q = this.S(), d = this.day(), wk = this.week(); let fresh = false; this.applyLook();
     if (Q.week !== wk) { Q.week = wk; Q.weekDone = 0; const wk2 = ['right', 'defeat', 'master', 'hunt'].concat(flag('priya') ? ['signals'] : [], flag('skyFirst') ? ['rings'] : []); Q.weekly = this.make(this.growing() ? pick(['master', 'right']) : pick(wk2), new Set(), true); if (Q.weekly) { Q.weekly.weekly = 1; Q.weekly.reward.critter = this.rareCritter(); } fresh = true; }
-    if (Q.day !== d) { Q.day = d; const taken = new Set(), list = [];
+    if (Q.day !== d) { Q.day = d; const taken = new Set(this.reserved ? this.reserved() : []), list = [];   // (a crew story may be using a spot)
       const sky = flag('skyFirst') && !flag('_noSky'), explore = ['hunt', 'defeat', 'patrol', 'rescue', 'errand'].concat(sky ? ['rings', 'skyvisit', 'skycarry', 'skycarry'] : []), brain = this.growing() ? [curEgg() ? 'right' : 'master'] : ['right', 'streak', 'dash', 'right'];
       for (const kinds of [['rescue', 'bounty', 'errand'], explore, brain]) { const left = kinds.filter(k => !list.some(q => q.kind === k)); let q = null; for (let t = 0; t < 6 && !q; t++) q = this.make(pick(left.length ? left : kinds), taken); if (q) list.push(q); }   // never the same kind twice in a day
       Q.list = list; fresh = true; }
@@ -228,7 +228,7 @@ const Quests = {
     this.refresh(); this._new = false; const Q = this.S();
     while (true) {
       const list = this.all(), label = q => (q.done ? '✔ ' : q.id === Q.track ? '▶ ' : '· ') + (q.weekly ? 'WEEKLY: ' : '') + q.title, right = q => q.done ? 'DONE' : q.need > 1 ? `${q.prog}/${q.need}` : (q.kind === 'errand' && q.got ? 'carrying' : '');
-      const cos = G.cos || { caps: [hero().col0], cap: hero().col0 }, i = await menu(list.map(q => ({ label: label(q) + (q.dragon && !q.done ? '  🐉' : ''), right: right(q), col: q.done ? '#a8ffb8' : q.weekly ? '#ffd76a' : null })).concat([{ label: `Wardrobe  (${cos.caps.length} ${capWord()}${cos.caps.length === 1 ? '' : 's'})` }, { label: 'Close' }]), { x: 70, y: 70, w: W - 140, rows: 7, title: `QUEST BOARD   ·   this week ${Math.min(5, Q.weekDone)}/5 for a trophy   ·   trophies: ${Q.trophies.length}` });
+      const cos = G.cos || { caps: [hero().col0], cap: hero().col0 }, i = await menu(list.map(q => ({ label: label(q) + (q.dragon && !q.done ? '  🐉' : ''), right: right(q), col: q.done ? '#a8ffb8' : q.weekly ? '#ffd76a' : q.story ? '#9fe0ff' : null })).concat([{ label: `Wardrobe  (${cos.caps.length} ${capWord()}${cos.caps.length === 1 ? '' : 's'})` }, { label: 'Close' }]), { x: 70, y: 70, w: W - 140, rows: 7, title: `QUEST BOARD   ·   this week ${Math.min(5, Q.weekDone)}/5 for a trophy   ·   trophies: ${Q.trophies.length}` });
       if (i === list.length) { await this.wardrobe(); continue; }
       if (i < 0 || i >= list.length) return;
       const q = list[i], R = q.reward;

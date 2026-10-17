@@ -265,6 +265,7 @@ function human(c, dir, frame) {
   }
   hair(c, dir, HY, false);
   if (c.goggles) { g.save(); g.beginPath(); g.ellipse(50, HY, 20.5, 19.5, 0, 0, 6.3); g.clip(); ln([24, HY - 10, 76, HY - 10], '#3a2a1a', 4); g.restore(); if (!up) for (const s of (sd ? [0] : [-1, 1])) { const gx = 50 + sd * 11 + s * 7; g.save(); g.lineWidth = 2.6; el(gx, HY - 10.5, 6, 5, '#8fe0ff', 0, true); g.restore(); ln([gx - 3, HY - 9, gx + 1, HY - 13], '#ffffff', 1.6); } }
+  if (c.specs && !up) { const fx = 50 + sd * 7.5, es = sd ? 6 : 7.5; g.save(); g.lineWidth = 2.2; g.strokeStyle = '#3a2a1a'; for (const k of (sd ? [0] : [-1, 1])) { g.beginPath(); g.arc(fx + k * es + (sd ? sd * 2 : 0), HY + 2.5, 5.8, 0, 6.3); g.stroke(); } if (!sd) { g.beginPath(); g.moveTo(fx - 1.8, HY + 2); g.lineTo(fx + 1.8, HY + 2); g.stroke(); } g.restore(); }
   if (c.prop === 'wrench' && down) { ln([bx + bw + 6, ty + 30, bx + bw + 10, ty + 6], '#aab4c2', 4.4); arc(bx + bw + 10.5, ty + 2, 4.6, 2.2, 7.2, '#aab4c2', 3.6); }
   if (c.prop === 'mirror' && !up) { ln([31, HY - 10, 69, HY - 10], '#5a6a80', 3); el(50 + sd * 8, HY - 12, 5.4, 5.4, '#dfe6ee'); }
   if (c.prop === 'ladle' && down) { ln([86, 42, 86, 72], '#8a93a0', 3.5); el(86, 38, 7, 6, '#aab4c2'); }
