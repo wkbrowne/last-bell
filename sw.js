@@ -1,6 +1,6 @@
 // Offline support: the game is saved on the device after the first visit.
-const CACHE = 'last-bell-v105';
-const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './js/engine.js?v=105', './js/snd.js?v=105', './js/art.js?v=105', './js/hero.js?v=105', './js/data.js?v=105', './js/learn-core.js?v=105', './js/learn.js?v=105', './js/grader.js?v=105', './js/learn2.js?v=105', './js/world.js?v=105', './js/battle.js?v=105', './js/story.js?v=105', './js/sky.js?v=105', './js/quests.js?v=105', './js/game.js?v=105', './js/playlog.js?v=105'];
+const CACHE = 'last-bell-v108';
+const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './js/engine.js?v=108', './js/snd.js?v=108', './js/art.js?v=108', './js/hero.js?v=108', './js/data.js?v=108', './js/learn-core.js?v=108', './js/learn.js?v=108', './js/grader.js?v=108', './js/learn2.js?v=108', './js/world.js?v=108', './js/battle.js?v=108', './js/story.js?v=108', './js/sky.js?v=108', './js/quests.js?v=108', './js/game.js?v=108', './js/playlog.js?v=108'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

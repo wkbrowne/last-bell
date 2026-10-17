@@ -842,7 +842,7 @@ const Learn = {
   // mode.test = practice-test conditions: no feedback until the end.
   // Returns whether it was right. Learn.lastRushed says whether a right answer was too quick to have been read (it counts for nothing).
   async ask(q, title, noRecord, mode) {
-    this.lastRushed = false;
+    this.lastRushed = false; this.lastHasty = false;
     Sess.note('question', title === 'BRAIN LOCK' ? 'gate' : /ONE MORE TRY/i.test(q.tag || '') ? 'retry' : /REVIEW/i.test(q.tag || '') ? 'review' : 'plain');
     let ok = await this.card(q, title, q.partB ? Object.assign({}, mode, { hold: 1, part: 'PART A' }) : mode);
     if (q.partB) {
@@ -852,7 +852,7 @@ const Learn = {
     }
     const rec = !noRecord && !q.noRec, plain = rec && !(mode && mode.test) && !this.hold && !this.building;
     if (rec) this.record(q, ok);
-    this.lastRushed = !!q._quick;
+    this.lastRushed = !!q._quick; this.lastHasty = this.tooQuick(q);   // (lastHasty: right OR wrong, faster than it could be read)
     // WHY IS IT RIGHT? Now and then after a right answer on a sum or difference (always once the skill is close to mastery)
     if (plain && ok && q._v === 'ok' && !q.isWhy && SKILLS[q.skill] && ENG.wantWhy(q.grp || this.grp(q.skill), q.skill)) {
       const w = this.toWhy(q);
@@ -889,8 +889,10 @@ const Learn = {
         if (quiet) { Snd.sfx('ok'); Timers.add(300, finish); return; }
         const all = good && mode.both !== false; Snd.sfx(all || late ? 'right' : 'wrong'); if (all) { Fx.flash = .25; tween(Fx, 'flash', 0, 250); }
       };
+      // READ FIRST (mode.wait): the choices cannot be tapped until there has been time to read them (after a run of rushed answers)
+      const wait = mode.wait && type !== 'num' ? Math.min(5000, Math.max(1000, 38 * (q.q + ' ' + (q.choices || []).join(' ')).length)) : 0, locked = () => wait && t < wait && ok === null;
       const choose = i => {
-        if (ok !== null) return;
+        if (ok !== null) return; if (locked()) { Snd.sfx('no'); return; }
         if (type === 'multi') { if (i === n) { if (!marks.size) { Snd.sfx('no'); return; } stamp(); settle(marks.size === q.as.length && q.as.every(x => marks.has(x))); } else { marks.has(i) ? marks.delete(i) : marks.add(i); Snd.sfx('move'); } return; }
         if (i === cut || struck.has(i)) { Snd.sfx('no'); return; }
         stamp();
@@ -924,6 +926,7 @@ const Learn = {
           }
         },
         get hits() { return ok === null ? hits : []; },
+        get locked() { return !!locked(); },   // READ FIRST is still running (the automated checks wait for it)
         tap(x, y) {
           if (ok !== null) { if (!quiet && t > 500) finish(); return; }
           if (sayHit && inRect(x, y, sayHit)) { speakNow(); return; }
@@ -982,18 +985,19 @@ const Learn = {
               let bg = '#4a3a8e', bd = '#7a66d0';
               if (!done && (i === sel || on)) { bg = on ? '#5a48b0' : '#6652c0'; bd = i === sel ? '#ffd76a' : '#b8a8ff'; }
               if (done && good) { bg = '#2f9a54'; bd = '#a8ffb8'; } else if (done && mine) { bg = '#b03a4c'; bd = '#ffb0bc'; }
-              rbox(58, y + 4, W - 112, h, 14, 'rgba(8,4,20,.35)'); rbox(56, y, W - 112, h, 14, bg, bd, 3); rbox(62, y + 4, 44, h - 8, 10, 'rgba(0,0,0,.22)');
+              rbox(58, y + 4, W - 112, h, 14, 'rgba(8,4,20,.35)'); rbox(56, y, W - 112, h, 14, bg, bd, 3); rbox(62, y + 4, 44, h - 8, 10, 'rgba(0,0,0,.22)'); if (locked()) ctx.globalAlpha = .45;
               setFont(cs);
               if (type === 'multi') { rbox(72, y + h / 2 - 12, 24, 24, 6, on ? '#ffd76a' : 'rgba(255,255,255,.12)', '#ffd76a', 2); if (on) text('✓', 84, y + h / 2 - 15, '#1a1030', 'center'); }
               else text('ABCDEF'[i], 84, y + (h - cs) / 2 - 2, '#ffd76a', 'center');
               lines[i].forEach((l, j) => text(l, 116, y + (h - lines[i].length * (cs + 2)) / 2 + j * (cs + 2) - 1, '#fff'));
               if ((i === cut || struck.has(i)) && !done) { ctx.fillStyle = 'rgba(20,12,44,.72)'; ctx.beginPath(); ctx.roundRect(56, y, W - 112, h, 14); ctx.fill(); ctx.strokeStyle = i === cut ? '#ffd76a' : '#ff9a8a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(116, y + h / 2); ctx.lineTo(W - 90, y + h / 2); ctx.stroke(); if (i === cut) { setFont(20); text('OWL CHARM', W - 80, y + h / 2 - 11, '#ffd76a', 'right'); } }
-              hits.push({ x: 56, y, w: W - 112, h, i });
+              ctx.globalAlpha = 1; hits.push({ x: 56, y, w: W - 112, h, i });
               y += h + gap;
             });
             if (type === 'multi' && !done) { const r = { x: W / 2 - 130, y: y + 2, w: 260, h: 46, i: n }; rbox(r.x, r.y + 3, r.w, r.h, 23, 'rgba(8,4,20,.35)'); rbox(r.x, r.y, r.w, r.h, 23, marks.size ? '#2f9a54' : '#3a3458', sel === n ? '#ffd76a' : '#7a66d0', 3); setFont(18, true); text('SUBMIT', W / 2, r.y + 10, marks.size ? '#fff' : '#8f86a8', 'center'); hits.push(r); }
             if (done || hint) { setFont(head.length > 50 ? 14 : 18, true); text(head, 56, y + 6, (ok && mode.both !== false) || late ? '#7fe08a' : '#ffb07a'); setFont(24); why.forEach((l, i) => text(l, 56, y + 34 + i * 25, '#e8e0f4')); }
           }
+          if (locked()) { const by = H - 112; rbox(W / 2 - 200, by, 400, 44, 22, 'rgba(26,14,58,.94)', '#ffd76a', 2.5); rbox(W / 2 - 188, by + 30, 376 * t / wait, 6, 3, '#ffd76a'); setFont(18, true); text('READ IT FIRST...', W / 2, by + 6, '#ffd76a', 'center'); }
           if (readText && ok === null) { sayHit = { x: 44, y: H - 70, w: 200, h: 40 }; rbox(sayHit.x, sayHit.y, sayHit.w, sayHit.h, 20, '#2f7ab0', Speak.on ? '#ffffff' : '#9fe0ff', 2.5); setFont(15, true); text(Speak.on ? 'READING...' : 'READ TO ME', sayHit.x + 100, sayHit.y + 10, '#fff', 'center'); }
           if (done && t > 500 && Math.floor(t / 400) % 2) { setFont(24); text('▼', W - 70, H - 54, '#c9a24a'); }
           if (ok !== null && quiet) { setFont(18, true); text('LOCKED IN', W / 2, H - 62, '#a8ffb8', 'center'); }

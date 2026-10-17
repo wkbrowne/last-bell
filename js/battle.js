@@ -2,6 +2,18 @@
 // Turn-based critter battles. Every attack is powered by a BRAIN BLAST question:
 // a right answer supercharges the move, a wrong one makes it fizzle (but never fail outright).
 const bsay = t => say(null, t, { auto: 650 });
+// CALM: tapping answers faster than they can be read, spotted in battle. Two in a row, and the next three battle questions
+// show their choices only after there has been time to read them ("READ IT FIRST...").
+const Calm = {
+  S() { return G.calm = G.calm || { run: 0, lock: 0, n: 0 }; },
+  wait() { return this.S().lock > 0; },
+  async after(hasty) {
+    const c = this.S(); if (c.lock > 0) { c.lock--; return; }
+    c.run = hasty ? c.run + 1 : 0; if (c.run < 2) return;
+    c.run = 0; c.lock = 3; c.n++; if (typeof PlayLog !== 'undefined') PlayLog.add('calm', { n: c.n });
+    await say(Learn.teacher(), 'Whoa, speedy! Those answers came faster than anyone can read. For the next few questions, read first, then tap. A Brain Blast only works when you read!');
+  }
+};
 const stageMul = s => s >= 0 ? (2 + s) / 2 : 2 / (2 - s);
 
 const Battle = {
@@ -14,6 +26,10 @@ const Battle = {
     };
     if (o.look) st.foes[0].look = o.look;
     if (st.pi < 0) return 'lose';
+    // a lone wild critter far weaker than the team can just be scared off: no questions to tap through for nothing
+    if (o.kind === 'wild' && o.foes.length === 1 && !o.intro && !o.noShoo) { const f = o.foes[0], top = Math.max(...G.party.map(c => c.lvl)), S = SPECIES[f[0]];
+      if (S && f[1] <= top - 10) { const c = await ask(null, `A wild ${S.n} (Lv ${f[1]}) pops out of the grass, takes one look at your team, and starts to shake.`, ['Scare it off!', G.dex[f[0]] ? 'Battle it anyway' : 'Battle it (you could befriend it!)']);
+        if (c === 0) { const prize = 2 + Math.floor(f[1] / 5); G.scrap += prize; Snd.sfx('ok'); await say(null, `BOO! The ${S.n} scampers away. +${prize} scrap`); return 'win'; } } }
     for (const c of G.party.concat(st.foes)) { c.st = { atk: 0, def: 0 }; c.stun = false; c.dhp = c.hp; }
     st.part.add(st.pi);
     const prevMusic = Snd.curName, prevScene = Scene;
@@ -42,7 +58,7 @@ const Battle = {
         const pm = MOVES[act.m], pp = pm.pri || 0, fp = fm.pri || 0;
         const first = pp > fp || (pp === fp && statOf(me, 'spd') >= statOf(foe, 'spd'));
         const order = first ? [[me, foe, pm, true], [foe, me, fm, false]] : [[foe, me, fm, false], [me, foe, pm, true]];
-        for (const [u, t, mv, isP] of order) { if (u.hp <= 0 || t.hp <= 0) continue; await this.doMove(u, t, mv, isP, isP ? (act.quick ? 'quick' : act.ok) : null); }
+        for (const [u, t, mv, isP] of order) { if (u.hp <= 0 || t.hp <= 0) continue; await this.doMove(u, t, mv, isP, isP ? (act.hasty ? 'hasty' : act.quick ? 'quick' : act.ok) : null); }
       } else if (foe.hp > 0 && me2.hp > 0) await this.doMove(foe, me2, fm, false, null);
       for (const [c, isP] of [[G.party[st.pi], true], [foe, false]]) {
         if (c.hp > 0 && c.status === 'ick') {
@@ -99,12 +115,16 @@ const Battle = {
           }
         });
         if (mi < 0) continue;
-        let ok = await Learn.quiz(st.combo >= 2 ? `BRAIN BLAST!   COMBO ×${st.combo}` : 'BRAIN BLAST!');
-        if (!ok && G.gear.charms.retry && !st.used.retry) { st.used.retry = true; await bsay('The Second-Chance Charm glows. Try another one!'); ok = await Learn.quiz('SECOND CHANCE!'); }
-        // right but too quick to have been read: the move lands at normal strength and the combo holds where it is
-        const quick = ok && Learn.lastRushed;
+        // after a run of answers too quick to have been read, the next few questions make him read first (Calm.wait)
+        const brain = title => Learn.ask(Learn.next(), title, false, Calm.wait() ? { wait: true } : undefined);
+        let ok = await brain(st.combo >= 2 ? `BRAIN BLAST!   COMBO ×${st.combo}` : 'BRAIN BLAST!');
+        if (!ok && G.gear.charms.retry && !st.used.retry) { st.used.retry = true; await bsay('The Second-Chance Charm glows. Try another one!'); ok = await brain('SECOND CHANCE!'); }
+        // right but too quick to have been read: the move lands at normal strength and the combo holds where it is.
+        // WRONG and too quick (tapping without reading): the move misses altogether, so mashing is never the fast way through
+        const quick = ok && Learn.lastRushed, hasty = !ok && Learn.lastHasty;
+        await Calm.after(Learn.lastHasty);
         st.combo = ok ? (quick ? st.combo : st.combo + 1) : 0;
-        return { k: 'move', m: me.moves[mi], ok, quick };
+        return { k: 'move', m: me.moves[mi], ok, quick, hasty };
       }
       if (i === 1) {
         const acts = (G.gear.sword ? ['sword'] : []).concat(G.crew);
@@ -201,6 +221,7 @@ const Battle = {
     const st = this.st;
     if (u.stun) { u.stun = false; await bsay(`${cname(u)} is stunned and can't move!`); return; }
     await bsay(`${cname(u)} used ${m.n}!`);
+    if (brain === 'hasty') { Snd.sfx('no'); st.banner = { t0: performance.now(), txt: 'TOO FAST!', sub: 'Read it, then tap.', d: 2200 }; await bsay(`Whoa, too fast! ${cname(u)} tripped over its own feet and missed. Read the question, then tap.`); return; }
     if (!m.p) {
       if (brain === false) { await bsay('...but it lost focus and fizzled out.'); return; }
       await this.fx(u, t, m, true); return;

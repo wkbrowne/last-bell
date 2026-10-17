@@ -126,7 +126,7 @@ window.HUNT = {
       script(async () => { try { await fn(); } catch (e) { this.add('screen threw: ' + name, (e.stack || e.message).split('\n').slice(0, 2).join(' | ')); } done = true; });
       await this.frames(taps || 900, i => { if (done) return false; const top = UI.stack[UI.stack.length - 1]; if (i % 9 !== 0 || !top) return;
         let pt = { x: 480, y: 610 }; const hs = top.hits;
-        if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }   // a question: answer it
+        if (cur && plan.length && hs && !top.locked) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }   // a question: answer it
         else if (top.close) pt = top.close;                                                                                                   // a menu that can be closed: use its close button
         else if (hs && hs.length && !cur) { const h = hs[hs.length - 1]; pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; }                        // a forced choice: take the last one
         Input.taps.push(pt); });
@@ -156,7 +156,7 @@ window.HUNT = {
         const sp = foes[(b * 7) % foes.length], opt = { foes: [[sp, strong ? 5 : 30]], kind: b % 5 === 4 ? 'boss' : 'wild', bg: 'grass' }; let done = false, res = null, menus = 0;
         script(async () => { try { res = await Battle.run(opt); if (res === 'lose' && typeof blackout === 'function') await blackout(); else if (typeof afterBattle === 'function') await afterBattle(); } catch (e) { this.add('battle threw vs ' + sp, (e.stack || e.message).split('\n').slice(0, 3).join(' | ')); } done = true; });
         await this.frames(9000, i => { if (done) return false; const top = UI.stack[UI.stack.length - 1]; if (i % 7 !== 0 || !top) return; let pt = { x: 480, y: 610 }; const hs = top.hits;
-          if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+          if (cur && plan.length && hs && !top.locked) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
           else if (hs && hs.length && !cur) { menus++; const pickI = menus % 9 === 4 ? Math.min(hs.length - 1, 2) : menus % 13 === 7 ? Math.min(hs.length - 1, 3) : 0, h = hs[pickI]; pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; }
           Input.taps.push(pt); });
         if (!done) this.add('battle did not finish by taps (' + opt.kind + ', ' + (strong ? 'strong team' : 'weak team') + ') vs ' + sp, 'layers open: ' + UI.stack.length + ', scene ' + Scene);
@@ -177,7 +177,7 @@ window.HUNT = {
       script(() => Story.intro());
       await this.frames(60000, i => { f = i; if (G && flag(until)) return false; for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
         if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
-          if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+          if (cur && plan.length && hs && !top.locked) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
           else if (top && hs && hs.length && !cur) { const c = taps.get(top) || 0; taps.set(top, c + 1); if (top.close && c >= 1) pt = top.close; else { const h = hs[0]; pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
           else if (top && top.close && !cur) pt = top.close; Input.taps.push(pt); }
         if (G && !top && Scene === 'world' && Script.n === 0) { const hx = G.x, hy = G.y; if (PL.moving) { G.x = PL.tx; G.y = PL.ty; } Guide.key = null; Guide.solve(); const p = Guide.path, t = Guide.tgt, gx = G.x, gy = G.y; G.x = hx; G.y = hy;
@@ -203,7 +203,7 @@ window.HUNT = {
       f = i; if (flag(stopFlag)) return false; for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
       if (top && top.answer !== undefined) { if (i % 5 === 0) { const a = top.answer; if (a >= 0) top.tap(0, top.ringAt(a)); } return; }   // in flight: steer to the right ring
       if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
-        if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+        if (cur && plan.length && hs && !top.locked) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
         else if (hs && hs.length && !cur) { const fin = Guide.final(), want = fin ? (fin.map === 'world' ? 'Home' : (Sky.DEST[fin.map] || {}).n) : null; let h = hs[0];
           if (want && items.length && top === itemsTop) { const k = items.findIndex(l => String(l).startsWith(want)); const hh = hs.find(r => r.i === k); if (hh) h = hh; } pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; }
         Input.taps.push(pt); }
@@ -278,7 +278,7 @@ window.HUNT = {
           for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
           if (top && top.answer !== undefined) { if (i % 5 === 0 && top.answer >= 0) top.tap(0, top.ringAt(top.answer)); return; }   // flying: steer through the right ring
           if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
-            if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+            if (cur && plan.length && hs && !top.locked) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
             else if (hs && hs.length && !cur) { const fin = Guide.final(), want = (Quests.tracked() || {}).kind === 'rings' ? (Sky.isSky(G.map) ? 'Home: Radio' : 'Roost Rock') : fin && (Sky.isSky(fin.map) ? Sky.DEST[fin.map].n : Sky.isSky(G.map) ? 'Home: Radio' : null); /* a rings quest: any flight will do */ let h = top.close && Scene !== 'battle' && !(Guide.tgt && Guide.tgt.rest) ? null : hs[0];
               if (want && top === itemsTop) { const k = items.findIndex(l => String(l).startsWith(want)), hh = hs.find(r => r.i === k); if (hh) h = hh; }   // on a perch: fly where the quest is
               pt = h ? { x: h.x + h.w / 2, y: h.y + h.h / 2 } : top.close; }   // in battle: always the first choice (FIGHT, then the first move)
@@ -393,7 +393,7 @@ window.HUNT = {
           f = i; if ((q.done || (kind === 'hunt' && met >= 2)) && !UI.stack.length && !Script.n) return false;
           for (const d of ['up', 'down', 'left', 'right']) Input.held[d] = false; const top = UI.stack[UI.stack.length - 1];
           if (i % 6 === 0 && (top || Scene !== 'world' || Script.n > 0)) { let pt = { x: 480, y: 610 }; const hs = top && top.hits;
-            if (cur && plan.length && hs) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
+            if (cur && plan.length && hs && !top.locked) { const w = plan[0], h = hs.find(r => w.k != null ? r.k === w.k : r.i === w.i); if (h) { plan.shift(); pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; } }
             else if (hs && hs.length && !cur) { const snack = kind === 'hunt' && Scene === 'battle' && hs.find(h => /SNACK|ITEM|BAG/i.test(String(h.label || ''))); const h = snack || hs[0]; pt = { x: h.x + h.w / 2, y: h.y + h.h / 2 }; }
             Input.taps.push(pt); }
           if (G && !top && Scene === 'world' && Script.n === 0 && !PL.moving) {
@@ -441,5 +441,39 @@ window.HUNT = {
     return { probe: 'rings', results, finds: this.out() };
   },
 
-  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero', 'ground', 'rings']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
+  // 13. Mashing: a lone wild critter 10+ levels weaker can be scared off; in a real fight, a wrong answer tapped faster
+  // than it could be read misses altogether; two such answers in a row and the next questions make him read first.
+  async calm() {
+    this.finds = {}; const errs = [], onErr = e => errs.push((e.message || (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason)).split('\n').slice(0, 2).join(' | '));
+    addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
+    const realNext = Learn.next, realCard = Learn.card, realSay = say, mute = Snd.muted, results = {}; Snd.muted = true; let lines = [], cur = null, curMode = null, refused = 0;
+    say = function (who, str) { lines.push(heroText(String(str))); return realSay.apply(this, arguments); };
+    Learn.next = () => Learn.make('synant');   // choice questions only (typed answers are never "too quick")
+    Learn.card = function (q, t, m) { cur = q; curMode = m || {}; return realCard.apply(this, arguments); };
+    const run = async (opt, pickFn, n) => { let r = null; UI.stack.length = 0; Script.n = 0; script(async () => { r = await Battle.run(opt); }); await this.frames(n || 6000, i => { if (r) return false; const top = UI.stack[UI.stack.length - 1]; if (!top || i % 4) return; const hs = top.hits || [];
+      if (cur && hs.length && hs[0].i != null && hs.length === cur.choices.length && UI.stack.length && Scene === 'battle' && top.update && 'tap' in top) { const h = pickFn(hs, cur, curMode); if (h) top.tap(h.x + 4, h.y + 4); }
+      else if (hs.length) top.tap(hs[0].x + 4, hs[0].y + 4); else top.tap(480, 610); }); return r; };
+    try {
+      // 1. scared off
+      this.fresh(2); G.party = [makeCritter('scrapup', 25)]; G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); const s0 = G.scrap;
+      results.shoo = await run({ foes: [['gloop', 6]], kind: 'wild', bg: 'grass' }, () => null, 1500);
+      if (results.shoo !== 'win' || G.scrap <= s0 || !lines.some(l => /scampers away/.test(l))) this.add('a much weaker critter could not be scared off', results.shoo);
+      // 2. a fair fight, mashed: two wrong answers at once, then right answers
+      this.fresh(2); G.party = [makeCritter('scrapup', 25)]; G.map = 'world'; G.x = 41; G.y = 64; enterWorld(); lines = []; let k = 0, cards = 0, seenLock = 0, last = null;
+      results.fight = await run({ foes: [['gloop', 24]], kind: 'wild', bg: 'grass' }, (hs, q, m) => {
+        if (q !== last) { last = q; cards++; if (m.wait) seenLock++; }
+        if (m.wait) { if (!q._triedEarly) { q._triedEarly = 1; return hs.find(h => h.i === q.a); } }   // a locked card: tap at once (must be refused), later it is answered normally
+        return cards <= 2 ? hs.filter(h => h.i !== q.a)[(k++) % 3] : hs.find(h => h.i === q.a); }, 20000);
+      results.missed = lines.filter(l => /too fast!.*missed/i.test(l)).length; results.calmTalk = lines.some(l => /Whoa, speedy/.test(l)); results.lockedCards = seenLock; results.calmState = JSON.stringify(G.calm);
+      if (!results.missed) this.add('a mashed wrong answer did not miss');
+      if (!results.calmTalk) this.add('no slow-down talk after two rushed answers');
+      if (!seenLock) this.add('no read-first questions after mashing');
+      if (results.fight !== 'win') this.add('the fight after mashing was not won', results.fight);
+    } catch (e) { this.add('calm probe threw', (e.stack || e.message).split('\n').slice(0, 2).join(' | ')); }
+    finally { say = realSay; Learn.next = realNext; Learn.card = realCard; Snd.muted = mute; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); UI.stack.length = 0; Script.n = 0; }
+    for (const e of [...new Set(errs)]) this.add('error during calm', e);
+    return { probe: 'calm', results, finds: this.out() };
+  },
+
+  async all() { const r = []; for (const p of ['layout', 'engine', 'saves', 'screens', 'battles', 'story', 'sky', 'quests', 'hero', 'ground', 'rings', 'calm']) { try { r.push(await this[p]()); } catch (e) { r.push({ probe: p, crashed: (e.stack || e.message).split('\n').slice(0, 3).join(' | ') }); } } this.release(); return r; }
 };

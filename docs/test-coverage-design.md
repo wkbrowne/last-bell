@@ -485,3 +485,23 @@ appeared about 4.8 seconds before its rings reached the dragon: that was the tim
 pops that ring and leaves two, the right one then finishes it; the next question is right first time; 2 of 2 right,
 learning recorded twice (once per question), 4 sparks. Tried by hand in the browser too: tap, drag and let go, a miss
 and second try.
+
+## Mashing through easy fights (v1.35)
+
+Reported: against an enemy he thinks is too easy, he taps answers at random to get through. Before this, that cost
+nothing: a wrong answer still landed at 60% and finished a weak enemy anyway.
+
+- **Scare it off.** A lone wild critter 10+ levels below his best critter: "Scare it off!" (an instant win, a little
+  scrap, counts for Defeat quests) or "Battle it anyway" ("Battle it (you could befriend it!)" if it is not in his
+  Field Guide yet). Most of the fights that invited mashing are gone.
+- **Mashing misses.** A WRONG answer tapped faster than it could be read (the engine's own "too quick" rule:
+  38 ms a character, at least 1 s) makes the move miss altogether: "Whoa, too fast! ... Read the question, then tap."
+  Reading is now the fastest way through. (A right answer that quick still lands at normal strength, as before.)
+- **Read first.** Two too-quick answers in a row in battle, and the teacher says so once; the next three battle
+  questions dim their choices behind a "READ IT FIRST..." bar for that same reading time. Typed answers are never
+  locked (typing takes its own time). State: `G.calm` (`Calm` in battle.js); each time is logged as `calm` in the
+  play log.
+
+**Tests.** `HUNT.calm()`: a Lv 6 critter against a Lv 25 team is scared off for scrap; in a fair fight two instant
+wrong answers both miss, the slow-down line appears, read-first cards follow (an instant tap on one is refused),
+and the fight is then won by answering normally. The other bots now wait while a card says `locked`.
